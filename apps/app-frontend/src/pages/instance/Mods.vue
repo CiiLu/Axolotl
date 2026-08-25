@@ -2791,17 +2791,23 @@ provideContentManager({
 	modpackItems: displayedLinkedModpackContentItems,
 	modpack: computed(() => {
 		if (linkedModpackProject.value) {
+			const instanceLink = props.instance.link
+			const projectPath =
+				instanceLink?.type === 'curseforge_modpack'
+				? `/project/curseforge/${instanceLink.project_id}`
+				: `/project/${linkedModpackProject.value.slug ?? linkedModpackProject.value.id}`
+
 			return {
 				project: displayedModpackProject.value ?? linkedModpackProject.value,
 				projectLink: {
-					path: `/project/${linkedModpackProject.value.slug ?? linkedModpackProject.value.id}`,
+					path: projectPath,
 					query: instanceContentProjectQuery.value,
 				},
 				version: linkedModpackVersion.value ?? undefined,
 				versionLink:
-					linkedModpackProject.value && linkedModpackVersion.value
+					instanceLink?.type !== 'curseforge_modpack' && linkedModpackVersion.value
 						? {
-								path: `/project/${linkedModpackProject.value.slug ?? linkedModpackProject.value.id}/version/${linkedModpackVersion.value.id}`,
+								path: `${projectPath}/version/${linkedModpackVersion.value.id}`,
 								query: instanceContentProjectQuery.value,
 							}
 						: undefined,

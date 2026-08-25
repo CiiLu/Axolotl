@@ -89,7 +89,7 @@ async function updateDiscordRpc(value: boolean) {
 </script>
 
 <template>
-	<div class="settings-page">
+	<div class="flex w-full flex-col gap-4">
 		<header class="settings-page-header">
 			<SettingsSaveStatus :status="saveStatus" :retry="retrySave" />
 		</header>
@@ -133,13 +133,6 @@ async function updateDiscordRpc(value: boolean) {
 </template>
 
 <style scoped>
-.settings-page {
-	display: flex;
-	width: 100%;
-	flex-direction: column;
-	gap: var(--gap-lg);
-}
-
 .settings-page-card {
 	overflow: hidden;
 	border: 1px solid

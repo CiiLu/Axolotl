@@ -219,7 +219,7 @@ const deleteHovered = ref(false)
 				? selected
 					? 'card-shadow !bg-surface-2.5 rounded-lg p-3'
 					: 'card-shadow !bg-bg-raised rounded-lg p-3 hover:!bg-bg-raised'
-				: 'px-3 hover:bg-[hsla(0,0%,50%,0.1)]',
+				: 'px-3 hover:bg-[hsl(230deg,6.98%,16.86%,60%)]',
 		]"
 		:style="
 			groupDepth && groupKind !== 'world' ? { paddingLeft: `${groupDepth * 2.5}rem` } : undefined

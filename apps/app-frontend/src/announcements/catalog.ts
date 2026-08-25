@@ -64,6 +64,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Opening the Settings page now automatically collapses the sidebar to give the settings panel more room.',
 					'zh-CN': '打开设置页面时自动收起侧边栏，为设置面板留出更多空间。',
 				},
+				{
+					'zh-CN': '自定义背景下实例内容页面悬停折叠项的ui透明度现在被调高。',
+					'en-US':
+						'Custom background now has higher opacity for hoverable folded items on instance content page.',
+				},
 			],
 			fixed: [
 				{
@@ -77,6 +82,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed the post-update announcement not showing on Windows after the launcher updates — it now appears after the updated launcher relaunches.',
 					'zh-CN':
 						'修复 Windows 端更新启动器后不弹出更新公告的问题，更新并重启后现在会正常显示更新公告。',
+				},
+				{
+					'en-US':
+						'Fixed the issue of when clicking curseforge modpack title to enter modpack information page, the launcher will show Error loading project. (issue #405)',
+					'zh-CN':
+						'修复了点击 CurseForge 整合包标题进入整合包信息页时，启动器会显示Error loading project的问题。(issue #405)',
 				},
 			],
 		},

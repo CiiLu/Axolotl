@@ -1394,6 +1394,21 @@ export function useDropImport(options: DropImportOptions) {
 		cleanupLauncherZipTemp()
 	}
 
+	function resolvedInstancePath(
+		inst: SelectedInstance,
+		ctx: ImportContext | null,
+	): string | undefined {
+		if (inst.compatibleMode) return inst.versionPath
+		const launcherType = ctx?.launcherType ?? inst.launcherType
+		return (
+			launcherType === 'PCL2' ||
+			launcherType === 'PCL2CE' ||
+			launcherType === 'HMCL'
+		)
+			? inst.path
+			: undefined
+	}
+
 	async function onSymlinkMethodConfirmed(choices: SymlinkMethodChoice[] | boolean) {
 		if (symlinkChoiceResolve) {
 			symlinkChoiceResolve(Array.isArray(choices) ? choices : [])
@@ -1451,7 +1466,7 @@ export function useDropImport(options: DropImportOptions) {
 					inst.compatibleMode ? inst.basePath : (ctx?.basePath ?? inst.path),
 					inst.name,
 					choice?.symlink ?? (Array.isArray(choices) ? false : choices),
-					inst.compatibleMode ? inst.versionPath : undefined,
+					resolvedInstancePath(inst, ctx),
 					inst.compatibleMode ? undefined : choice?.gameVersion,
 					inst.compatibleMode ? undefined : choice?.loader,
 					inst.compatibleMode ? undefined : choice?.loaderVersion,
@@ -1516,7 +1531,7 @@ export function useDropImport(options: DropImportOptions) {
 					inst.compatibleMode ? inst.basePath : (ctx?.basePath ?? inst.path),
 					inst.name,
 					choice?.symlink ?? (Array.isArray(choices) ? false : choices),
-					inst.compatibleMode ? inst.versionPath : undefined,
+					resolvedInstancePath(inst, ctx),
 					inst.compatibleMode ? undefined : choice?.gameVersion,
 					inst.compatibleMode ? undefined : choice?.loader,
 					inst.compatibleMode ? undefined : choice?.loaderVersion,
