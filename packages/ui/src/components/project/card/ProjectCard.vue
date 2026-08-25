@@ -30,7 +30,7 @@
 				v-if="provider"
 				class="project-card--compact__provider truncate text-[13px] font-medium leading-4 text-secondary"
 			>
-				{{ provider === 'curseforge' ? 'CurseForge' : 'Modrinth' }}
+				{{ providerLabel }}
 			</span>
 			<div class="project-card--compact__tags flex min-w-0 items-center gap-1 overflow-hidden">
 				<template v-if="isServerProject">
@@ -116,7 +116,7 @@
 										v-if="provider"
 										class="rounded-full bg-surface-5 px-2 py-0.5 text-xs font-semibold text-secondary"
 									>
-										{{ provider === 'curseforge' ? 'CurseForge' : 'Modrinth' }}
+										{{ providerLabel }}
 									</span>
 									<ProjectStatusBadge v-if="status" :status="status" class="text-sm" />
 								</div>
@@ -212,7 +212,7 @@
 						v-if="provider"
 						class="rounded-full bg-surface-5 px-2 py-0.5 text-xs font-semibold text-secondary"
 					>
-						{{ provider === 'curseforge' ? 'CurseForge' : 'Modrinth' }}
+						{{ providerLabel }}
 					</span>
 					<ProjectStatusBadge v-if="status" :status="status" />
 				</div>
@@ -355,8 +355,21 @@ const props = defineProps<{
 	environment?: ProjectCardEnvironmentProps
 	status?: ProjectStatus
 	maxTags?: number
-	provider?: 'modrinth' | 'curseforge'
+	provider?: 'modrinth' | 'curseforge' | 'mcarchive' | 'planet_minecraft'
 }>()
+
+const providerLabel = computed(() => {
+	switch (props.provider) {
+		case 'curseforge':
+			return 'CurseForge'
+		case 'mcarchive':
+			return 'MCArchive'
+		case 'planet_minecraft':
+			return 'Planet Minecraft'
+		default:
+			return 'Modrinth'
+	}
+})
 
 const baseCardStyle =
 	'w-full h-full border-[1px] border-solid border-surface-4 overflow-hidden bg-surface-3 rounded-2xl transition-all smart-clickable:outline-on-focus smart-clickable:highlight-on-hover'

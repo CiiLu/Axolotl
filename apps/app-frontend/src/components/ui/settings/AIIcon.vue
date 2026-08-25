@@ -8,11 +8,12 @@ import {
 } from '@/data/lobeModelIcons'
 import { lobeProviderIcons } from '@/data/lobeProviderIcons'
 
+import CodeFlowLogo from './CodeFlowLogo.vue'
 import LobeBrandCombine from './LobeBrandCombine.vue'
 
 const props = withDefaults(
 	defineProps<{
-		kind: 'model' | 'provider-avatar' | 'provider-combine'
+		kind: 'model' | 'provider-avatar' | 'provider-combine' | 'provider-wordmark'
 		value: string
 		size?: number
 	}>(),
@@ -37,6 +38,7 @@ const iconComponents = Object.fromEntries(
 
 const soraGradientId = useId()
 const providerConfig = computed(() => lobeProviderIcons[props.value.toLocaleLowerCase()])
+const isCodeFlow = computed(() => props.value.toLocaleLowerCase() === 'codeflow')
 const avatarConfig = computed(() => providerConfig.value?.avatar)
 const avatarComponent = computed(() => {
 	if (!providerConfig.value || !avatarConfig.value) return undefined
@@ -94,7 +96,7 @@ const modelAvatarStyle = computed(() => ({
 const avatarStyle = computed(() => ({
 	background: avatarConfig.value?.background,
 	borderRadius: `${Math.floor(props.size * 0.1)}px`,
-	color: avatarConfig.value?.color,
+	color: avatarConfig.value?.color ?? (isCodeFlow.value ? 'var(--color-contrast)' : undefined),
 	height: `${props.size}px`,
 	width: `${props.size}px`,
 }))
@@ -154,6 +156,7 @@ const avatarStyle = computed(() => ({
 				width: `${size}px`,
 			}"
 		/>
+		<CodeFlowLogo v-else-if="isCodeFlow" :size="size" />
 		<span v-else>{{ value.slice(0, 1).toLocaleUpperCase() }}</span>
 	</span>
 
@@ -222,7 +225,27 @@ const avatarStyle = computed(() => ({
 			extra="Cloud"
 			:size="size * 1.16"
 		/>
+		<CodeFlowLogo v-else-if="isCodeFlow" :size="combineSize" />
 		<LobeBrandCombine v-else :brand="combineBrand" :size="combineSize" />
+	</span>
+
+	<span
+		v-else-if="kind === 'provider-wordmark'"
+		class="lobe-provider-wordmark"
+		:style="{
+			color: 'var(--color-contrast)',
+			gap: `${Math.max(4, Math.round(size * 0.214))}px`,
+		}"
+		aria-hidden="true"
+	>
+		<CodeFlowLogo v-if="isCodeFlow" :size="size" />
+		<LobeBrandCombine v-else :brand="combineBrand" :size="combineSize" />
+		<span
+			v-if="isCodeFlow"
+			class="font-semibold"
+			:style="{ fontSize: `${Math.round(size * 0.536)}px`, letterSpacing: '-0.01em' }"
+			>CodeFlow</span
+		>
 	</span>
 
 	<span
@@ -422,6 +445,13 @@ const avatarStyle = computed(() => ({
 	align-items: center;
 	justify-content: flex-start;
 	color: var(--color-contrast);
+}
+
+.lobe-provider-wordmark {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: flex-start;
 }
 
 .special-square {

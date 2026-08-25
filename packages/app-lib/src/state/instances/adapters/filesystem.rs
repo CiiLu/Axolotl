@@ -1,7 +1,7 @@
 use crate::state::ProjectType;
 use crate::util::io::{self, IOError};
 use std::path::Path;
-use std::time::UNIX_EPOCH;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Debug)]
 pub(crate) struct ScannedContentFile {
@@ -9,6 +9,7 @@ pub(crate) struct ScannedContentFile {
     pub file_name: String,
     pub enabled: bool,
     pub size: u64,
+    pub modified: Option<SystemTime>,
     pub hash_cache_key: String,
 }
 
@@ -167,7 +168,8 @@ fn scan_content_folder(
             continue;
         }
 
-        let size = path.metadata().map_err(IOError::from)?.len();
+        let metadata = path.metadata().map_err(IOError::from)?;
+        let size = metadata.len();
         let relative_path = format!("{relative_dir}/{file_name}");
         let hash_cache_key = format!("{size}-{instance_path}/{relative_path}");
 
@@ -176,6 +178,7 @@ fn scan_content_folder(
             file_name: file_name.to_string(),
             enabled: !file_name.ends_with(".disabled"),
             size,
+            modified: metadata.modified().ok(),
             hash_cache_key,
         });
     }

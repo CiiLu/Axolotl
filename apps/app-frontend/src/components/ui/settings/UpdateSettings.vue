@@ -209,7 +209,8 @@ async function checkForUpdates() {
 .settings-note {
 	margin: 0;
 	padding: var(--gap-md) var(--gap-lg);
-	border: 1px solid var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
+	border: 1px solid
+		var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
 	border-radius: var(--radius-md);
 	background: var(--surface-2);
 	color: var(--color-secondary);

@@ -2,7 +2,7 @@ import { setEulaAccepted } from '@modrinth/server'
 import { ref, useTemplateRef } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
-import EulaModal from '@/components/multiplayer/servers/EulaModal.vue'
+import type EulaModal from '@/components/multiplayer/servers/EulaModal.vue'
 import { type ServerView, useServers } from '@/composables/useServers'
 import { servers as serversApi } from '@/helpers/servers'
 
