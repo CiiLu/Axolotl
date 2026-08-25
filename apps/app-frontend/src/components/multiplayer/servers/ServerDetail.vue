@@ -293,7 +293,7 @@ async function shareOnline() {
 </script>
 
 <template>
-	<div class="multiplayer-fixed-render flex min-h-0 w-full flex-1 flex-col gap-3">
+	<div class="multiplayer-fixed-render flex h-full min-h-0 w-full flex-col gap-3">
 		<div v-if="!server && isLoaded && !hasSeenServer" class="text-secondary">
 			{{ formatMessage(messages.notFound) }}
 		</div>
@@ -463,7 +463,7 @@ async function shareOnline() {
 				@tab-click="tabIndex = $event"
 			/>
 
-			<div v-if="tabIndex === 0" class="max-h-[calc(100dvh-var(--top-bar-height))] min-h-0 flex-1">
+			<div v-if="tabIndex === 0" class="min-h-0 flex-1">
 				<ServerConsole :server="server" />
 			</div>
 			<div v-else-if="tabIndex === 1" class="min-h-0 flex-1 overflow-y-auto pr-1">
@@ -480,17 +480,26 @@ async function shareOnline() {
 
 <style>
 /*
- * fixed 渲染模式（服务器详情页）：页面自身不滚动，控制台/设置区内部滚动，
- * 命令输入框始终停留在可视区域内。
- * 显式把 page-transition-grid 定高（100%），让整条 h-full 百分比高度链有确定参照，
- * 避免网格行高被日志内容撑开导致终端无限增高。
- * 只去掉 .app-viewport 的 scrollbar-gutter（避免多余的空滚动条轨道），
- * 保留 overflow: auto 作为兜底——内容万一超出视口仍可滚动，不会被裁切。
+ * fixed 渲染模式（服务器详情页）：控制台/设置区内部滚动。
+ * page-transition-grid 与 page-transition-layer 显式定高（100%）且允许
+ * 收缩（min-height: 0）。grid 必须显式声明 minmax(0, 1fr) 行——隐式 auto 行
+ * 以内容自适应，行高不 definite 时 layer 的百分比高度会退化为 auto，
+ * 整条 h-full 链随之失效，日志一多终端就会把页面撑出视口。
+ * app-viewport 保留 overflow: auto 作为兜底：控制台区块在有日志时固定为
+ * calc(100dvh - 80px)，高于可视剩余空间，页面需要可以滚动露出命令输入框；
+ * scrollbar-gutter: auto 避免滚动条出现/消失时布局跳动。
  */
-.app-viewport:has(.multiplayer-fixed-render) .page-transition-grid {
-	height: 100%;
-}
 .app-viewport:has(.multiplayer-fixed-render) {
 	scrollbar-gutter: auto;
+}
+
+.app-viewport:has(.multiplayer-fixed-render) .page-transition-grid,
+.app-viewport:has(.multiplayer-fixed-render) .page-transition-layer {
+	height: 100%;
+	min-height: 0;
+}
+
+.app-viewport:has(.multiplayer-fixed-render) .page-transition-grid {
+	grid-template-rows: minmax(0, 1fr);
 }
 </style>

@@ -23,6 +23,15 @@
 				</ButtonStyled>
 			</div>
 		</div>
+		<CollapsibleAdmonition
+			v-if="ctx.crashAnalysis?.value && !isFullscreen"
+			type="critical"
+			:header="crashHeader"
+			:items="crashItems"
+			dismissible
+			@dismiss="ctx.onDismissCrash?.()"
+		/>
+
 		<div class="flex items-center gap-2">
 			<StyledInput
 				v-model="searchQuery"
@@ -103,23 +112,19 @@
 			</Transition>
 		</div>
 
-		<div
+		<StyledInput
 			v-if="showCommandInput"
-			class="rounded-[20px] border border-solid border-surface-4 bg-surface-3 p-4"
-		>
-			<StyledInput
-				v-model="commandInput"
-				v-tooltip="commandDisabled ? commandDisabledTooltip : undefined"
-				:icon="TerminalSquareIcon"
-				:placeholder="commandPlaceholder"
-				:disabled="commandDisabled"
-				wrapper-class="w-full"
-				input-class="!h-10"
-				autocomplete="off"
-				:spellcheck="false"
-				@keydown.enter="submitCommand"
-			/>
-		</div>
+			v-model="commandInput"
+			v-tooltip="commandDisabled ? commandDisabledTooltip : undefined"
+			:icon="TerminalSquareIcon"
+			:placeholder="commandPlaceholder"
+			:disabled="commandDisabled"
+			wrapper-class="w-full"
+			input-class="!h-9"
+			autocomplete="off"
+			:spellcheck="false"
+			@keydown.enter="submitCommand"
+		/>
 	</div>
 	<ShareModal
 		ref="shareModal"
@@ -584,6 +589,40 @@ const localCrashItems = computed<CollapsibleAdmonitionItem[]>(() => {
 	return items
 })
 
+const crashHeader = computed(() => {
+	const analysis = ctx.crashAnalysis?.value
+	const findings = analysis?.findings.length ?? 0
+	return formatMessage(consoleMessages.crashHeader, { findings })
+})
+
+const crashItems = computed<CollapsibleAdmonitionItem[]>(() => {
+	const analysis = ctx.crashAnalysis?.value
+	if (!analysis) return []
+	return analysis.findings.map((finding) => {
+		const copy = localFindingCopy[finding.id as keyof typeof localFindingCopy]
+		const title = copy
+			? formatMessage(copy.title)
+			: formatMessage(consoleMessages.fallbackFindingTitle, { finding: finding.id })
+		const action = copy
+			? formatMessage(copy.action)
+			: formatMessage(consoleMessages.fallbackFindingAction)
+		const evidence = finding.evidence.map((item) => `${item.filename}:${item.line} - ${item.text}`)
+		const mods = analysis.mods.map((mod) => {
+			const identity = mod.name || mod.id || mod.file_name
+			const modId = mod.id && mod.id !== identity ? ` (${mod.id})` : ''
+			return formatMessage(consoleMessages.matchedMod, {
+				identity,
+				modId,
+				fileName: mod.file_name,
+			})
+		})
+		return {
+			title,
+			descriptions: [action, ...mods, ...evidence],
+		}
+	})
+})
+
 const viewportRef = ref<InstanceType<typeof LogViewport> | null>(null)
 const shareModal = ref<InstanceType<typeof ShareModal> | null>(null)
 const deleteModal = ref<InstanceType<typeof NewModal> | null>(null)
@@ -701,7 +740,20 @@ function submitCommand() {
 	if (!command || commandDisabled.value || !ctx.sendCommand) return
 	ctx.sendCommand(command)
 	commandInput.value = ''
+	// The user just interacted with the console: pin the view to the bottom
+	// so the command echo and its response are visible immediately.
+	viewportRef.value?.scrollToBottom()
 }
+
+// Re-pins the viewport to the bottom (and re-enables bottom-following).
+// Exposed so hosts can react to external events such as a server starting.
+function scrollToBottom() {
+	viewportRef.value?.scrollToBottom()
+}
+
+defineExpose({
+	scrollToBottom,
+})
 
 const showDelete = computed(() => !isLiveSource.value && ctx.onDelete != null)
 

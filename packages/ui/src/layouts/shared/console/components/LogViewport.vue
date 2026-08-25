@@ -115,29 +115,43 @@ function estimateHeight(item: ViewportLine): number {
 }
 
 // 高度前缀和缓存：lines/wrap/fontSize 变化时重建（O(n)），滚动时二分查找（O(log n)）
+// 总高度必须是响应式的：普通变量 + 无依赖 computed 会缓存过期值，
+// 清空控制台后模板不再读取它，重启后 spacer 会以旧高度渲染（底部空白）。
 let heightPrefix: number[] | null = null
-let heightTotal = 0
+const heightTotal = ref(0)
 
 function rebuildHeights() {
 	const n = props.lines.length
 	if (!props.wrap) {
 		heightPrefix = null
-		heightTotal = n * lineHeightPx.value
+		heightTotal.value = n * lineHeightPx.value
 		return
 	}
-	heightPrefix = new Array(n)
+	const prefix = new Array<number>(n)
 	let acc = 0
 	for (let i = 0; i < n; i++) {
-		heightPrefix[i] = acc
+		prefix[i] = acc
 		acc += estimateHeight(props.lines[i]!)
 	}
-	heightTotal = acc
+	heightPrefix = prefix
+	heightTotal.value = acc
 }
 
 watch(
 	() => [props.lines, props.wrap, props.fontSize] as const,
-	() => {
+	([lines], previous) => {
 		rebuildHeights()
+		// A fresh stream after an empty console (clear, restart, initial
+		// hydration) always resumes bottom-following.
+		if (previous && previous[0].length === 0 && lines.length > 0) {
+			stickToBottom.value = true
+		}
+		if (lines.length === 0) {
+			// Reset the virtual window state along with the DOM scroll position;
+			// browsers may clamp silently without firing a scroll event.
+			scrollTop.value = 0
+			if (viewportRef.value) viewportRef.value.scrollTop = 0
+		}
 		if (stickToBottom.value) {
 			nextTick(scrollToBottom)
 		}
@@ -145,7 +159,7 @@ watch(
 	{ immediate: true },
 )
 
-const totalHeight = computed(() => heightTotal)
+const totalHeight = computed(() => heightTotal.value)
 
 // 虚拟窗口：可见行 + 上下缓冲
 const WINDOW_BUFFER = 15
