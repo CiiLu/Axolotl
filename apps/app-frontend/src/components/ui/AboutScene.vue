@@ -290,6 +290,7 @@ function main() {
 	}
 
 	function animate(time: number) {
+		if (isUpdating === false) return
 		requestAnimationFrame(animate)
 
 		const deltaTime = deltaClock.getDelta()
