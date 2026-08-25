@@ -3,9 +3,18 @@
 </template>
 
 <script setup lang="ts">
+import { useTheming } from '@/store/theme'
 import * as THREE from 'three'
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/Addons.js'
 import { onMounted, onScopeDispose, useTemplateRef } from 'vue'
+
+const themeStore = useTheming()
+function isDarkMode() {
+	if (themeStore.selectedTheme == 'system') {
+		return matchMedia('(prefers-color-scheme: dark)').matches
+	}
+	return ['dark', 'oled'].includes(themeStore.selectedTheme)
+}
 
 function loadGLTF(url: string): Promise<GLTF> {
 	return new Promise((res, rej) => {
@@ -186,7 +195,7 @@ function main() {
 	const camera = new THREE.PerspectiveCamera(30, canvasSize.x / canvasSize.y, 1, 3000)
 	camera.fov *= 0.7
 	camera.position.set(-10, 5, 30)
-	camera.lookAt(-3.17, 0, 0)
+	camera.lookAt(0, 0, 0)
 
 	const ambientLight = new THREE.AmbientLight(0xffffff)
 	scene.add(ambientLight)
@@ -202,7 +211,11 @@ function main() {
 		getComputedStyle(document.documentElement).getPropertyValue('--color-brand').trim() || '#4444ff'
 
 	const waterMaterial = createWaterMaterial()
-	waterMaterial.uniforms.color.value = new THREE.Color(accentColor).multiplyScalar(0.6)
+	waterMaterial.uniforms.color.value = new THREE.Color(accentColor).multiplyScalar(
+		isDarkMode() ? 0.6 : 2.4,
+	)
+	// .multiplyScalar(0.6)
+	// .multiplyScalar(2.4)
 
 	scene.add(createWater(waterMaterial, new THREE.Vector3(0, -6.5, 4)))
 	scene.add(createWater(waterMaterial, new THREE.Vector3(2, -8, -10)))
@@ -247,7 +260,11 @@ function main() {
 	})
 
 	const circleMaterial = createCircleMaterial()
-	circleMaterial.uniforms.color.value = new THREE.Color(accentColor).multiplyScalar(1.2)
+	circleMaterial.uniforms.color.value = new THREE.Color(accentColor).multiplyScalar(
+		isDarkMode() ? 1.2 : 3,
+	)
+	// .multiplyScalar(1.2)
+	// .multiplyScalar(3)
 
 	var circleMeshList: THREE.Mesh[] = []
 	var nextCircleCreateTime = 0.0
@@ -333,7 +350,7 @@ onMounted(main)
 #about_scene {
 	background: linear-gradient(
 		to bottom,
-		color-mix(in srgb, var(--color-brand-shadow) 60%, rgb(0, 0, 0) 80%),
+		color-mix(in srgb, var(--color-brand) 36%, var(--surface-1) 100%),
 		#00000000 40%
 	);
 }
