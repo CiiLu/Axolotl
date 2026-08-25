@@ -53,6 +53,7 @@ fn main() {
     println!("cargo:rerun-if-changed=tauri.linux.conf.json");
     println!("cargo:rerun-if-changed=tauri-modern.conf.json");
     println!("cargo:rerun-if-changed=tauri-release.conf.json");
+    println!("cargo:rerun-if-changed=../../third-party/blockbench");
     // Tauri validates frontendDist during Cargo metadata/check builds. The
     // frontend build runs in parallel in CI, so create the directory before
     // tauri-build reads the configuration. A real frontend build overwrites

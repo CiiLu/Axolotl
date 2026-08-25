@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { defineMessages, useVIntl } from '@modrinth/ui'
+import { defineMessages, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { platform } from '@tauri-apps/plugin-os'
 import { save } from '@tauri-apps/plugin-dialog'
 import { writeFile } from '@tauri-apps/plugin-fs'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const { locale, formatMessage } = useVIntl()
+const { handleError } = injectNotificationManager()
 const messages = defineMessages({
 	title: { id: 'app.lab.skin-editor.title', defaultMessage: 'Skin editor' },
 	loading: { id: 'app.lab.skin-editor.loading', defaultMessage: 'Loading skin editor' },
@@ -35,13 +36,18 @@ async function saveExportedSkin(event: MessageEvent<unknown>) {
 	if (!event.data || typeof event.data !== 'object') return
 	const message = event.data as { type?: unknown; name?: unknown; dataUrl?: unknown }
 	if (message.type !== 'axolotl-skin-export' || typeof message.name !== 'string' || typeof message.dataUrl !== 'string') return
-	const path = await save({
-		defaultPath: message.name,
-		filters: [{ name: formatMessage(messages.exportSkin), extensions: ['png'] }],
-	})
-	if (!path) return
-	const response = await fetch(message.dataUrl)
-	await writeFile(path, new Uint8Array(await response.arrayBuffer()))
+	try {
+		const path = await save({
+			defaultPath: message.name,
+			filters: [{ name: formatMessage(messages.exportSkin), extensions: ['png'] }],
+		})
+		if (!path) return
+		const response = await fetch(message.dataUrl)
+		if (!response.ok) throw new Error(`Failed to read exported skin: ${response.status}`)
+		await writeFile(path, new Uint8Array(await response.arrayBuffer()))
+	} catch (error) {
+		handleError(error)
+	}
 }
 
 const frame = ref<HTMLIFrameElement>()

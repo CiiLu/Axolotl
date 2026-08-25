@@ -110,6 +110,75 @@ fn blockbench_skin_response(
         .expect("failed to build Blockbench skin response")
 }
 
+fn is_allowed_blockbench_skin_request(
+    request: &tauri::http::Request<Vec<u8>>,
+) -> bool {
+    if !matches!(
+        request.uri().host(),
+        Some("localhost") | Some("axolotl-skin.localhost")
+    ) {
+        return false;
+    }
+
+    const ALLOWED_ORIGINS: [&str; 6] = [
+        "http://localhost:5201",
+        "http://tauri.localhost",
+        "https://tauri.localhost",
+        "tauri://localhost",
+        "axolotl-skin://localhost",
+        "http://axolotl-skin.localhost",
+    ];
+    let is_allowed_source = |value: &str| {
+        ALLOWED_ORIGINS.iter().any(|origin| {
+            value == *origin || value.starts_with(&format!("{origin}/"))
+        })
+    };
+
+    if let Some(origin) = request
+        .headers()
+        .get(header::ORIGIN)
+        .and_then(|value| value.to_str().ok())
+    {
+        if !is_allowed_source(origin) {
+            return false;
+        }
+
+        if let Some(referer) = request
+            .headers()
+            .get(header::REFERER)
+            .and_then(|value| value.to_str().ok())
+        {
+            return is_skin_editor_referer(referer, &is_allowed_source);
+        }
+
+        return true;
+    }
+
+    request
+        .headers()
+        .get(header::REFERER)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|referer| {
+            is_skin_editor_referer(referer, &is_allowed_source)
+        })
+}
+
+fn is_skin_editor_referer(
+    referer: &str,
+    is_allowed_source: &impl Fn(&str) -> bool,
+) -> bool {
+    let Ok(url) = referer.parse::<url::Url>() else {
+        return false;
+    };
+    if !is_allowed_source(url.origin().ascii_serialization().as_str())
+        || url.path() != "/index.html"
+    {
+        return false;
+    }
+    url.query_pairs()
+        .any(|(key, value)| key == "embed" && value == "skin")
+}
+
 // Should be called in launcher initialization
 #[tracing::instrument(skip_all)]
 #[tauri::command]
@@ -421,6 +490,14 @@ fn main() {
     let mut builder = tauri::Builder::default().register_uri_scheme_protocol(
         "axolotl-skin",
         move |context, request| {
+            if !is_allowed_blockbench_skin_request(&request) {
+                return Response::builder()
+                    .status(StatusCode::FORBIDDEN)
+                    .body(Vec::new())
+                    .expect(
+                        "failed to build Blockbench skin forbidden response",
+                    );
+            }
             let resource_dir = context
                 .app_handle()
                 .path()
