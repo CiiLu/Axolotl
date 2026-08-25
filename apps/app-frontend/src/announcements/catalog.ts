@@ -33,12 +33,12 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
-		id: 'launcher-1.8.13',
-		version: '1.8.13',
-		publishedAt: '2026-08-24',
+		id: 'launcher-1.8.14',
+		version: '1.8.14',
+		publishedAt: '2026-08-25',
 		title: {
-			'en-US': 'Axolotl Launcher 1.8.13',
-			'zh-CN': 'Axolotl Launcher 1.8.13',
+			'en-US': 'Axolotl Launcher 1.8.14',
+			'zh-CN': 'Axolotl Launcher 1.8.14',
 		},
 		changes: {
 			added: [
@@ -51,12 +51,6 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Added MCArchive as a content source for browsing and importing archived Minecraft releases.',
 					'zh-CN': '新增 MCArchive 内容源，支持浏览和导入 Minecraft 历史版本资源。',
-				},
-				{
-					'en-US':
-						'Added an Ancient version option beside April Fools in the new-instance version selector, showing historical Alpha, Beta, and legacy-tagged versions such as a1.2.3.',
-					'zh-CN':
-						'新增远古版选项，位于愚人节版本右侧，可在创建实例时选择历史 Alpha、Beta 及其他旧版标签版本，例如 a1.2.3。',
 				},
 				{
 					'zh-CN': '添加实例一键升级功能',
@@ -74,11 +68,6 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 				},
 			],
 			changed: [
-				{
-					'en-US':
-						'April Fools releases are now kept separate from snapshots and Ancient versions when filtering game versions.',
-					'zh-CN': '筛选游戏版本时，愚人节版本现在会与快照版和远古版保持独立。',
-				},
 				{
 					'en-US':
 						'Reworked the accent color picker layout: the color options always stay in a single row and adapt to the settings panel width, hiding their labels only when the row is too narrow to fit them.',
