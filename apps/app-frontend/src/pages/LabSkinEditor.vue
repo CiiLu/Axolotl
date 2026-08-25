@@ -7,6 +7,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const { locale, formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
+const platformName = ref<string>()
 const messages = defineMessages({
 	title: { id: 'app.lab.skin-editor.title', defaultMessage: 'Skin editor' },
 	loading: { id: 'app.lab.skin-editor.loading', defaultMessage: 'Loading skin editor' },
@@ -26,7 +27,8 @@ const editorUrl = computed(
 		if (import.meta.env.DEV) {
 			return `/__blockbench_skin__/index.html?embed=skin&lang=${encodeURIComponent(blockbenchLocale.value)}`
 		}
-		const baseUrl = platform() === 'windows' ? 'http://axolotl-skin.localhost' : 'axolotl-skin://localhost'
+		if (!platformName.value) return ''
+		const baseUrl = platformName.value === 'windows' ? 'http://axolotl-skin.localhost' : 'axolotl-skin://localhost'
 		return `${baseUrl}/index.html?embed=skin&lang=${encodeURIComponent(blockbenchLocale.value)}`
 	},
 )
@@ -51,7 +53,10 @@ async function saveExportedSkin(event: MessageEvent<unknown>) {
 }
 
 const frame = ref<HTMLIFrameElement>()
-onMounted(() => window.addEventListener('message', saveExportedSkin))
+onMounted(async () => {
+	platformName.value = await platform()
+	window.addEventListener('message', saveExportedSkin)
+})
 onUnmounted(() => window.removeEventListener('message', saveExportedSkin))
 </script>
 

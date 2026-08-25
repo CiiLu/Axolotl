@@ -1,9 +1,10 @@
 use crate::state::instances::{
+    ContentSourceKind, Instance, InstanceLaunchOverrides, InstanceLink,
+    LoaderComponent,
     adapters::sqlite::{
         config_sync_rows, content_rows, instance_rows, loader_component_rows,
     },
-    config_sync, ContentSourceKind, Instance, InstanceLaunchOverrides,
-    InstanceLink, LoaderComponent,
+    config_sync,
 };
 use crate::state::{
     Hooks, InstanceInstallStage, LauncherFeatureVersion, MemorySettings,
