@@ -64,6 +64,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Opening the Settings page now automatically collapses the sidebar to give the settings panel more room.',
 					'zh-CN': '打开设置页面时自动收起侧边栏，为设置面板留出更多空间。',
 				},
+				{
+					'zh-CN': '自定义背景下实例内容页面悬停折叠项的ui透明度现在被调高。',
+					'en-US':
+						'Custom background now has higher opacity for hoverable folded items on instance content page.',
+				},
 			],
 			fixed: [
 				{
