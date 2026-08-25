@@ -2684,37 +2684,62 @@ impl CachedEntry {
                 )
             }
             CacheValueType::FileHash => {
-                // TODO: Replace state call here
                 let state = crate::State::get().await?;
 
-                async fn hash_file(
-                    state: &crate::State,
-                    key: String,
-                ) -> crate::Result<(CachedEntry, bool)> {
+                // The cache key is `{size}-{instance.path}/{relative}`. Resolve
+                // each instance's game working directory (which honours a
+                // per-instance `game_dir_override`) ONCE per distinct instance
+                // path, instead of once per file, so override-instance content
+                // is hashed from the correct root without issuing N identical
+                // DB lookups per content scan.
+                let keys: Vec<String> =
+                    keys.into_iter().map(|k| k.to_string()).collect();
+
+                let mut base_dirs: HashMap<String, PathBuf> = HashMap::new();
+                for key in &keys {
                     let path =
                         key.split_once('-').map(|x| x.1).unwrap_or_default();
-
-                    // The cache key is `{instance.path}/{relative}`. Resolve the
-                    // instance's game working directory (which honours a
-                    // per-instance override) so override-instance content is
-                    // hashed from the correct root, not the managed profiles dir.
-                    let (base_dir, relative) = match path
+                    if let Some((instance_path, _)) = path
                         .split_once('/')
                         .or_else(|| path.split_once('\\'))
                     {
-                        Some((instance_path, relative)) => {
+                        if !base_dirs.contains_key(instance_path) {
                             let override_dir = crate::state::instances::adapters::sqlite::instance_rows::get_game_dir_override_by_path(
                                     instance_path,
                                     &state.pool,
                                 )
                                 .await?;
-                            (
+                            base_dirs.insert(
+                                instance_path.to_string(),
                                 state.directories.resolve_game_dir(
                                     instance_path,
                                     override_dir.as_deref(),
                                 ),
-                                relative.to_string(),
-                            )
+                            );
+                        }
+                    }
+                }
+
+                async fn hash_file(
+                    state: &crate::State,
+                    base_dirs: &HashMap<String, PathBuf>,
+                    key: String,
+                ) -> crate::Result<(CachedEntry, bool)> {
+                    let path =
+                        key.split_once('-').map(|x| x.1).unwrap_or_default();
+
+                    let (base_dir, relative) = match path
+                        .split_once('/')
+                        .or_else(|| path.split_once('\\'))
+                    {
+                        Some((instance_path, relative)) => {
+                            let base_dir = base_dirs
+                                .get(instance_path)
+                                .cloned()
+                                .unwrap_or_else(|| {
+                                    state.directories.instances_dir()
+                                });
+                            (base_dir, relative.to_string())
                         }
                         None => (
                             state.directories.instances_dir(),
@@ -2759,7 +2784,7 @@ impl CachedEntry {
 
                 use futures::stream::StreamExt;
                 let results: Vec<_> = futures::stream::iter(keys)
-                    .map(|x| hash_file(&state, x.to_string()))
+                    .map(|x| hash_file(&state, &base_dirs, x))
                     .buffer_unordered(64) // hash 64 files at once
                     .collect::<Vec<_>>()
                     .await

@@ -166,15 +166,13 @@ async function clearGameDir() {
 	}
 }
 
-// The launcher stores a single override path, so "not isolated" and "custom"
-// both map to setting a path; "version isolated" maps to clearing it.
-const gameDirMode = ref<'isolated' | 'not-isolated' | 'custom'>('isolated')
-const gameDirModeItems = ['isolated', 'not-isolated', 'custom'] as const
+// The launcher stores a single override path, so the UI exposes two states:
+// version isolated (no path) and custom external game dir (a path set).
+const gameDirMode = ref<'isolated' | 'custom'>('isolated')
+const gameDirModeItems = ['isolated', 'custom'] as const
 
 function gameDirModeLabel(mode: (typeof gameDirModeItems)[number]) {
 	switch (mode) {
-		case 'not-isolated':
-			return messages.gameDirNotIsolated
 		case 'custom':
 			return messages.gameDirCustom
 		default:
@@ -183,21 +181,21 @@ function gameDirModeLabel(mode: (typeof gameDirModeItems)[number]) {
 }
 
 // Keep the radio selection in sync with the stored override: when a path is
-// present the instance is not isolated (or custom), otherwise version isolated.
+// present the instance uses a custom external game directory.
 watch(
 	gameDirOverride,
 	(path) => {
-		gameDirMode.value = path ? 'not-isolated' : 'isolated'
+		gameDirMode.value = path ? 'custom' : 'isolated'
 	},
 	{ immediate: true },
 )
 
-async function setGameDirMode(mode: 'isolated' | 'not-isolated' | 'custom') {
+async function setGameDirMode(mode: 'isolated' | 'custom') {
 	// v-model already updated gameDirMode; persist the override.
 	if (mode === 'isolated') {
 		await clearGameDir()
 	} else if (!gameDirOverride.value) {
-		// Not isolated / custom selected with no folder yet — open the picker.
+		// Custom selected with no folder yet — open the picker.
 		// If the user cancels, revert the radio to the stored state.
 		await pickGameDir()
 		if (!gameDirOverride.value) {

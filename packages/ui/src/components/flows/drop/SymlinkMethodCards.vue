@@ -649,7 +649,7 @@ const instances = ref<SymlinkMethodInstance[]>([])
 const symlinkCapable = ref<'supported' | 'requires_admin' | 'unsupported'>('supported')
 const activeIndex = ref(0)
 const method = ref<'copy' | 'symlink' | null>(null)
-const gameDirMode = ref<'isolated' | 'not-isolated' | 'custom'>('isolated')
+const gameDirMode = ref<'isolated' | 'custom'>('isolated')
 const gameDirOverride = ref<string | null>(null)
 const methodSectionRef = ref<HTMLElement | null>(null)
 const methodShake = ref(false)
@@ -800,12 +800,10 @@ async function pickGameDir() {
 	gameDirMode.value = 'custom'
 }
 
-const gameDirModeItems = ['isolated', 'not-isolated', 'custom'] as const
+const gameDirModeItems = ['isolated', 'custom'] as const
 
 function gameDirModeLabel(mode: (typeof gameDirModeItems)[number]) {
 	switch (mode) {
-		case 'not-isolated':
-			return messages.gameDirNotIsolated
 		case 'custom':
 			return messages.gameDirCustom
 		default:
