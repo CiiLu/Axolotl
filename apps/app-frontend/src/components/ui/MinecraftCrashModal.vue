@@ -603,7 +603,7 @@ onUnmounted(() => {
 	unlistenProcess?.()
 })
 
-defineExpose({ handleLaunchError, handleWarning, isLaunchFailure, showPreview })
+defineExpose({ handleLaunchError, handleWarning, isLaunchFailure, showPreview, openAIAnalysis: _openAIAnalysis })
 </script>
 
 <template>

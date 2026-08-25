@@ -7,6 +7,7 @@ import type {
 } from './types.ts'
 
 const FABRIC_META_URL = 'https://meta.fabricmc.net/v2'
+const QUILT_META_URL = 'https://meta.quiltmc.org/v3'
 const PAPER_API_URL = 'https://fill.papermc.io/v3'
 const PAPER_PROJECT = 'paper'
 
@@ -79,6 +80,23 @@ export function fabricLoaderVersionsForGameUrl(gameVersion: string): string {
 	return `${FABRIC_META_URL}/versions/loader/${gameVersion}`
 }
 
+/** URL of the Quilt server launcher jar for a specific game/loader/installer combination. */
+export function quiltServerJarUrl(
+	gameVersion: string,
+	loaderVersion: string,
+	installerVersion: string,
+): string {
+	return `${QUILT_META_URL}/versions/loader/${gameVersion}/${loaderVersion}/${installerVersion}/server/jar`
+}
+
+export function quiltInstallerVersionsUrl(): string {
+	return `${QUILT_META_URL}/versions/installer`
+}
+
+export function quiltLoaderVersionsForGameUrl(gameVersion: string): string {
+	return `${QUILT_META_URL}/versions/loader/${gameVersion}`
+}
+
 export function paperBuildsUrl(gameVersion: string): string {
 	return `${PAPER_API_URL}/projects/${PAPER_PROJECT}/versions/${gameVersion}/builds`
 }
@@ -103,6 +121,13 @@ export function resolveServerJar(
 			return {
 				url: fabricServerJarUrl(input.gameVersion, input.loaderVersion, input.installerVersion),
 				filename: 'fabric-server.jar',
+			}
+		}
+		case 'quilt': {
+			if (!input.loaderVersion || !input.installerVersion) return null
+			return {
+				url: quiltServerJarUrl(input.gameVersion, input.loaderVersion, input.installerVersion),
+				filename: 'quilt-server.jar',
 			}
 		}
 		case 'paper': {

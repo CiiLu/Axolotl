@@ -757,6 +757,7 @@ fn main() {
                         "servers_read_file",
                         "servers_write_file",
                         "servers_download_file",
+                        "servers_install_modpack",
                         "servers_start",
                         "servers_send_command",
                         "servers_stop",

@@ -2,6 +2,13 @@ import type { ServerTypeId } from '@modrinth/server'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
+export interface ModpackInfoData {
+	project_id: string
+	version_id: string
+	title: string
+	icon_url?: string
+}
+
 export interface ServerManifestData {
 	id: string
 	name: string
@@ -10,6 +17,7 @@ export interface ServerManifestData {
 	loaderVersion?: string
 	jarName?: string
 	iconPath?: string
+	modpack?: ModpackInfoData
 	javaPath?: string
 	memoryMb?: number
 	jvmArgs: string[]
@@ -35,6 +43,18 @@ export type ServerEventPayload =
 export interface PortProcessInfoData {
 	pid: number
 	name?: string | null
+}
+
+export interface InstallModpackOptions {
+	mrpackUrl: string
+	mrpackSha1?: string
+	jarUrl: string
+	jarFilename: string
+	jarSha1?: string
+	modpackProjectId?: string
+	modpackVersionId?: string
+	modpackTitle?: string
+	modpackIconUrl?: string
 }
 
 const command = (name: string) => `plugin:servers|${name}`
@@ -73,6 +93,8 @@ export const servers = {
 			filename,
 			expectedSha1,
 		}),
+	installModpack: (serverId: string, options: InstallModpackOptions) =>
+		invoke<void>(command('servers_install_modpack'), { serverId, ...options }),
 	start: (
 		serverId: string,
 		options?: { javaPath?: string; memoryMb?: number; jvmArgs?: string[] },

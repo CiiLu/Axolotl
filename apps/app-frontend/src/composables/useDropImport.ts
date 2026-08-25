@@ -559,6 +559,8 @@ export function useDropImport(options: DropImportOptions) {
 		return result
 	}
 
+	// ── Compatible mode ──────────────────────────────────────────────────
+
 	async function handleCompatibleModeConfirm(choice: 'compatible' | 'old-way' | 'cancel') {
 		if (choice === 'cancel') {
 			currentImportContext.value = null

@@ -5798,6 +5798,18 @@
   "app.project.install-context.install-content-to-instance": {
     "message": "Install content to instance"
   },
+  "app.project.modpack-server.created-description": {
+    "message": "{name} is ready. Configure and start it in Multiplayer."
+  },
+  "app.project.modpack-server.created-title": {
+    "message": "Server created"
+  },
+  "app.project.modpack-server.open": {
+    "message": "Open server"
+  },
+  "app.project.modpack-server.start": {
+    "message": "Start server"
+  },
   "app.project.mcarchive.install": {
     "message": "Install"
   },

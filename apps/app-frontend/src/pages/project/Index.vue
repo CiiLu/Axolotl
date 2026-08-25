@@ -210,6 +210,23 @@
 								{{ installButtonLabel }}
 							</button>
 						</ButtonStyled>
+						<Transition name="start-server">
+							<ButtonStyled
+								v-if="serverCapableModpack"
+								key="modpack-start-server"
+								size="large"
+								type="outlined"
+							>
+								<button
+									v-tooltip="formatMessage(messages.startServer)"
+									type="button"
+									@click="openModpackServerFlow"
+								>
+									<ServerIcon />
+									{{ formatMessage(messages.startServer) }}
+								</button>
+							</ButtonStyled>
+						</Transition>
 						<ButtonStyled size="large" circular type="transparent">
 							<OverflowMenu
 								:tooltip="`More options`"
@@ -366,6 +383,7 @@
 			@browse-modpacks="() => {}"
 			@create="serverInstallContent.handleServerModpackFlowCreate"
 		/>
+		<CreateModpackServerModal ref="modpackServerModal" @created="handleModpackServerCreated" />
 	</div>
 </template>
 
@@ -387,6 +405,7 @@ import {
 	PlusIcon,
 	ReportIcon,
 	SearchIcon,
+	ServerIcon,
 	SpinnerIcon,
 	StopCircleIcon,
 } from '@modrinth/assets'
@@ -402,6 +421,7 @@ import {
 	getLatestMatchingInstallVersion,
 	getTargetInstallPreferences,
 	injectNotificationManager,
+	injectPopupNotificationManager,
 	NavTabs,
 	OverflowMenu,
 	ProjectBackgroundGradient,
@@ -426,6 +446,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { SwapIcon } from '@/assets/icons/index.js'
 import BrowseInstanceSelector from '@/components/browse/BrowseInstanceSelector.vue'
+import CreateModpackServerModal from '@/components/multiplayer/servers/modpack/CreateModpackServerModal.vue'
 import ContextMenu from '@/components/ui/ContextMenu.vue'
 import InstanceIndicator from '@/components/ui/InstanceIndicator.vue'
 import {
@@ -477,6 +498,7 @@ import UpgradeProjectReturnBar from './UpgradeProjectReturnBar.vue'
 dayjs.extend(relativeTime)
 
 const { addNotification, handleError } = injectNotificationManager()
+const popupNotificationManager = injectPopupNotificationManager()
 const { install: installVersion } = injectContentInstall()
 const contentSelection = injectContentSelection()
 const route = useRoute()
@@ -565,7 +587,7 @@ const messages = defineMessages({
 	favoritesLoading: {
 		id: 'app.content-favorites.loading',
 		defaultMessage: 'Updating favorites…',
-	},
+},
 	viewDependents: {
 		id: 'project.actions.view-dependents',
 		defaultMessage: 'View dependents',
@@ -577,6 +599,22 @@ const messages = defineMessages({
 	viewModpacks: {
 		id: 'project.actions.view-modpacks',
 		defaultMessage: 'View modpacks',
+	},
+	startServer: {
+		id: 'app.project.modpack-server.start',
+		defaultMessage: 'Start server',
+	},
+	serverCreated: {
+		id: 'app.project.modpack-server.created-title',
+		defaultMessage: 'Server created',
+	},
+	serverCreatedDescription: {
+		id: 'app.project.modpack-server.created-description',
+		defaultMessage: '{name} is ready. Configure and start it in Multiplayer.',
+	},
+	openServer: {
+		id: 'app.project.modpack-server.open',
+		defaultMessage: 'Open server',
 	},
 })
 
@@ -600,6 +638,39 @@ const favoritePending = computed(() =>
 const favoriteSaved = computed(() =>
 	data.value ? contentFavorites.isFavorite('modrinth', data.value.id) : false,
 )
+
+const serverCapableModpack = computed(
+	() => data.value?.project_type === 'modpack' && data.value.server_side !== 'unsupported',
+)
+const modpackServerModal = ref()
+
+async function openModpackServerFlow() {
+	if (!data.value) return
+	let targetVersion = versions.value[0]
+	if (!targetVersion) {
+		const versionId = data.value.versions[0]
+		targetVersion = versionId ? await get_version(versionId, 'bypass').catch(() => null) : null
+	}
+	if (!targetVersion) return
+	modpackServerModal.value?.show(data.value, targetVersion)
+}
+
+function handleModpackServerCreated(serverId) {
+	popupNotificationManager.addPopupNotification({
+		title: formatMessage(messages.serverCreated),
+		text: formatMessage(messages.serverCreatedDescription, { name: data.value?.title ?? '' }),
+		type: 'success',
+		buttons: [
+			{
+				label: formatMessage(messages.openServer),
+				color: 'brand',
+				action: () => {
+					void router.push(`/multiplayer/servers/${encodeURIComponent(serverId)}`)
+				},
+			},
+		],
+	})
+}
 
 async function toggleFavorite() {
 	if (!data.value || !favoriteSupported.value || favoritePending.value) return
@@ -1339,6 +1410,35 @@ const handleOptionsClick = (args) => {
 	width: 100%;
 	padding: 1rem;
 	margin-left: calc(300px + 1rem);
+}
+
+.button-group {
+	display: flex;
+	flex-wrap: wrap;
+	flex-direction: row;
+	gap: 0.5rem;
+}
+
+.start-server-enter-active {
+	transition:
+		opacity 0.28s ease,
+		transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.start-server-enter-from {
+	opacity: 0;
+	transform: translateY(6px) scale(0.96);
+}
+
+.start-server-leave-active {
+	transition:
+		opacity 0.16s ease,
+		transform 0.16s ease;
+}
+
+.start-server-leave-to {
+	opacity: 0;
+	transform: translateY(4px) scale(0.97);
 }
 
 .stats {
