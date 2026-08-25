@@ -330,9 +330,7 @@ function showBatch(
 	modal.value?.show()
 	return new Promise<ContentInstallBatchPreviewResult | null>((resolve) => {
 		resolveShow = (result) =>
-			resolve(
-				result && !Array.isArray(result) && typeof result !== 'boolean' ? result : null,
-			)
+			resolve(result && !Array.isArray(result) && typeof result !== 'boolean' ? result : null)
 	})
 }
 

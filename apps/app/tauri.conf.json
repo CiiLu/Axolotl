@@ -50,18 +50,12 @@
 		"shortDescription": "",
 		"linux": {
 			"deb": {
-				"depends": [
-					"libwebkit2gtk-4.1-0",
-					"libgtk-3-0",
-					"libayatana-appindicator3-1"
-				]
+				"depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0", "libayatana-appindicator3-1"]
 			}
 		},
 		"fileAssociations": [
 			{
-				"ext": [
-					"mrpack"
-				],
+				"ext": ["mrpack"],
 				"mimeType": "application/x-modrinth-modpack+zip"
 			}
 		]
@@ -73,9 +67,7 @@
 	"plugins": {
 		"deep-link": {
 			"desktop": {
-				"schemes": [
-					"axolotl"
-				]
+				"schemes": ["axolotl"]
 			},
 			"mobile": []
 		}
@@ -114,18 +106,11 @@
 				],
 				"enable": true
 			},
-			"capabilities": [
-				"core",
-				"plugins"
-			],
+			"capabilities": ["core", "plugins"],
 			"csp": {
 				"default-src": "'self' customprotocol: asset:",
-				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://api.mclo.gs https://api.logshare.cn https://logshare.cn http://textures.minecraft.net https://textures.minecraft.net https://fill.papermc.io https://api.papermc.io https://piston-meta.mojang.com https://launchermeta.mojang.com https://meta.fabricmc.net https://api.purpurmc.org https://mod.mcimirror.top https://mod.tianpao.top 'self' data: blob:",
-				"font-src": [
-					"'self'",
-					"data:",
-					"https://cdn-raw.modrinth.com/fonts/"
-				],
+				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://fill.papermc.io https://api.papermc.io https://piston-meta.mojang.com https://launchermeta.mojang.com https://meta.fabricmc.net https://api.purpurmc.org https://mod.mcimirror.top https://mod.tianpao.top 'self' data: blob:",
+				"font-src": ["'self'", "data:", "https://cdn-raw.modrinth.com/fonts/"],
 				"img-src": "https: 'unsafe-inline' 'self' asset: http://asset.localhost http://textures.minecraft.net blob: data:",
 				"style-src": "'unsafe-inline' 'self'",
 				"script-src": "'self' 'unsafe-eval' 'wasm-unsafe-eval'",

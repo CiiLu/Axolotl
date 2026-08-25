@@ -28,6 +28,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import providerDescriptionsEn from '@/data/lobehub-provider-descriptions/en-US.json'
 import providerDescriptionsZh from '@/data/lobehub-provider-descriptions/zh-CN.json'
+import { sponsoredProviderWebsites } from '@/data/sponsoredProviders'
 import {
 	type AIProviderConfig,
 	type AIProviderDefinition,
@@ -98,6 +99,14 @@ const messages = defineMessages({
 	disabledProviders: {
 		id: 'app.ai-settings.disabled-providers',
 		defaultMessage: 'Disabled providers',
+	},
+	sponsoredProviders: {
+		id: 'app.ai-settings.sponsored-providers',
+		defaultMessage: 'Sponsored providers',
+	},
+	visitWebsite: {
+		id: 'app.ai-settings.visit-website',
+		defaultMessage: 'Visit website',
 	},
 	configuredModels: {
 		id: 'app.ai-settings.configured-models',
@@ -246,16 +255,26 @@ const filteredProviderItems = computed(() => {
 })
 
 const enabledProviderItems = computed(() =>
-	filteredProviderItems.value.filter(({ config }) => config.enabled),
+	filteredProviderItems.value.filter(
+		({ config, definition }) => config.enabled && !definition.sponsored,
+	),
+)
+const sponsoredProviderItems = computed(() =>
+	filteredProviderItems.value.filter(({ definition }) => definition.sponsored),
 )
 const disabledProviderItems = computed(() =>
-	filteredProviderItems.value.filter(({ config }) => !config.enabled),
+	filteredProviderItems.value.filter(
+		({ config, definition }) => !config.enabled && !definition.sponsored,
+	),
 )
 const allEnabledProviderItems = computed(() =>
-	providerItems.value.filter(({ config }) => config.enabled),
+	providerItems.value.filter(({ config, definition }) => config.enabled && !definition.sponsored),
+)
+const allSponsoredProviderItems = computed(() =>
+	providerItems.value.filter(({ definition }) => definition.sponsored),
 )
 const allDisabledProviderItems = computed(() =>
-	providerItems.value.filter(({ config }) => !config.enabled),
+	providerItems.value.filter(({ config, definition }) => !config.enabled && !definition.sponsored),
 )
 const providerDescriptions = computed<Record<string, string>>(() =>
 	locale.value.toLocaleLowerCase().startsWith('zh')
@@ -345,6 +364,17 @@ async function reloadState() {
 	await getAIState()
 	selectedTestModel.value =
 		selectedConfig.value?.models.find((model) => model.enabled)?.id ?? selectedTestModel.value
+}
+
+async function openSponsoredWebsite() {
+	if (!selectedDefinition.value?.sponsored) return
+	const url = sponsoredProviderWebsites[selectedDefinition.value.id]
+	if (!url) return
+	try {
+		await openUrl(url)
+	} catch (error) {
+		handleError(error)
+	}
 }
 
 async function setMasterEnabled(enabled: boolean) {
@@ -742,6 +772,27 @@ onMounted(async () => {
 					</button>
 				</div>
 
+				<div v-if="sponsoredProviderItems.length" class="ai-provider-group">
+					<p class="ai-provider-group-title">
+						<span>{{ formatMessage(messages.sponsoredProviders) }}</span>
+						<span>{{ sponsoredProviderItems.length }}</span>
+					</p>
+					<button
+						v-for="{ definition: provider, config } in sponsoredProviderItems"
+						:key="provider.id"
+						type="button"
+						class="ai-provider-item"
+						:class="{ selected: selectedId === provider.id }"
+						@click="selectProvider(provider.id)"
+					>
+						<AIIcon kind="provider-avatar" :value="provider.id" :size="22" />
+						<span class="min-w-0 flex-1 truncate text-left text-sm font-semibold">
+							{{ provider.name }}
+						</span>
+						<span v-if="config.enabled" class="size-2 shrink-0 rounded-full bg-green" />
+					</button>
+				</div>
+
 				<div v-if="disabledProviderItems.length" class="ai-provider-group">
 					<p class="ai-provider-group-title">
 						<span>{{ formatMessage(messages.disabledProviders) }}</span>
@@ -798,6 +849,54 @@ onMounted(async () => {
 						>
 							<span class="ai-provider-card-title">
 								<template v-if="definition.id === 'chatgpt'">
+									<AIIcon kind="provider-avatar" :value="definition.id" :size="24" />
+									<strong>{{ definition.name }}</strong>
+								</template>
+								<AIIcon v-else kind="provider-combine" :value="definition.id" :size="24" />
+							</span>
+							<span class="ai-provider-card-description">
+								{{ providerDescription(definition.id) }}
+							</span>
+						</button>
+						<div class="ai-provider-card-footer">
+							<span>
+								<span class="capitalize">{{ definition.protocol }}</span>
+								·
+								{{ formatMessage(messages.configuredModels, { count: config.models.length }) }}
+							</span>
+							<Toggle
+								:id="`ai-overview-provider-${definition.id}`"
+								:model-value="config.enabled"
+								:disabled="busy"
+								small
+								@update:model-value="setProviderEnabledById(definition.id, $event)"
+							/>
+						</div>
+					</article>
+				</div>
+			</div>
+
+			<div v-if="allSponsoredProviderItems.length" class="ai-overview-group">
+				<div class="ai-overview-heading">
+					<h2>{{ formatMessage(messages.sponsoredProviders) }}</h2>
+					<span>{{ allSponsoredProviderItems.length }}</span>
+				</div>
+				<div class="ai-provider-grid">
+					<article
+						v-for="{ definition, config } in allSponsoredProviderItems"
+						:key="definition.id"
+						class="ai-provider-card"
+					>
+						<button
+							type="button"
+							class="ai-provider-card-main"
+							@click="selectProvider(definition.id)"
+						>
+							<span class="ai-provider-card-title">
+								<template v-if="definition.sponsored">
+									<AIIcon kind="provider-wordmark" :value="definition.id" :size="28" />
+								</template>
+								<template v-else-if="definition.id === 'chatgpt'">
 									<AIIcon kind="provider-avatar" :value="definition.id" :size="24" />
 									<strong>{{ definition.name }}</strong>
 								</template>
@@ -885,6 +984,9 @@ onMounted(async () => {
 					</div>
 				</div>
 				<div class="flex shrink-0 items-center gap-2 text-sm font-semibold text-secondary">
+					<Button v-if="selectedDefinition.sponsored" type="quiet" @click="openSponsoredWebsite">
+						<ExternalIcon />{{ formatMessage(messages.visitWebsite) }}
+					</Button>
 					{{ formatMessage(selectedConfig.enabled ? messages.enabled : messages.disabled) }}
 					<Toggle
 						:id="`ai-provider-${selectedDefinition.id}`"
@@ -1424,7 +1526,8 @@ onMounted(async () => {
 	min-width: 0;
 	flex-direction: column;
 	overflow: hidden;
-	border: 1px solid var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
+	border: 1px solid
+		var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
 	border-radius: var(--radius-md);
 	background: var(--surface-2);
 	transition:
@@ -1481,6 +1584,7 @@ onMounted(async () => {
 	font-size: 0.8125rem;
 	line-height: 1.45;
 	text-align: left;
+	white-space: pre-line;
 }
 
 .ai-provider-card-footer {
@@ -1552,6 +1656,7 @@ onMounted(async () => {
 }
 
 .ai-provider-actions {
+	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
 	align-items: end;
@@ -1595,7 +1700,8 @@ onMounted(async () => {
 	align-items: center;
 	gap: 0.5rem;
 	padding: 0.75rem;
-	border: 1px solid var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
+	border: 1px solid
+		var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
 	border-radius: var(--radius-sm);
 	background: var(--surface-2);
 }

@@ -41,7 +41,9 @@ const showStatus = computed(() => isServerStatusVisible(props.server.status))
 		@keydown.enter="emit('open')"
 		@keydown.space.prevent="emit('open')"
 	>
-		<div class="relative flex aspect-square w-full shrink-0 items-center justify-center overflow-clip rounded-2xl bg-surface-2">
+		<div
+			class="relative flex aspect-square w-full shrink-0 items-center justify-center overflow-clip rounded-2xl bg-surface-2"
+		>
 			<ServerIcon
 				:icon-path="server.iconPath"
 				:server-type="server.serverType"

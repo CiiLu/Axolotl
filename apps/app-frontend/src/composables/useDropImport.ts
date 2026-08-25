@@ -577,7 +577,7 @@ export function useDropImport(options: DropImportOptions) {
 
 	// ── Compatible mode ──────────────────────────────────────────────────
 
-	function checkForCompatibleMode(
+	function _checkForCompatibleMode(
 		basePath: string,
 		results: ScanResult[],
 	): CompatibleModeCandidate | null {
@@ -611,7 +611,7 @@ export function useDropImport(options: DropImportOptions) {
 		return null
 	}
 
-	function showCompatibleModeModal(
+	function _showCompatibleModeModal(
 		candidate: CompatibleModeCandidate,
 		basePath: string,
 		results: ScanResult[],
@@ -1392,7 +1392,12 @@ export function useDropImport(options: DropImportOptions) {
 		selections: Array<{
 			launcherType: string
 			launcherName: string
-			instances: Array<{ name: string; path: string; compatibleMode?: boolean; versionPath?: string }>
+			instances: Array<{
+				name: string
+				path: string
+				compatibleMode?: boolean
+				versionPath?: string
+			}>
 		}>,
 	) {
 		const allSelected: SelectedInstance[] = []

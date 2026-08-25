@@ -4502,6 +4502,7 @@
   "drop.confirm.as-data-pack-desc": {
     "defaultMessage": "將資料包安裝到存檔"
   },
-  "app.translation-settings.provider.deepl": "DeepL 翻譯",
-  "app.settings.updates.miawa": "檸澤映象"
+  "content.page-layout.view-dependencies": {
+    "defaultMessage": "檢視依賴關係"
+  }
 }
