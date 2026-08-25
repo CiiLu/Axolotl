@@ -22,7 +22,7 @@
 			}"
 			@click="toggleDropdown"
 		>
-			<div>
+			<div class="min-w-0 overflow-hidden">
 				<slot :selected="selectedOption">
 					<span>
 						{{ selectedOption }}
@@ -304,11 +304,6 @@ const isChildOfDropdown = (element) => {
 			0 0 0 0 transparent;
 
 		transition: 0.05s;
-
-		> div {
-			min-width: 0;
-			overflow: hidden;
-		}
 
 		span {
 			display: block;

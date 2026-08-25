@@ -741,7 +741,7 @@ onMounted(async () => {
 				<button
 					v-if="!search.trim()"
 					type="button"
-					class="ai-provider-item ai-provider-all"
+					class="ai-provider-item mb-1"
 					:class="{ selected: selectedId === 'all' }"
 					@click="selectProvider('all')"
 				>
@@ -751,8 +751,8 @@ onMounted(async () => {
 					</span>
 				</button>
 
-				<div v-if="enabledProviderItems.length" class="ai-provider-group">
-					<p class="ai-provider-group-title">
+				<div v-if="enabledProviderItems.length" class="flex flex-none flex-col gap-1">
+					<p class="m-0 flex items-center justify-between px-2 pb-1 pt-2 text-xs font-semibold text-secondary">
 						<span>{{ formatMessage(messages.enabledProviders) }}</span>
 						<span>{{ enabledProviderItems.length }}</span>
 					</p>
@@ -772,8 +772,8 @@ onMounted(async () => {
 					</button>
 				</div>
 
-				<div v-if="sponsoredProviderItems.length" class="ai-provider-group">
-					<p class="ai-provider-group-title">
+				<div v-if="sponsoredProviderItems.length" class="flex flex-none flex-col gap-1">
+					<p class="m-0 flex items-center justify-between px-2 pb-1 pt-2 text-xs font-semibold text-secondary">
 						<span>{{ formatMessage(messages.sponsoredProviders) }}</span>
 						<span>{{ sponsoredProviderItems.length }}</span>
 					</p>
@@ -793,8 +793,8 @@ onMounted(async () => {
 					</button>
 				</div>
 
-				<div v-if="disabledProviderItems.length" class="ai-provider-group">
-					<p class="ai-provider-group-title">
+				<div v-if="disabledProviderItems.length" class="flex flex-none flex-col gap-1">
+					<p class="m-0 flex items-center justify-between px-2 pb-1 pt-2 text-xs font-semibold text-secondary">
 						<span>{{ formatMessage(messages.disabledProviders) }}</span>
 						<span>{{ disabledProviderItems.length }}</span>
 					</p>
@@ -836,7 +836,7 @@ onMounted(async () => {
 					<h2>{{ formatMessage(messages.enabledProviders) }}</h2>
 					<span>{{ allEnabledProviderItems.length }}</span>
 				</div>
-				<div class="ai-provider-grid">
+				<div class="ai-provider-grid grid grid-cols-2 gap-3">
 					<article
 						v-for="{ definition, config } in allEnabledProviderItems"
 						:key="definition.id"
@@ -858,7 +858,7 @@ onMounted(async () => {
 								{{ providerDescription(definition.id) }}
 							</span>
 						</button>
-						<div class="ai-provider-card-footer">
+						<div class="mt-auto flex min-h-11 items-center justify-between gap-3 bg-transparent px-4 text-xs font-semibold text-secondary">
 							<span>
 								<span class="capitalize">{{ definition.protocol }}</span>
 								·
@@ -881,7 +881,7 @@ onMounted(async () => {
 					<h2>{{ formatMessage(messages.sponsoredProviders) }}</h2>
 					<span>{{ allSponsoredProviderItems.length }}</span>
 				</div>
-				<div class="ai-provider-grid">
+				<div class="ai-provider-grid grid grid-cols-2 gap-3">
 					<article
 						v-for="{ definition, config } in allSponsoredProviderItems"
 						:key="definition.id"
@@ -906,7 +906,7 @@ onMounted(async () => {
 								{{ providerDescription(definition.id) }}
 							</span>
 						</button>
-						<div class="ai-provider-card-footer">
+						<div class="mt-auto flex min-h-11 items-center justify-between gap-3 bg-transparent px-4 text-xs font-semibold text-secondary">
 							<span>
 								<span class="capitalize">{{ definition.protocol }}</span>
 								·
@@ -929,7 +929,7 @@ onMounted(async () => {
 					<h2>{{ formatMessage(messages.disabledProviders) }}</h2>
 					<span>{{ allDisabledProviderItems.length }}</span>
 				</div>
-				<div class="ai-provider-grid">
+				<div class="ai-provider-grid grid grid-cols-2 gap-3">
 					<article
 						v-for="{ definition, config } in allDisabledProviderItems"
 						:key="definition.id"
@@ -951,7 +951,7 @@ onMounted(async () => {
 								{{ providerDescription(definition.id) }}
 							</span>
 						</button>
-						<div class="ai-provider-card-footer">
+						<div class="mt-auto flex min-h-11 items-center justify-between gap-3 bg-transparent px-4 text-xs font-semibold text-secondary">
 							<span>
 								<span class="capitalize">{{ definition.protocol }}</span>
 								·
@@ -1003,7 +1003,7 @@ onMounted(async () => {
 						!['bedrock', 'vertexai'].includes(selectedDefinition.id) ||
 						selectedDefinition.required_settings.length
 					"
-					class="ai-provider-connection-fields"
+					class="ai-provider-connection-fields grid grid-cols-1 gap-4 lg:grid-cols-2"
 				>
 					<label
 						v-if="!['bedrock', 'vertexai'].includes(selectedDefinition.id)"
@@ -1407,24 +1407,6 @@ onMounted(async () => {
 	touch-action: pan-y;
 }
 
-.ai-provider-group {
-	display: flex;
-	flex: none;
-	flex-direction: column;
-	gap: var(--gap-xs);
-}
-
-.ai-provider-group-title {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	margin: 0;
-	padding: var(--gap-sm) var(--gap-sm) var(--gap-xs);
-	color: var(--color-secondary);
-	font-size: 0.75rem;
-	font-weight: 600;
-}
-
 .ai-provider-item {
 	display: flex;
 	width: 100%;
@@ -1452,10 +1434,6 @@ onMounted(async () => {
 .ai-provider-item.selected {
 	background: var(--color-button-bg-selected);
 	color: var(--color-button-text-selected);
-}
-
-.ai-provider-all {
-	margin-bottom: var(--gap-xs);
 }
 
 .ai-master-switch {
@@ -1513,12 +1491,6 @@ onMounted(async () => {
 	color: var(--color-secondary);
 	font-size: 0.75rem;
 	font-weight: 700;
-}
-
-.ai-provider-grid {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: var(--gap-md);
 }
 
 .ai-provider-card {
@@ -1587,20 +1559,6 @@ onMounted(async () => {
 	white-space: pre-line;
 }
 
-.ai-provider-card-footer {
-	display: flex;
-	min-height: 2.75rem;
-	align-items: center;
-	justify-content: space-between;
-	gap: 0.75rem;
-	margin-top: auto;
-	padding: 0 1rem;
-	background: transparent;
-	color: var(--color-secondary);
-	font-size: 0.75rem;
-	font-weight: 600;
-}
-
 .ai-provider-detail {
 	display: flex;
 	height: 100%;
@@ -1633,17 +1591,7 @@ onMounted(async () => {
 	scrollbar-gutter: stable;
 }
 
-.ai-provider-connection-fields {
-	display: grid;
-	grid-template-columns: repeat(1, minmax(0, 1fr));
-	gap: 1rem;
-}
-
 @media (min-width: 1024px) {
-	.ai-provider-connection-fields {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
-
 	.ai-provider-connection-fields > :first-child:last-child {
 		grid-column: span 2 / span 2;
 	}

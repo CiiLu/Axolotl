@@ -44,8 +44,55 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US':
+						'Dependencies in the install confirmation dialog can now be expanded inline to view their description and open the project page.',
+					'zh-CN': '确认安装弹窗中的依赖项支持展开查看简介，并可打开项目页面。',
+				},
+				{
+					'en-US':
 						'Added a dependency relationship graph to the Content tab for exploring installed content and its dependencies.',
 					'zh-CN': '内容页新增依赖关系图，可查看已安装内容及其依赖关系。',
+				},
+				{
+					'en-US':
+						'Added support for custom instance icons — when an icon file (icon.png/jpg/jpeg/webp) exists in the instance folder, it is now applied as the instance icon.',
+					'zh-CN': '当实例文件夹下有icon.png/jpg/jpeg/webp时 优先应用此图标。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'Opening the Settings page now automatically collapses the sidebar to give the settings panel more room.',
+					'zh-CN': '打开设置页面时自动收起侧边栏，为设置面板留出更多空间。',
+				},
+				{
+					'zh-CN': '自定义背景下实例内容页面悬停折叠项的ui透明度现在被调高。',
+					'en-US':
+						'Custom background now has higher opacity for hoverable folded items on instance content page.',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed the fullscreen toggle in the Schematic Workshop (button and F11) not taking effect — entering fullscreen now expands the 3D view to fill the screen, hides the surrounding interface, and leaves the exit-fullscreen button in place.',
+					'zh-CN':
+						'修复投影工坊全屏不生效的问题（按钮和 F11 均无效）：进入全屏后 3D 视图铺满屏幕并隐藏周边界面，原位置保留退出全屏按钮。',
+				},
+				{
+					'en-US':
+						'Fixed the post-update announcement not showing on Windows after the launcher updates — it now appears after the updated launcher relaunches.',
+					'zh-CN':
+						'修复 Windows 端更新启动器后不弹出更新公告的问题，更新并重启后现在会正常显示更新公告。',
+				},
+				{
+					'en-US':
+						'Fixed the issue of when clicking curseforge modpack title to enter modpack information page, the launcher will show Error loading project. (issue #405)',
+					'zh-CN':
+						'修复了点击 CurseForge 整合包标题进入整合包信息页时，启动器会显示Error loading project的问题。(issue #405)',
+				},
+				{
+					'zh-CN': '实例名含非 ASCII 字符（™）导致启动崩溃InvalidPathException(issue #397)',
+					'en-US':
+						'Fixed the issue of instance name containing non-ASCII characters (™) causing the launcher to crash with InvalidPathException(issue #397)',
 				},
 			],
 		},

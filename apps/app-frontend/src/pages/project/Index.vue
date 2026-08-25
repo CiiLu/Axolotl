@@ -1314,12 +1314,6 @@ const handleOptionsClick = (args) => {
 </script>
 
 <style scoped lang="scss">
-.root-container {
-	display: flex;
-	flex-direction: row;
-	min-height: 100%;
-}
-
 .project-sidebar {
 	position: fixed;
 	width: calc(300px + 1.5rem);
@@ -1337,12 +1331,6 @@ const handleOptionsClick = (args) => {
 	}
 }
 
-.sidebar-card {
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-}
-
 .content-container {
 	display: flex;
 	flex-direction: column;
@@ -1351,19 +1339,7 @@ const handleOptionsClick = (args) => {
 	margin-left: calc(300px + 1rem);
 }
 
-.button-group {
-	display: flex;
-	flex-wrap: wrap;
-	flex-direction: row;
-	gap: 0.5rem;
-}
-
 .stats {
-	display: flex;
-	flex-direction: column;
-	flex-wrap: wrap;
-	gap: var(--gap-md);
-
 	.stat {
 		display: flex;
 		flex-direction: row;
@@ -1385,19 +1361,9 @@ const handleOptionsClick = (args) => {
 			min-width: var(--stat-strong-size);
 		}
 	}
-
-	.date {
-		margin-top: auto;
-	}
 }
 
 .tabs {
-	display: flex;
-	flex-direction: row;
-	gap: 1rem;
-	margin-bottom: var(--gap-md);
-	justify-content: space-between;
-
 	.tab {
 		display: flex;
 		flex-direction: row;

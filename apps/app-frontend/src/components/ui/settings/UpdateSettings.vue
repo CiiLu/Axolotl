@@ -142,7 +142,7 @@ async function checkForUpdates() {
 </script>
 
 <template>
-	<div class="settings-page">
+	<div class="flex flex-col gap-6">
 		<SettingsSection>
 			<SettingsRow>
 				<template #label>
@@ -163,7 +163,7 @@ async function checkForUpdates() {
 		</SettingsSection>
 
 		<SettingsSection>
-			<div class="settings-action-row">
+			<div class="flex flex-col items-start gap-3 p-4">
 				<div class="flex flex-wrap gap-2">
 					<Button type="colored" color="brand" :disabled="checking" @click="checkForUpdates">
 						<RefreshCwIcon :class="{ 'animate-spin': checking }" />
@@ -192,20 +192,6 @@ async function checkForUpdates() {
 </template>
 
 <style scoped>
-.settings-page {
-	display: flex;
-	flex-direction: column;
-	gap: var(--gap-xl);
-}
-
-.settings-action-row {
-	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-	gap: var(--gap-md);
-	padding: var(--gap-lg);
-}
-
 .settings-note {
 	margin: 0;
 	padding: var(--gap-md) var(--gap-lg);
