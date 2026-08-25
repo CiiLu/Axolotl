@@ -434,7 +434,6 @@ fn edit_to_core(edit_instance: EditInstance) -> Result<CoreEditInstance> {
 const LOCAL_INSTANCE_ICON_MAX_DIMENSION: u32 = 256;
 
 async fn instance_from_metadata(metadata: InstanceMetadata) -> Result<Instance> {
-    tracing::debug!("instance_from_metadata: start id={}", metadata.instance.id);
     let mut instance = Instance::from(metadata);
     if instance.icon_path.is_none() {
         if let Ok(Some(local_icon)) =
@@ -443,7 +442,6 @@ async fn instance_from_metadata(metadata: InstanceMetadata) -> Result<Instance> 
             instance.icon_path = Some(local_icon);
         }
     }
-    tracing::debug!("instance_from_metadata: done id={}", instance.id);
     Ok(instance)
 }
 
@@ -455,15 +453,10 @@ pub async fn instance_remove(instance_id: &str) -> Result<()> {
 
 #[tauri::command]
 pub async fn instance_get(instance_id: &str) -> Result<Option<Instance>> {
-    tracing::debug!("instance_get: start id={}", instance_id);
     let Some(metadata) = theseus::instance::get(instance_id).await? else {
-        tracing::debug!("instance_get: instance not found id={}", instance_id);
         return Ok(None);
     };
-    tracing::debug!("instance_get: metadata loaded id={}", instance_id);
-    let instance = instance_from_metadata(metadata).await?;
-    tracing::debug!("instance_get: done id={}", instance_id);
-    Ok(Some(instance))
+    Ok(Some(instance_from_metadata(metadata).await?))
 }
 
 #[tauri::command]
