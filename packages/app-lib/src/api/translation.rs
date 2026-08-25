@@ -450,6 +450,27 @@ fn decode_basic_entities(value: &str) -> String {
         .replace("&amp;", "&")
 }
 
+/// Debug-log preview that never panics on multi-byte UTF-8 text (e.g. Chinese
+/// translations returned by DeepL): a byte-offset slice like `&text[..50]`
+/// panics when byte 50 lands inside a multi-byte character.
+fn truncate_preview(value: &str, max_chars: usize) -> String {
+    value.chars().take(max_chars).collect()
+}
+
+/// Byte-bounded log prefix for sensitive credentials. `max_bytes` is a strict
+/// upper bound: for ASCII credentials (all real DeepL keys) the prefix is
+/// exactly `max_bytes` bytes, matching the historical behaviour; for multi-byte
+/// credentials it can only be shorter (never longer) because the budget is
+/// walked back to a char boundary instead of splitting a character. This is
+/// strictly more conservative than the byte slice it replaces and never panics.
+fn credential_prefix(value: &str, max_bytes: usize) -> String {
+    let mut end = max_bytes.min(value.len());
+    while !value.is_char_boundary(end) {
+        end -= 1;
+    }
+    value[..end].to_string()
+}
+
 fn provider_language(locale: &str, provider: TranslationProvider) -> String {
     let normalized = locale.replace('_', "-");
     match provider {
@@ -573,27 +594,6 @@ fn summarize_error_body(body: &str) -> String {
     } else {
         trimmed.to_string()
     }
-}
-
-/// Log preview truncated by character count, never by byte offset. Byte slicing
-/// like `&text[..50]` panics when byte 50 lands inside a multi-byte UTF-8
-/// character, which happens routinely with CJK translations.
-fn truncate_preview(value: &str, max_chars: usize) -> String {
-    value.chars().take(max_chars).collect()
-}
-
-/// Byte-bounded log prefix for sensitive credentials. `max_bytes` is a strict
-/// upper bound: for ASCII credentials (all real DeepL keys) the prefix is
-/// exactly `max_bytes` bytes, matching the historical behaviour; for multi-byte
-/// credentials it can only be shorter (never longer) because the budget is
-/// walked back to a char boundary instead of splitting a character. This is
-/// strictly more conservative than the byte slice it replaces and never panics.
-fn credential_prefix(value: &str, max_bytes: usize) -> String {
-    let mut end = max_bytes.min(value.len());
-    while !value.is_char_boundary(end) {
-        end -= 1;
-    }
-    value[..end].to_string()
 }
 
 async fn deepl_translate(
@@ -1338,6 +1338,49 @@ mod tests {
     }
 
     #[test]
+    fn truncate_preview_never_panics_on_multibyte_text() {
+        // U+6E2C is 3 bytes in UTF-8, so byte 50 sits inside a character.
+        let text = "\u{6e2c}".repeat(60);
+        assert!(text.len() > 50);
+        assert!(!text.is_char_boundary(50));
+        let preview = truncate_preview(&text, 50);
+        assert_eq!(preview.chars().count(), 50);
+        assert_eq!(preview, text.chars().take(50).collect::<String>());
+        assert_eq!(truncate_preview("hello", 50), "hello");
+    }
+
+    #[test]
+    fn credential_prefix_stays_within_byte_budget() {
+        // ASCII keys keep the original byte-based behaviour.
+        assert_eq!(credential_prefix("abc12345", 4), "abc1");
+        // Byte budget never grows: a multi-byte key logs at most 4 bytes and
+        // always ends at a char boundary (may be shorter, never panics).
+        let key = "\u{6e2c}\u{6e2c}\u{6e2c}\u{6e2c}\u{6e2c}";
+        let prefix = credential_prefix(key, 4);
+        assert!(prefix.len() <= 4);
+        assert!(key.is_char_boundary(prefix.len()));
+        assert_eq!(credential_prefix("ab", 4), "ab");
+    }
+
+    #[test]
+    fn credential_prefix_never_exceeds_byte_budget() {
+        // Even with an adversarial byte budget, the prefix never leaks more
+        // than the requested budget and always ends on a char boundary.
+        let samples = [
+            "abcd1234",
+            "\u{6e2c}\u{6e2c}\u{6e2c}\u{6e2c}",
+            "a\u{6e2c}b\u{6e2c}",
+        ];
+        for text in samples {
+            for budget in 0..=8 {
+                let prefix = credential_prefix(text, budget);
+                assert!(prefix.len() <= budget);
+                assert!(text.is_char_boundary(prefix.len()));
+            }
+        }
+    }
+
+    #[test]
     fn parses_provider_responses() {
         assert_eq!(
             parse_google_response(
@@ -1477,49 +1520,6 @@ mod tests {
             provider_source_language("en-US", TranslationProvider::Google),
             "en-US"
         );
-    }
-
-    #[test]
-    fn truncate_preview_never_panics_on_multibyte_text() {
-        // U+6E2C is 3 bytes in UTF-8, so byte 50 lands inside a character.
-        let text = "\u{6e2c}".repeat(60);
-        assert!(text.len() > 50);
-        assert!(!text.is_char_boundary(50));
-        let preview = truncate_preview(&text, 50);
-        assert_eq!(preview.chars().count(), 50);
-        assert_eq!(preview, text.chars().take(50).collect::<String>());
-        assert_eq!(truncate_preview("hello", 50), "hello");
-    }
-
-    #[test]
-    fn credential_prefix_stays_within_byte_budget() {
-        // ASCII keys keep the original byte-based behaviour.
-        assert_eq!(credential_prefix("abc12345", 4), "abc1");
-        // Byte budget never grows: a multi-byte key logs at most 4 bytes and
-        // always ends at a char boundary (may be shorter, never panics).
-        let key = "\u{6e2c}\u{6e2c}\u{6e2c}\u{6e2c}\u{6e2c}";
-        let prefix = credential_prefix(key, 4);
-        assert!(prefix.len() <= 4);
-        assert!(key.is_char_boundary(prefix.len()));
-        assert_eq!(credential_prefix("ab", 4), "ab");
-    }
-
-    #[test]
-    fn credential_prefix_never_exceeds_byte_budget() {
-        // Even with an adversarial byte budget, the prefix never leaks more
-        // than the requested budget and always ends on a char boundary.
-        let samples = [
-            "abcd1234",
-            "\u{6e2c}\u{6e2c}\u{6e2c}\u{6e2c}",
-            "a\u{6e2c}b\u{6e2c}",
-        ];
-        for text in samples {
-            for budget in 0..=8 {
-                let prefix = credential_prefix(text, budget);
-                assert!(prefix.len() <= budget);
-                assert!(text.is_char_boundary(prefix.len()));
-            }
-        }
     }
 
     #[test]
