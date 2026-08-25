@@ -73,6 +73,15 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US':
+						'Fixed an issue where instances with version isolation disabled could not be imported correctly.',
+					'zh-CN': '修复未开启版本隔离的实例无法正常导入的问题。',
+				},
+				{
+					'en-US': 'Fixed an issue where modpack unlinking was not complete.',
+					'zh-CN': '修复了整合包解除关联不彻底的问题。',
+				},
+				{
+					'en-US':
 						'Fixed the fullscreen toggle in the Schematic Workshop (button and F11) not taking effect — entering fullscreen now expands the 3D view to fill the screen, hides the surrounding interface, and leaves the exit-fullscreen button in place.',
 					'zh-CN':
 						'修复投影工坊全屏不生效的问题（按钮和 F11 均无效）：进入全屏后 3D 视图铺满屏幕并隐藏周边界面，原位置保留退出全屏按钮。',
