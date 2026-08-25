@@ -273,11 +273,11 @@ const messages = defineMessages({
 	},
 	gameDirIsolated: {
 		id: 'creation-flow.modal.custom-setup.game-dir.isolated',
-		defaultMessage: 'Version isolated (stored in versions/)',
+		defaultMessage: 'Custom · Version isolated (.minecraft/versions/<instance name>/)',
 	},
 	gameDirNotIsolated: {
 		id: 'creation-flow.modal.custom-setup.game-dir.not-isolated',
-		defaultMessage: 'Not isolated (shared .minecraft folder)',
+		defaultMessage: 'Custom · Version shared (.minecraft/)',
 	},
 	gameDirManaged: {
 		id: 'creation-flow.modal.custom-setup.game-dir.managed',

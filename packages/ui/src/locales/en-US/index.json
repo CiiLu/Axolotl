@@ -1167,7 +1167,7 @@
     "defaultMessage": "Choose folder"
   },
   "creation-flow.modal.custom-setup.game-dir.isolated": {
-    "defaultMessage": "Version isolated (stored in versions/)"
+    "defaultMessage": "Custom · Version isolated (.minecraft/versions/<instance name>/)"
   },
   "creation-flow.modal.custom-setup.game-dir.label": {
     "defaultMessage": "Game directory"
@@ -1176,7 +1176,7 @@
     "defaultMessage": "Axolotl directory"
   },
   "creation-flow.modal.custom-setup.game-dir.not-isolated": {
-    "defaultMessage": "Not isolated (shared .minecraft folder)"
+    "defaultMessage": "Custom · Version shared (.minecraft/)"
   },
   "creation-flow.modal.custom-setup.game-version-type.alpha": {
     "defaultMessage": "April Fools"
