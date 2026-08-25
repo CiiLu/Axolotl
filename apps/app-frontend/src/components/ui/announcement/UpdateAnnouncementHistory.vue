@@ -77,7 +77,7 @@ const historyAnnouncements = computed(() =>
 				<Accordion
 					v-for="announcement in historyAnnouncements"
 					:key="announcement.id"
-					class="update-announcement-history-item"
+					class="update-announcement-history-item hover:border-surface-4 focus-within:border-surface-4"
 					button-class="group flex w-full cursor-pointer items-center gap-3 border-0 bg-transparent px-4 py-3 text-left"
 				>
 					<template #title>
@@ -132,11 +132,6 @@ const historyAnnouncements = computed(() =>
 	border-radius: var(--radius-sm);
 	background: var(--surface-3);
 	transition: border-color 120ms ease;
-}
-
-.update-announcement-history-item:hover,
-.update-announcement-history-item:focus-within {
-	border-color: var(--surface-4);
 }
 
 .update-announcement-history-item-content {

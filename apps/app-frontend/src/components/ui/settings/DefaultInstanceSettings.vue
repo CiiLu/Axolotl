@@ -129,7 +129,7 @@ watch(
 </script>
 
 <template>
-	<div class="settings-page">
+	<div class="flex flex-col gap-6">
 		<SettingsSection>
 			<SettingsRow>
 				<template #label>
@@ -281,11 +281,3 @@ watch(
 		<CrashAnalysisAISettings />
 	</div>
 </template>
-
-<style scoped>
-.settings-page {
-	display: flex;
-	flex-direction: column;
-	gap: var(--gap-xl);
-}
-</style>
