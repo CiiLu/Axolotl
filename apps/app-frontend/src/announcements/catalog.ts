@@ -78,6 +78,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'修复 Windows 端更新启动器后不弹出更新公告的问题，更新并重启后现在会正常显示更新公告。',
 				},
+				{
+					'en-US':
+						'Fixed the issue of when clicking curseforge modpack title to enter modpack information page, the launcher will show Error loading project. (issue #405)',
+					'zh-CN':
+						'修复了点击 CurseForge 整合包标题进入整合包信息页时，启动器会显示Error loading project的问题。(issue #405)',
+				},
 			],
 		},
 	},
