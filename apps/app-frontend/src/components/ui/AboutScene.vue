@@ -169,7 +169,7 @@ function createCircle(material: THREE.ShaderMaterial, position: THREE.Vector3) {
 }
 
 function main() {
-	const canvas = document.querySelector('#about_scene')
+	const canvas = document.querySelector<HTMLCanvasElement>('#about_scene')
 	if (!canvas) return console.error('No canvas')
 
 	const canvasSize = new THREE.Vector2(
