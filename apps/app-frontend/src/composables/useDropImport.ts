@@ -568,7 +568,6 @@ export function useDropImport(options: DropImportOptions) {
 		return result
 	}
 
-
 	async function handleCompatibleModeConfirm(choice: 'compatible' | 'old-way' | 'cancel') {
 		if (choice === 'cancel') {
 			currentImportContext.value = null
@@ -1419,6 +1418,7 @@ export function useDropImport(options: DropImportOptions) {
 						item.gameVersion = choice.gameVersion
 						item.loader = choice.loader
 						item.loaderVersion = choice.loaderVersion
+						item.gameDirOverride = choice.gameDirOverride
 					}
 				}
 			}
@@ -2167,6 +2167,7 @@ export function useDropImport(options: DropImportOptions) {
 					item.gameVersion ?? undefined,
 					item.loader ?? undefined,
 					item.loaderVersion ?? undefined,
+					item.gameDirOverride ?? null,
 				)
 				await wait_for_install_job(job.job_id)
 				return

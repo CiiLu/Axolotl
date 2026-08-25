@@ -278,7 +278,7 @@
 							</div>
 						</div>
 
-						<div class="flex flex-col gap-2">
+						<div v-if="method === 'symlink'" class="flex flex-col gap-2">
 							<span class="text-sm font-semibold text-contrast">
 								{{ formatMessage(messages.gameDirLabel) }}
 							</span>
@@ -291,11 +291,6 @@
 									{{ formatMessage(gameDirModeLabel(item)) }}
 								</template>
 							</RadioButtons>
-							<ButtonStyled v-if="gameDirMode !== 'isolated'" type="outlined">
-								<button @click="pickGameDir">
-									{{ formatMessage(messages.gameDirChooseFolder) }}
-								</button>
-							</ButtonStyled>
 							<span v-if="gameDirOverride" class="text-sm text-secondary break-all">
 								{{ gameDirOverride }}
 							</span>
@@ -434,14 +429,6 @@ const messages = defineMessages({
 	gameDirNotIsolated: {
 		id: 'drop.symlink_method.game-dir.not-isolated',
 		defaultMessage: 'Not isolated (shared .minecraft folder)',
-	},
-	gameDirCustom: {
-		id: 'drop.symlink_method.game-dir.custom',
-		defaultMessage: 'Custom',
-	},
-	gameDirChooseFolder: {
-		id: 'drop.symlink_method.game-dir.choose-folder',
-		defaultMessage: 'Choose folder',
 	},
 	instance: {
 		id: 'drop.symlink_method.instance',
@@ -649,8 +636,7 @@ const instances = ref<SymlinkMethodInstance[]>([])
 const symlinkCapable = ref<'supported' | 'requires_admin' | 'unsupported'>('supported')
 const activeIndex = ref(0)
 const method = ref<'copy' | 'symlink' | null>(null)
-const gameDirMode = ref<'isolated' | 'custom'>('isolated')
-const gameDirOverride = ref<string | null>(null)
+const gameDirMode = ref<'isolated' | 'not-isolated'>('isolated')
 const methodSectionRef = ref<HTMLElement | null>(null)
 const methodShake = ref(false)
 const gameVersion = ref('')
@@ -680,6 +666,22 @@ let rescanTimer: number | null = null
 
 const activeInstance = computed(() => instances.value[activeIndex.value])
 const activeSnapshot = computed(() => snapshots.value[activeIndex.value] ?? null)
+// The `.minecraft` root for the active instance: computed so the game-dir
+// override can be derived (isolated -> <root>/versions/<name>, shared -> <root>).
+const activeGameRoot = computed(
+	() =>
+		activeSnapshot.value?.minecraftRoot ||
+		activeInstance.value?.basePath ||
+		activeInstance.value?.path ||
+		null,
+)
+const gameDirOverride = computed(() => {
+	const root = activeGameRoot.value
+	if (method.value !== 'symlink' || !root) return null
+	return gameDirMode.value === 'isolated'
+		? `${root}/versions/${activeInstance.value?.name ?? ''}`
+		: root
+})
 const statsLoading = computed(() => Object.values(scanning.value).some(Boolean))
 const planError = computed(() => planErrors.value[activeIndex.value] ?? null)
 const pageAnimationClass = computed(() => (pageAnim.value ? `page-${pageAnim.value}` : ''))
@@ -793,31 +795,19 @@ function selectMethod(value: 'copy' | 'symlink') {
 	method.value = value
 }
 
-async function pickGameDir() {
-	const path = await instanceImport.selectDirectory()
-	if (!path) return
-	gameDirOverride.value = path
-	gameDirMode.value = 'custom'
-}
-
-const gameDirModeItems = ['isolated', 'custom'] as const
+const gameDirModeItems = ['isolated', 'not-isolated'] as const
 
 function gameDirModeLabel(mode: (typeof gameDirModeItems)[number]) {
 	switch (mode) {
-		case 'custom':
-			return messages.gameDirCustom
-		default:
+		case 'isolated':
 			return messages.gameDirIsolated
+		default:
+			return messages.gameDirNotIsolated
 	}
 }
 
 function setGameDirMode(mode: (typeof gameDirModeItems)[number]) {
 	gameDirMode.value = mode
-	// Switching back to version isolation means the managed folder is used;
-	// drop any previously chosen override so it is not silently retained.
-	if (mode === 'isolated') {
-		gameDirOverride.value = null
-	}
 }
 
 function resetChanges() {
@@ -1220,6 +1210,7 @@ function handleConfirm() {
 	const choices: SymlinkMethodChoice[] = instances.value.map((instance, index) => {
 		const saved = instanceChoices.value[index]
 		const snapshot = snapshots.value[index] ?? null
+		const root = snapshot?.minecraftRoot || instance.basePath || instance.path || null
 		return {
 			instanceName: instance.name,
 			instancePath: instance.path,
@@ -1229,7 +1220,12 @@ function handleConfirm() {
 			loader: saved?.loader || importPlanDefaultLoader(snapshot?.loader) || null,
 			loaderVersion:
 				saved?.loaderVersion || importPlanDefaultLoaderVersion(snapshot?.loaderVersion) || null,
-			gameDirOverride: gameDirOverride.value,
+			gameDirOverride:
+				method.value === 'symlink' && root
+					? gameDirMode.value === 'isolated'
+						? `${root}/versions/${instance.name}`
+						: root
+					: null,
 		}
 	})
 
@@ -1286,7 +1282,6 @@ function show(options: {
 	internalUpdating.value = true
 	activeIndex.value = 0
 	gameDirMode.value = 'isolated'
-	gameDirOverride.value = null
 	resetActiveFields()
 	internalUpdating.value = false
 	isOpen.value = true

@@ -3986,6 +3986,9 @@
   "app.lab.schematic-preview.entities": {
     "message": "Entities"
   },
+  "app.lab.schematic-preview.exit-fullscreen": {
+    "message": "Exit fullscreen"
+  },
   "app.lab.schematic-preview.export-complete": {
     "message": "Export complete"
   },
@@ -8345,14 +8348,8 @@
   "instance.settings.tabs.general.game-dir": {
     "message": "Game directory"
   },
-  "instance.settings.tabs.general.game-dir.clear": {
-    "message": "Use managed folder"
-  },
   "instance.settings.tabs.general.game-dir.current": {
     "message": "Current directory"
-  },
-  "instance.settings.tabs.general.game-dir.custom": {
-    "message": "Custom"
   },
   "instance.settings.tabs.general.game-dir.description": {
     "message": "Uses a separate folder as the working directory for this instance. The game reads mods, saves, configs, and resource packs from that folder instead of the managed instance folder."
@@ -8360,11 +8357,14 @@
   "instance.settings.tabs.general.game-dir.isolated": {
     "message": "Version isolated (stored in versions/)"
   },
+  "instance.settings.tabs.general.game-dir.managed-note": {
+    "message": "This instance uses the Axolotl-managed folder."
+  },
+  "instance.settings.tabs.general.game-dir.move-note": {
+    "message": "Switching isolation only updates the launcher path. Move the mods, saves, and config folders yourself to match."
+  },
   "instance.settings.tabs.general.game-dir.not-isolated": {
     "message": "Not isolated (shared .minecraft folder)"
-  },
-  "instance.settings.tabs.general.game-dir.set": {
-    "message": "Choose folder"
   },
   "instance.settings.tabs.general.icon": {
     "message": "Icon"

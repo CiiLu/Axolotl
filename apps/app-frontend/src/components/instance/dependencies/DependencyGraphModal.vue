@@ -564,11 +564,6 @@ function edgeIsMuted(edge: DependencyGraphEdge) {
 	)
 }
 
-function edgeColor(edge: DependencyGraphEdge) {
-	if (edgeIsMuted(edge)) return 'var(--surface-5)'
-	return edge.resolved ? 'var(--color-brand)' : 'var(--color-orange)'
-}
-
 function show(contentItems: ContentItem[]) {
 	items.value = [...contentItems]
 	selectedNodeId.value = undefined

@@ -263,12 +263,20 @@ export function setupCreationModal(
 				: (config.selectedLoaderVersion.value ?? config.loaderVersionType.value)
 			const iconPath = config.instanceIconPath.value ?? null
 			const name = config.instanceName.value.trim() || config.autoInstanceName.value
-			// Game directory isolation: pass the override path only when the user
-			// chose not-isolated or custom; isolated leaves it null (managed folder).
+			// Game directory: `gameDirOverride` holds the picked `.minecraft`
+			// root. Builtin keeps the managed folder (null); external resolves to
+			// `<root>/versions/<name>` when version-isolated, or the `.minecraft`
+			// root itself when not.
+			const mode = config.gameDirOverrideMode.value
+			const gameRoot = config.gameDirOverride.value ?? null
 			const gameDirOverride =
-				config.gameDirOverrideMode.value === 'isolated'
+				mode === 'builtin'
 					? null
-					: (config.gameDirOverride.value ?? null)
+					: gameRoot
+						? mode === 'isolated'
+							? `${gameRoot}/versions/${name}`
+							: gameRoot
+						: null
 
 			await install_create_instance({
 				name,

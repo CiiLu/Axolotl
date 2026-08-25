@@ -44,7 +44,7 @@
 					{{ formatMessage(gameDirModeLabel(item)) }}
 				</template>
 			</RadioButtons>
-			<div v-if="gameDirMode !== 'isolated'" class="flex items-center gap-2">
+			<div v-if="gameDirMode !== 'builtin'" class="flex items-center gap-2">
 				<ButtonStyled type="outlined">
 					<button @click="pickGameDir">
 						{{ formatMessage(messages.gameDirChooseFolder) }}
@@ -278,10 +278,6 @@ const messages = defineMessages({
 	gameDirNotIsolated: {
 		id: 'creation-flow.modal.custom-setup.game-dir.not-isolated',
 		defaultMessage: 'Not isolated (shared .minecraft folder)',
-	},
-	gameDirCustom: {
-		id: 'creation-flow.modal.custom-setup.game-dir.custom',
-		defaultMessage: 'Custom',
 	},
 	gameDirManaged: {
 		id: 'creation-flow.modal.custom-setup.game-dir.managed',
@@ -749,19 +745,21 @@ const gameDirMode = computed<GameDirOverrideMode>({
 
 function setGameDirMode(mode: GameDirOverrideMode) {
 	ctx.gameDirOverrideMode.value = mode
-	// Keep only one of not-isolated / custom semantically distinct via the
-	// stored override path; switching back to isolated clears the override.
-	if (mode === 'isolated') {
+	// Switching back to the managed (builtin) folder drops any previously
+	// chosen external root so it is not silently retained.
+	if (mode === 'builtin') {
 		ctx.gameDirOverride.value = null
 	}
 }
 
-const gameDirModeItems: GameDirOverrideMode[] = ['isolated', 'custom']
+const gameDirModeItems: GameDirOverrideMode[] = ['builtin', 'isolated', 'not-isolated']
 
 function gameDirModeLabel(mode: GameDirOverrideMode) {
 	switch (mode) {
-		case 'custom':
-			return messages.gameDirCustom
+		case 'isolated':
+			return messages.gameDirIsolated
+		case 'not-isolated':
+			return messages.gameDirNotIsolated
 		default:
 			return messages.gameDirManaged
 	}

@@ -8411,14 +8411,8 @@
   "instance.settings.tabs.general.game-dir": {
   	"message": "游戏目录"
   },
-  "instance.settings.tabs.general.game-dir.clear": {
-  	"message": "使用托管目录"
-  },
   "instance.settings.tabs.general.game-dir.current": {
   	"message": "当前目录"
-  },
-  "instance.settings.tabs.general.game-dir.custom": {
-  	"message": "自定义"
   },
   "instance.settings.tabs.general.game-dir.description": {
   	"message": "将一个独立的文件夹作为此实例的工作目录。游戏会从该文件夹读取模组、存档、配置和资源包，而不是托管的实例文件夹。适用于共用 .minecraft 目录的非版本隔离实例。"
@@ -8429,8 +8423,11 @@
   "instance.settings.tabs.general.game-dir.not-isolated": {
   	"message": "不隔离（共享 .minecraft 文件夹）"
   },
-  "instance.settings.tabs.general.game-dir.set": {
-  	"message": "选择文件夹"
+  "instance.settings.tabs.general.game-dir.move-note": {
+  	"message": "切换隔离仅更新启动器路径。请自行移动模组、存档和配置文件夹以保持一致。"
+  },
+  "instance.settings.tabs.general.game-dir.managed-note": {
+  	"message": "此实例使用 Axolotl 托管目录。"
   },
   "instance.settings.tabs.general.icon": {
     "message": "图标"

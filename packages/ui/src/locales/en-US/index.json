@@ -1166,9 +1166,6 @@
   "creation-flow.modal.custom-setup.game-dir.choose-folder": {
     "defaultMessage": "Choose folder"
   },
-  "creation-flow.modal.custom-setup.game-dir.custom": {
-    "defaultMessage": "Custom"
-  },
   "creation-flow.modal.custom-setup.game-dir.isolated": {
     "defaultMessage": "Version isolated (stored in versions/)"
   },
@@ -1456,12 +1453,6 @@
   },
   "drop.symlink_method.detecting": {
     "defaultMessage": "Detecting..."
-  },
-  "drop.symlink_method.game-dir.choose-folder": {
-    "defaultMessage": "Choose folder"
-  },
-  "drop.symlink_method.game-dir.custom": {
-    "defaultMessage": "Custom"
   },
   "drop.symlink_method.game-dir.isolated": {
     "defaultMessage": "Version isolated"

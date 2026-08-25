@@ -1142,9 +1142,6 @@
   "creation-flow.modal.custom-setup.game-dir.choose-folder": {
     "defaultMessage": "选择文件夹"
   },
-  "creation-flow.modal.custom-setup.game-dir.custom": {
-    "defaultMessage": "自定义"
-  },
   "creation-flow.modal.custom-setup.game-dir.isolated": {
     "defaultMessage": "版本隔离（存放于 versions/）"
   },
@@ -4489,12 +4486,6 @@
   },
   "drop.symlink_method.detecting": {
     "message": "检测中..."
-  },
-  "drop.symlink_method.game-dir.choose-folder": {
-    "message": "选择文件夹"
-  },
-  "drop.symlink_method.game-dir.custom": {
-    "message": "自定义"
   },
   "drop.symlink_method.game-dir.isolated": {
     "message": "版本隔离"

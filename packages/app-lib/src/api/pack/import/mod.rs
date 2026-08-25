@@ -1515,23 +1515,37 @@ pub(crate) async fn finish_import(
 ) -> crate::Result<()> {
     let local_source = LocalRuntimeSource::discover(&dotminecraft);
 
-    // For a non-version-isolated import the game content (mods, saves, config)
-    // lives in the `.minecraft` root, not in the detected `versions/<name>`
-    // subfolder. Detect that and record the override so the instance uses the
-    // real game root directly instead of an empty version subfolder.
-    let game_root = resolve_import_game_root(&dotminecraft);
-    if game_root != dotminecraft {
-        crate::state::edit_instance(
-            instance_id,
-            crate::state::EditInstance {
-                game_dir_override: Some(Some(
-                    game_root.to_string_lossy().to_string(),
-                )),
-                ..Default::default()
-            },
-            &crate::state::State::get().await?.pool,
-        )
-        .await?;
+    // Respect an explicitly chosen game-dir override (the user's isolated /
+    // not-isolated selection, already stored on the instance row at creation).
+    // Only fall back to auto-detection for symlink imports that did not carry
+    // an explicit override, so copy imports always stay built-in (no override)
+    // and the frontend's choice is never clobbered.
+    let state = crate::state::State::get().await?;
+    let pool = &state.pool;
+    let existing_override =
+        instance_rows::get_instance_path_and_game_dir_override_by_id(instance_id, pool)
+            .await?
+            .map(|(_, override_dir)| override_dir)
+            .unwrap_or(None);
+    if existing_override.is_none() && symlink {
+        // For a non-version-isolated import the game content (mods, saves, config)
+        // lives in the `.minecraft` root, not in the detected `versions/<name>`
+        // subfolder. Detect that and record the override so the instance uses the
+        // real game root directly instead of an empty version subfolder.
+        let game_root = resolve_import_game_root(&dotminecraft);
+        if game_root != dotminecraft {
+            crate::state::edit_instance(
+                instance_id,
+                crate::state::EditInstance {
+                    game_dir_override: Some(Some(
+                        game_root.to_string_lossy().to_string(),
+                    )),
+                    ..Default::default()
+                },
+                pool,
+            )
+            .await?;
+        }
     }
 
     if symlink {
