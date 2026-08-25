@@ -466,7 +466,7 @@ watch(
 )
 </script>
 <template>
-	<div class="settings-page">
+	<div class="flex flex-col gap-6">
 		<SettingsSection v-if="props.scope === 'interface'">
 			<template #header>
 				<h2
@@ -480,7 +480,7 @@ watch(
 					{{ formatMessage(messages.colorThemeDescription) }}
 				</p>
 			</template>
-			<div class="appearance-panel">
+			<div class="flex flex-col gap-4 p-4">
 				<ThemeSelector
 					:update-color-theme="
 						(theme: ColorTheme) => {
@@ -508,7 +508,7 @@ watch(
 					{{ formatMessage(messages.accentColorDescription) }}
 				</p>
 			</template>
-			<div class="appearance-panel @container">
+			<div class="flex flex-col gap-4 p-4 @container">
 				<div
 					class="grid grid-cols-6 gap-1 @2xl:gap-2"
 					role="radiogroup"
@@ -641,7 +641,7 @@ watch(
 					{{ formatMessage(messages.customBackgroundDescription) }}
 				</p>
 			</template>
-			<div class="appearance-panel appearance-panel--divided">
+			<div class="flex flex-col gap-4 p-4 appearance-panel--divided">
 				<div
 					class="relative h-44 overflow-hidden rounded-lg border border-solid border-surface-4 bg-surface-1"
 				>
@@ -1064,19 +1064,6 @@ watch(
 </template>
 
 <style scoped lang="scss">
-.settings-page {
-	display: flex;
-	flex-direction: column;
-	gap: var(--gap-xl);
-}
-
-.appearance-panel {
-	display: flex;
-	flex-direction: column;
-	gap: var(--gap-lg);
-	padding: var(--gap-lg);
-}
-
 .appearance-panel--divided {
 	border-bottom: 1px solid var(--settings-divider, var(--surface-4));
 }

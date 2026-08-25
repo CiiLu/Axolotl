@@ -984,20 +984,8 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
-.instance-card {
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-}
-
 Button {
 	width: 100%;
-}
-
-.button-group {
-	display: flex;
-	flex-direction: row;
-	gap: 0.5rem;
 }
 
 .side-cards {
@@ -1041,10 +1029,6 @@ Button {
 	text-overflow: ellipsis;
 }
 
-.metadata {
-	text-transform: capitalize;
-}
-
 .instance-container {
 	display: flex;
 	flex-direction: row;
@@ -1052,12 +1036,6 @@ Button {
 	gap: 1rem;
 	min-height: 100%;
 	padding: 1rem;
-}
-
-.instance-info {
-	display: flex;
-	flex-direction: column;
-	width: 100%;
 }
 
 .badge {
@@ -1069,10 +1047,6 @@ Button {
 }
 
 .pages-list {
-	display: flex;
-	flex-direction: column;
-	gap: var(--gap-xs);
-
 	.btn {
 		font-size: 100%;
 		font-weight: 400;
@@ -1111,10 +1085,6 @@ Button {
 	gap: 0.5rem;
 	height: min-content;
 	width: 100%;
-}
-
-.instance-button {
-	width: fit-content;
 }
 
 .actions {
@@ -1159,10 +1129,6 @@ Button {
 			height: var(--stat-strong-size);
 			width: var(--stat-strong-size);
 		}
-	}
-
-	.date {
-		margin-top: auto;
 	}
 
 	@media screen and (max-width: 750px) {

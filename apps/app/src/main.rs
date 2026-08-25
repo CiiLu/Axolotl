@@ -663,6 +663,14 @@ fn main() {
                         } else {
                             (**update).clone().restart_after_install(false)
                         };
+
+                        // Persist the trigger before installing: on Windows the
+                        // updater plugin launches the NSIS installer and exits the
+                        // process via `std::process::exit(0)` without returning, so
+                        // the success path below never runs there.
+                        #[cfg(target_os = "windows")]
+                        set_changelog_toast(Some(update.version.clone()));
+
                         match update.install(data) {
                             Ok(()) => {
                                 set_changelog_toast(Some(update.version.clone()));

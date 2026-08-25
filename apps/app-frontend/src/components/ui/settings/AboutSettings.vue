@@ -168,7 +168,7 @@ const projectLinks = [
 </script>
 
 <template>
-	<div class="about-page">
+	<div class="about-page flex flex-col gap-6">
 		<section id="settings-target-about-product" tabindex="-1" class="about-panel">
 			<div class="flex items-center gap-4">
 				<img class="size-20 object-contain" src="@/assets/axolotl.png" alt="" />
@@ -404,12 +404,6 @@ const projectLinks = [
 </template>
 
 <style scoped>
-.about-page {
-	display: flex;
-	flex-direction: column;
-	gap: var(--gap-xl);
-}
-
 .about-settings-details {
 	border-top: 1px solid
 		var(--settings-divider, color-mix(in srgb, var(--surface-4) 55%, transparent));
