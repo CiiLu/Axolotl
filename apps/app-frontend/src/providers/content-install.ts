@@ -436,6 +436,15 @@ function curseForgeLoaderType(loader: string): number | undefined {
 	}
 }
 
+function projectPageUrl(project: { project_type: string; slug: string }): string {
+	return `https://modrinth.com/${project.project_type}/${project.slug}`
+}
+
+function curseForgePageUrl(project: { slug: string; links?: { websiteUrl?: string } }): string {
+	if (project.links?.websiteUrl) return project.links.websiteUrl
+	return `https://www.curseforge.com/minecraft/mc-mods/${project.slug}`
+}
+
 type InstallTargetInstance = Pick<
 	GameInstance,
 	'id' | 'name' | 'icon_path' | 'game_version' | 'loader'
@@ -1108,20 +1117,26 @@ export function createContentInstall(opts: {
 		const parentTitles = new Map(
 			planned.map((candidate) => [candidate.version_id, titleFor(candidate)]),
 		)
-		const dependencies = plan.dependencies.map((dependency) => ({
-			id: dependency.project_id,
-			title: projectsById.get(dependency.project_id)?.title ?? dependency.project_id,
-			iconUrl: projectsById.get(dependency.project_id)?.icon_url ?? null,
-			versionNumber: versionsById.get(dependency.version_id)?.version_number,
-			fileName: versionsById.get(dependency.version_id)?.files?.[0]?.filename,
-			requiredBy: dependency.dependent_on_version_id
-				? [parentTitles.get(dependency.dependent_on_version_id)].filter(
-						(title): title is string => !!title,
-					)
-				: [],
-			alreadyInstalled: false,
-			required: dependency.required,
-		}))
+		const dependencies = plan.dependencies.map((dependency) => {
+			const project = projectsById.get(dependency.project_id)
+			const version = versionsById.get(dependency.version_id)
+			return {
+				id: dependency.project_id,
+				title: project?.title ?? dependency.project_id,
+				iconUrl: project?.icon_url ?? null,
+				versionNumber: version?.version_number,
+				fileName: version?.files?.[0]?.filename,
+				description: project?.description,
+				projectUrl: project ? projectPageUrl(project) : undefined,
+				requiredBy: dependency.dependent_on_version_id
+					? [parentTitles.get(dependency.dependent_on_version_id)].filter(
+							(title): title is string => !!title,
+						)
+					: [],
+				alreadyInstalled: false,
+				required: dependency.required,
+			}
+		})
 		const skipped = plan.skipped
 			.filter((item) => item.project_id)
 			.map((item) => ({
@@ -1470,37 +1485,63 @@ export function createContentInstall(opts: {
 			...preview.optionalDependencies,
 			...preview.incompatibleDependencies,
 		].filter((projectId) => !titleById.has(projectId))
-		if (unresolvedProjectIds.length > 0) {
-			const projects = await getCurseForgeProjects([...new Set(unresolvedProjectIds)]).catch(
-				() => [],
-			)
+		const fetchProjectIds = [
+			...new Set([...preview.dependencies.map((item) => item.projectId), ...unresolvedProjectIds]),
+		]
+		const projectById = new Map<number, CurseForgeProject>()
+		if (fetchProjectIds.length > 0) {
+			const projects = await getCurseForgeProjects(fetchProjectIds).catch(() => [])
 			for (const project of projects) {
+				projectById.set(project.id, project)
 				titleById.set(project.id, project.name)
 			}
 		}
-		const dependencies = preview.dependencies.map((dependency) => ({
-			id: String(dependency.projectId),
-			title: dependency.title,
-			iconUrl: dependency.iconUrl ?? null,
-			versionNumber: dependency.versionNumber,
-			fileName: dependency.fileName,
-			requiredBy: dependency.requiredByProjectIds
-				.map((projectId) => titleById.get(projectId))
-				.filter((title): title is string => !!title),
-			alreadyInstalled: false,
-			versionMismatch: dependency.versionMismatch ?? false,
-			selectionReason:
-				dependency.selectionReason === 'sha1_verified_modrinth_fallback'
-					? formatMessage(sha1VerifiedModrinthFallbackMessage)
+		const fallbackProjectById = new Map<string, Labrinth.Projects.v2.Project>()
+		const fallbackProjectIds = [
+			...new Set((preview.modrinthFallbacks ?? []).map((fallback) => fallback.projectId)),
+		]
+		if (fallbackProjectIds.length > 0) {
+			const projects = await get_project_many(fallbackProjectIds).catch(
+				() => [] as Labrinth.Projects.v2.Project[],
+			)
+			for (const project of projects) fallbackProjectById.set(project.id, project)
+		}
+		const dependencies = preview.dependencies.map((dependency) => {
+			const project = projectById.get(dependency.projectId)
+			return {
+				id: String(dependency.projectId),
+				title: dependency.title,
+				iconUrl: dependency.iconUrl ?? null,
+				versionNumber: dependency.versionNumber,
+				fileName: dependency.fileName,
+				description: project?.summary,
+				projectUrl: project
+					? curseForgePageUrl({
+							slug: project.slug,
+							links: project.links,
+						})
 					: undefined,
-			required: dependency.required,
-		}))
+				requiredBy: dependency.requiredByProjectIds
+					.map((projectId) => titleById.get(projectId))
+					.filter((title): title is string => !!title),
+				alreadyInstalled: false,
+				versionMismatch: dependency.versionMismatch ?? false,
+				selectionReason:
+					dependency.selectionReason === 'sha1_verified_modrinth_fallback'
+						? formatMessage(sha1VerifiedModrinthFallbackMessage)
+						: undefined,
+				required: dependency.required,
+			}
+		})
 		for (const fallback of preview.modrinthFallbacks ?? []) {
+			const fallbackProject = fallbackProjectById.get(fallback.projectId)
 			dependencies.push({
 				id: `modrinth:${fallback.versionId}`,
 				title: fallback.title,
 				iconUrl: fallback.iconUrl ?? null,
 				versionNumber: fallback.versionNumber,
+				description: fallbackProject?.description,
+				projectUrl: fallbackProject ? projectPageUrl(fallbackProject) : undefined,
 				requiredBy: [titleById.get(fallback.parentProjectId) ?? String(fallback.parentProjectId)],
 				alreadyInstalled: false,
 				selectionReason: formatMessage(sha1VerifiedModrinthFallbackMessage),

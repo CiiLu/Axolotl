@@ -821,6 +821,9 @@
   "app.content-install.preview.description": {
     "message": "将在 {instance} 中为 {project} 自动安装 {count, plural, other {# 个前置}}。"
   },
+  "app.content-install.preview.description-unavailable": {
+    "message": "暂无简介。"
+  },
   "app.content-install.preview.existing-content": {
     "message": "已有内容"
   },
@@ -835,6 +838,9 @@
   },
   "app.content-install.preview.only-checked": {
     "message": "只会安装勾选的前置。"
+  },
+  "app.content-install.preview.open-project-page": {
+    "message": "打开项目页面"
   },
   "app.content-install.preview.optional-dependencies-header": {
     "message": "可选前置"
@@ -910,6 +916,9 @@
   },
   "app.content-install.preview.version-mismatch": {
     "message": "下载的版本可能与当前版本不兼容。"
+  },
+  "app.content-install.preview.view-details": {
+    "message": "查看详情"
   },
   "app.content-selection.conflict-unavailable": {
     "message": "无法确认该内容是否与另一个来源重复。"
@@ -4039,6 +4048,9 @@
   },
   "app.lab.schematic-preview.entities": {
     "message": "实体"
+  },
+  "app.lab.schematic-preview.exit-fullscreen": {
+    "message": "退出全屏"
   },
   "app.lab.schematic-preview.export-complete": {
     "message": "导出完成"

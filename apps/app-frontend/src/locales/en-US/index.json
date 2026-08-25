@@ -821,6 +821,9 @@
   "app.content-install.preview.description": {
     "message": "{count, plural, one {# dependency will be installed automatically} other {# dependencies will be installed automatically}} for {project} in {instance}."
   },
+  "app.content-install.preview.description-unavailable": {
+    "message": "No description available."
+  },
   "app.content-install.preview.existing-content": {
     "message": "Existing content"
   },
@@ -835,6 +838,9 @@
   },
   "app.content-install.preview.only-checked": {
     "message": "Only checked dependencies will be installed."
+  },
+  "app.content-install.preview.open-project-page": {
+    "message": "Open project page"
   },
   "app.content-install.preview.optional-dependencies-header": {
     "message": "Optional dependencies"
@@ -910,6 +916,9 @@
   },
   "app.content-install.preview.version-mismatch": {
     "message": "Version may not match this instance"
+  },
+  "app.content-install.preview.view-details": {
+    "message": "View details"
   },
   "app.content-selection.conflict-unavailable": {
     "message": "Could not verify whether this content duplicates another source."
