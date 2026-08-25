@@ -152,7 +152,13 @@ async function toggleRunning(server: ServerView) {
 			</ButtonStyled>
 		</EmptyState>
 
-		<div v-else class="server-grid" :class="{ 'library-cards': displayMode === 'cards' }">
+		<div
+			v-else
+			class="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] w-full max-w-[72rem] gap-3"
+			:class="{
+				'grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-4': displayMode === 'cards',
+			}"
+		>
 			<ServerCard
 				v-for="entry in servers"
 				:key="entry.id"
@@ -169,16 +175,4 @@ async function toggleRunning(server: ServerView) {
 </template>
 
 <style lang="scss" scoped>
-.server-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-	width: 100%;
-	max-width: 72rem;
-	gap: 0.75rem;
-
-	&.library-cards {
-		grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
-		gap: 1rem;
-	}
-}
 </style>

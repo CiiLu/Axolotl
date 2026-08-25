@@ -674,16 +674,17 @@ async fn import_configured_instance(
     get_game_dir: impl FnOnce(&str) -> Option<String>,
 ) -> crate::Result<()> {
     let (config_name, rest) = split_config_name(&job.instance_folder);
-    let game_dir = get_game_dir(config_name)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            let local = job.base_path.join(config_name);
-            if local.is_dir() {
-                local
-            } else {
-                job.base_path.clone()
-            }
-        });
+    let game_dir =
+        get_game_dir(config_name)
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                let local = job.base_path.join(config_name);
+                if local.is_dir() {
+                    local
+                } else {
+                    job.base_path.clone()
+                }
+            });
     let target = if rest.is_empty() { config_name } else { rest };
     let path = resolve_instance_path(&game_dir, target);
     generic::import_generic(

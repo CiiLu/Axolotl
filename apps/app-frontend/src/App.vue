@@ -2286,7 +2286,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			>
 				{{ formatMessage(messages.authUnreachableBody) }}
 			</Admonition>
-			<div class="page-transition-grid">
+			<div class="page-transition-grid grid min-h-full">
 				<RouterView v-slot="{ Component, route }">
 					<Transition name="page-slide" :css="themeStore.getFeatureFlag('page_transitions')">
 						<div v-if="Component" :key="getPageTransitionKey(route)" class="page-transition-layer">
@@ -2327,8 +2327,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				class="app-sidebar-scrollable relative min-h-0 flex-1"
 				data-overlayscrollbars-initialize
 			>
-				<div id="sidebar-teleport-target" class="sidebar-teleport-content"></div>
-				<div class="sidebar-default-content" :class="{ 'sidebar-enabled': sidebarVisible }">
+				<div id="sidebar-teleport-target" class="sidebar-teleport-content contents"></div>
+				<div class="sidebar-default-content hidden" :class="{ 'sidebar-enabled': sidebarVisible }">
 					<div class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid">
 						<h3 class="text-base text-primary font-medium m-0">
 							{{ formatMessage(messages.playingAs) }}
@@ -2871,14 +2871,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	border-width: 1px;
 	border-style: solid;
 	pointer-events: none;
-}
-
-.sidebar-teleport-content {
-	display: contents;
-}
-
-.sidebar-default-content {
-	display: none;
 }
 
 .sidebar-teleport-content:empty + .sidebar-default-content.sidebar-enabled {
