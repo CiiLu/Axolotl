@@ -203,6 +203,13 @@ const APP_SIDEBAR_WIDTH = 300
 const credentials = ref()
 const sidebarToggled = ref(getSidebarExpanded())
 
+function collapseSidebar() {
+	if (!sidebarToggled.value) return
+
+	sidebarToggled.value = false
+	setSidebarExpanded(false)
+}
+
 function toggleSidebar() {
 	sidebarToggled.value = !sidebarToggled.value
 	setSidebarExpanded(sidebarToggled.value)
@@ -1285,6 +1292,14 @@ watch(offline, (isOffline) => {
 		void router.push('/library')
 	}
 })
+
+watch(
+	() => route.path,
+	(path) => {
+		if (path === '/settings') collapseSidebar()
+	},
+	{ immediate: true },
+)
 
 watch(
 	() => route.path,
