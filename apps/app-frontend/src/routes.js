@@ -4,6 +4,7 @@ import {
 	isBrowseReturnNavigation,
 	prepareBrowseReturnNavigation,
 } from '@/helpers/browse-return-state.ts'
+import { clearUpgradeFlow, peekUpgradeFlow } from '@/helpers/upgrade-return-state'
 
 /**
  * Configures application routing. Add page to pages/index and then add to route table here.
@@ -351,6 +352,52 @@ export default new createRouter({
 				pageTransitionGroup: 'instance',
 			},
 			children: [
+				{
+					path: 'upgrade',
+					component: () => import('@/pages/instance/upgrade/UpgradeShell.vue'),
+					meta: {
+						useRootContext: true,
+						hideInstanceTabs: true,
+						breadcrumb: [{ name: 'Upgrade' }],
+					},
+					children: [
+						{
+							path: '',
+							name: 'InstanceUpgrade',
+							component: () => import('@/pages/instance/upgrade/Select.vue'),
+						},
+						{
+							path: 'compatibility',
+							name: 'InstanceUpgradeCompatibility',
+							component: () => import('@/pages/instance/upgrade/Compatibility.vue'),
+							meta: { upgradeRequirement: 'plan' },
+						},
+						{
+							path: 'customize',
+							name: 'InstanceUpgradeCustomize',
+							component: () => import('@/pages/instance/upgrade/Customize.vue'),
+							meta: { upgradeRequirement: 'unblocked-plan' },
+						},
+						{
+							path: 'confirm',
+							name: 'InstanceUpgradeConfirm',
+							component: () => import('@/pages/instance/upgrade/Confirm.vue'),
+							meta: { upgradeRequirement: 'selection' },
+						},
+						{
+							path: 'progress',
+							name: 'InstanceUpgradeProgress',
+							component: () => import('@/pages/instance/upgrade/Progress.vue'),
+							meta: { upgradeRequirement: 'job' },
+						},
+						{
+							path: 'result',
+							name: 'InstanceUpgradeResult',
+							component: () => import('@/pages/instance/upgrade/Result.vue'),
+							meta: { upgradeRequirement: 'result' },
+						},
+					],
+				},
 				// {
 				//   path: '',
 				//   name: 'Overview',
@@ -374,10 +421,7 @@ export default new createRouter({
 					component: () => import('@/pages/instance/WorldEditor.vue'),
 					meta: {
 						useRootContext: true,
-						breadcrumb: [
-							{ name: 'Worlds', link: '/instance/{id}/worlds' },
-							{ name: 'Edit world' },
-						],
+						breadcrumb: [{ name: 'Worlds', link: '/instance/{id}/worlds' }, { name: 'Edit world' }],
 					},
 				},
 				{
@@ -423,10 +467,7 @@ export default new createRouter({
 					meta: {
 						renderMode: 'fixed',
 						useRootContext: true,
-						breadcrumb: [
-							{ name: 'Files', link: '/instance/{id}/files' },
-							{ name: 'Studio' },
-						],
+						breadcrumb: [{ name: 'Files', link: '/instance/{id}/files' }, { name: 'Studio' }],
 					},
 				},
 				{
@@ -445,6 +486,14 @@ export default new createRouter({
 	linkActiveClass: 'router-link-active',
 	linkExactActiveClass: 'router-link-exact-active',
 	beforeEach(to, from) {
+		const parkedUpgrade = peekUpgradeFlow()
+		if (
+			parkedUpgrade &&
+			!to.path.startsWith('/project/') &&
+			!to.fullPath.startsWith(parkedUpgrade.returnFullPath)
+		) {
+			clearUpgradeFlow()
+		}
 		if (to.path.startsWith('/browse/')) {
 			prepareBrowseReturnNavigation(to.fullPath, from.path)
 		}

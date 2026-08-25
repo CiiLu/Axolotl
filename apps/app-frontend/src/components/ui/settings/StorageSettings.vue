@@ -149,9 +149,10 @@ function findInstanceParent(target: StorageNode): StorageNode | null {
 	const roots: StorageNode[] = [...(tree.value?.categories ?? [])]
 	if (tree.value?.rootOther) roots.push(tree.value.rootOther)
 
-	const stack: { node: StorageNode; parentInstance: StorageNode | null }[] = roots.map(
-		(node) => ({ node, parentInstance: null }),
-	)
+	const stack: { node: StorageNode; parentInstance: StorageNode | null }[] = roots.map((node) => ({
+		node,
+		parentInstance: null,
+	}))
 
 	while (stack.length > 0) {
 		const { node, parentInstance } = stack.pop()!
@@ -375,7 +376,9 @@ function formatDateTime(date: Date) {
 					<div class="storage-total-value">
 						<span class="total-actual">{{ formatBytes(tree.total.actual) }}</span>
 						<span v-if="tree.total.symlink > 0" class="total-symlink">
-							+ {{ formatBytes(tree.total.symlink) }} ({{ formatMessage(storageMessages.symlinkLabel) }})
+							+ {{ formatBytes(tree.total.symlink) }} ({{
+								formatMessage(storageMessages.symlinkLabel)
+							}})
 						</span>
 					</div>
 

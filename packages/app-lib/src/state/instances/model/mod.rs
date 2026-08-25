@@ -18,6 +18,12 @@ pub use self::content_snapshot::*;
 mod content_update_plan;
 pub use self::content_update_plan::*;
 
+mod instance_upgrade_plan;
+pub use self::instance_upgrade_plan::*;
+
+mod post_upgrade_notice;
+pub use self::post_upgrade_notice::*;
+
 mod content_provider;
 pub use self::content_provider::*;
 

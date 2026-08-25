@@ -320,6 +320,9 @@
   "app.ai-settings.search-models": {
     "message": "Search models"
   },
+  "app.ai-settings.sponsored-providers": {
+    "message": "Sponsored providers"
+  },
   "app.ai-settings.test": {
     "message": "Test provider"
   },
@@ -341,6 +344,9 @@
   "app.ai-settings.vertex.service-account-description": {
     "message": "Paste the complete Google Cloud service-account JSON document."
   },
+  "app.ai-settings.visit-website": {
+    "message": "Visit website"
+  },
   "app.appearance-settings.accent-color.blue": {
     "message": "Blue"
   },
@@ -352,9 +358,6 @@
   },
   "app.appearance-settings.accent-color.custom-hue": {
     "message": "Hue"
-  },
-  "app.appearance-settings.accent-color.custom-palette": {
-    "message": "Preset palette"
   },
   "app.appearance-settings.accent-color.custom-preview-dark": {
     "message": "Dark theme"
@@ -1322,44 +1325,14 @@
   "app.downloads.open-instance": {
     "message": "Open instance"
   },
-  "app.downloads.phase.downloading-content": {
-    "message": "Downloading content"
-  },
-  "app.downloads.phase.downloading-minecraft": {
-    "message": "Downloading Minecraft"
+  "app.downloads.operation.upgrade": {
+    "message": "Upgrade"
   },
   "app.downloads.phase.downloading-pack-file": {
     "message": "Downloading modpack"
   },
-  "app.downloads.phase.extracting-overrides": {
-    "message": "Extracting overrides"
-  },
-  "app.downloads.phase.finalizing": {
-    "message": "Finalizing"
-  },
-  "app.downloads.phase.preparing-instance": {
-    "message": "Preparing instance"
-  },
-  "app.downloads.phase.preparing-java": {
-    "message": "Preparing Java"
-  },
-  "app.downloads.phase.reading-pack-manifest": {
-    "message": "Reading manifest"
-  },
-  "app.downloads.phase.resolving-loader": {
-    "message": "Resolving loader"
-  },
-  "app.downloads.phase.resolving-minecraft": {
-    "message": "Resolving Minecraft"
-  },
-  "app.downloads.phase.resolving-pack": {
-    "message": "Resolving modpack"
-  },
-  "app.downloads.phase.rolling-back": {
-    "message": "Rolling back changes"
-  },
-  "app.downloads.phase.running-loader-processors": {
-    "message": "Installing loader"
+  "app.downloads.phase.unknown": {
+    "message": "Working"
   },
   "app.downloads.phase.verifying-downloaded-files": {
     "message": "Verifying files and continuing installation"
@@ -1414,6 +1387,9 @@
   },
   "app.downloads.status.waiting-for-user": {
     "message": "Action needed"
+  },
+  "app.downloads.view-upgrade-result": {
+    "message": "View upgrade result"
   },
   "app.drop.batch.completed-text": {
     "message": "Imported {succeeded} of {total} ({failed} failed, {skipped} skipped)."
@@ -2660,6 +2636,18 @@
   "app.instance.mods.parsing-files": {
     "message": "Parsing... larger files may take a while"
   },
+  "app.instance.mods.post-upgrade-notice.body": {
+    "message": "Some preserved content may not support the current Minecraft version and should be reviewed manually."
+  },
+  "app.instance.mods.post-upgrade-notice.ignore-all": {
+    "message": "Ignore all"
+  },
+  "app.instance.mods.post-upgrade-notice.item-tooltip": {
+    "message": "This content was preserved during the instance upgrade without installing a new compatible version. It may be incompatible with the current Minecraft version."
+  },
+  "app.instance.mods.post-upgrade-notice.title": {
+    "message": "Post-upgrade compatibility review"
+  },
   "app.instance.mods.project-was-added": {
     "message": "\"{name}\" was added"
   },
@@ -2731,6 +2719,9 @@
   },
   "app.instance.played": {
     "message": "Played {time}"
+  },
+  "app.instance.post-upgrade-status": {
+    "message": "Upgraded to {version}"
   },
   "app.instance.screenshots.action-failed": {
     "message": "Screenshot action failed"
@@ -2821,6 +2812,9 @@
   },
   "app.instance.update-selected": {
     "message": "Update selected"
+  },
+  "app.instance.upgrade-instance": {
+    "message": "Upgrade instance"
   },
   "app.instance.worlds.add-server": {
     "message": "Add server"
@@ -4751,6 +4745,18 @@
   "app.minecraft-crash.copy-link": {
     "message": "Copy link"
   },
+  "app.minecraft-crash.diagnosis.disk-space.action": {
+    "message": "Free space on the drive containing this instance, then launch Minecraft again."
+  },
+  "app.minecraft-crash.diagnosis.disk-space.title": {
+    "message": "Possible issue: the disk ran out of free space"
+  },
+  "app.minecraft-crash.diagnosis.file-in-use.action": {
+    "message": "Close the program named in the log, including other launchers, backup tools, or antivirus scans, then launch again."
+  },
+  "app.minecraft-crash.diagnosis.file-in-use.title": {
+    "message": "Possible issue: another process is using a required file"
+  },
   "app.minecraft-crash.diagnosis.forge-java.action": {
     "message": "You can try using the Java version expected by this Forge release, or updating Forge."
   },
@@ -4829,6 +4835,48 @@
   "app.minecraft-crash.launch-failure-hint": {
     "message": "Open the Minecraft logs to view the captured Java output. When asking for help, export and send the complete Minecraft diagnostic package."
   },
+  "app.minecraft-crash.mod-changes-action": {
+    "message": "Review the changed Mod files and restore the previous setup manually if the crash started after those changes."
+  },
+  "app.minecraft-crash.mod-changes-modal.added": {
+    "message": "Added ({count})"
+  },
+  "app.minecraft-crash.mod-changes-modal.close": {
+    "message": "Close"
+  },
+  "app.minecraft-crash.mod-changes-modal.description": {
+    "message": "This comparison does not restore or modify any files."
+  },
+  "app.minecraft-crash.mod-changes-modal.empty": {
+    "message": "No Mod file changes were detected."
+  },
+  "app.minecraft-crash.mod-changes-modal.modified": {
+    "message": "Modified ({count})"
+  },
+  "app.minecraft-crash.mod-changes-modal.refresh-failed": {
+    "message": "Mod removed, but the content list could not be refreshed."
+  },
+  "app.minecraft-crash.mod-changes-modal.removed": {
+    "message": "Removed ({count})"
+  },
+  "app.minecraft-crash.mod-changes-modal.title": {
+    "message": "Mod changes since the last successful launch"
+  },
+  "app.minecraft-crash.mod-changes-modal.undo": {
+    "message": "Undo added Mod"
+  },
+  "app.minecraft-crash.mod-changes-modal.undo-confirm": {
+    "message": "Remove {name}? Only this unchanged file will be deleted."
+  },
+  "app.minecraft-crash.mod-changes-modal.undo-failed": {
+    "message": "Could not undo this Mod change"
+  },
+  "app.minecraft-crash.mod-changes-modal.undone": {
+    "message": "Added Mod removed"
+  },
+  "app.minecraft-crash.mod-changes-title": {
+    "message": "Possible issue: Mod files changed since the last successful launch"
+  },
   "app.minecraft-crash.no-log-content": {
     "message": "No log content was found to share or analyze. Make sure the instance has logs generated in the last few minutes."
   },
@@ -4864,6 +4912,9 @@
   },
   "app.minecraft-crash.title": {
     "message": "{instanceName} crashed"
+  },
+  "app.minecraft-crash.view-mod-changes": {
+    "message": "View Mod changes"
   },
   "app.minecraft.playing-as": {
     "message": "Playing as"
@@ -6836,8 +6887,44 @@
   "app.settings.storage.world": {
     "message": "World"
   },
+  "app.settings.tabs.about": {
+    "message": "About"
+  },
+  "app.settings.tabs.ai": {
+    "message": "AI"
+  },
+  "app.settings.tabs.content-downloads": {
+    "message": "Content & downloads"
+  },
+  "app.settings.tabs.home-navigation": {
+    "message": "Home & navigation"
+  },
+  "app.settings.tabs.interface": {
+    "message": "Interface & appearance"
+  },
+  "app.settings.tabs.java-performance": {
+    "message": "Java & performance"
+  },
+  "app.settings.tabs.language-translation": {
+    "message": "Language & translation"
+  },
+  "app.settings.tabs.launch-defaults": {
+    "message": "Launch & instance defaults"
+  },
+  "app.settings.tabs.network-multiplayer": {
+    "message": "Network & multiplayer"
+  },
+  "app.settings.tabs.privacy-data": {
+    "message": "Privacy & data sharing"
+  },
   "app.settings.tabs.storage": {
     "message": "Storage"
+  },
+  "app.settings.tabs.storage-backups": {
+    "message": "Storage & backups"
+  },
+  "app.settings.tabs.updates": {
+    "message": "Updates"
   },
   "app.settings.updates.announcements.description": {
     "message": "See what changed in this version and browse previous releases."
@@ -8312,6 +8399,996 @@
   "instance.settings.tabs.window.width.enter": {
     "message": "Enter width..."
   },
+  "instance.upgrade.action.add-dependency": {
+    "message": "Add dependency"
+  },
+  "instance.upgrade.action.disable": {
+    "message": "Disable"
+  },
+  "instance.upgrade.action.keep": {
+    "message": "Keep"
+  },
+  "instance.upgrade.action.remove-dependency": {
+    "message": "Remove dependency"
+  },
+  "instance.upgrade.action.update-dependency": {
+    "message": "Update dependency"
+  },
+  "instance.upgrade.action.upgrade": {
+    "message": "Update"
+  },
+  "instance.upgrade.changelog.empty": {
+    "message": "No changelog was provided for this version."
+  },
+  "instance.upgrade.changelog.loading": {
+    "message": "Loading release details…"
+  },
+  "instance.upgrade.changelog.show-original": {
+    "message": "Show original"
+  },
+  "instance.upgrade.changelog.translate": {
+    "message": "Translate"
+  },
+  "instance.upgrade.changelog.translation.authentication": {
+    "message": "Translation provider authentication failed."
+  },
+  "instance.upgrade.changelog.translation.failed": {
+    "message": "Changelog translation failed."
+  },
+  "instance.upgrade.changelog.translation.network": {
+    "message": "Translation network request failed."
+  },
+  "instance.upgrade.changelog.translation.rate-limited": {
+    "message": "Translation is temporarily rate limited."
+  },
+  "instance.upgrade.changelog.translation.too-long": {
+    "message": "This changelog is too long to translate."
+  },
+  "instance.upgrade.changelog.unavailable": {
+    "message": "Release details unavailable."
+  },
+  "instance.upgrade.compatibility.allow-prerelease": {
+    "message": "Allow prerelease for this content"
+  },
+  "instance.upgrade.compatibility.back": {
+    "message": "Back"
+  },
+  "instance.upgrade.compatibility.blockers": {
+    "message": "Blocking issues"
+  },
+  "instance.upgrade.compatibility.blocking-description": {
+    "message": "These items need your decision before the upgrade can continue."
+  },
+  "instance.upgrade.compatibility.bulk-eligible": {
+    "message": "{count, plural, one {# actionable item} other {# actionable items}}"
+  },
+  "instance.upgrade.compatibility.bulk-partial": {
+    "message": "{applied} updated; {remaining} still need review."
+  },
+  "instance.upgrade.compatibility.bulk-progress": {
+    "message": "Updating {current} of {total}…"
+  },
+  "instance.upgrade.compatibility.bulk-skipped": {
+    "message": "{count} items were skipped."
+  },
+  "instance.upgrade.compatibility.cancel": {
+    "message": "Cancel"
+  },
+  "instance.upgrade.compatibility.candidate-release": {
+    "message": "Candidate: {version}"
+  },
+  "instance.upgrade.compatibility.compatible": {
+    "message": "Compatible or kept"
+  },
+  "instance.upgrade.compatibility.confirm": {
+    "message": "Confirm"
+  },
+  "instance.upgrade.compatibility.confirm-disable-all": {
+    "message": "Disable {count, plural, one {# warning item} other {# warning items}}?"
+  },
+  "instance.upgrade.compatibility.content": {
+    "message": "Content"
+  },
+  "instance.upgrade.compatibility.content-count": {
+    "message": "{count, plural, one {# item} other {# items}}"
+  },
+  "instance.upgrade.compatibility.continue": {
+    "message": "Continue"
+  },
+  "instance.upgrade.compatibility.current-version-only": {
+    "message": "Current: {current}"
+  },
+  "instance.upgrade.compatibility.dependencies": {
+    "message": "Dependency changes"
+  },
+  "instance.upgrade.compatibility.dependency-changes": {
+    "message": "Dependencies changed"
+  },
+  "instance.upgrade.compatibility.description": {
+    "message": "Review content changes and resolve issues before continuing."
+  },
+  "instance.upgrade.compatibility.disable-all": {
+    "message": "Disable all"
+  },
+  "instance.upgrade.compatibility.disable-current": {
+    "message": "Disable current content"
+  },
+  "instance.upgrade.compatibility.disabled": {
+    "message": "Currently disabled"
+  },
+  "instance.upgrade.compatibility.disabled-count": {
+    "message": "Will disable"
+  },
+  "instance.upgrade.compatibility.global-issue": {
+    "message": "Instance-wide issue"
+  },
+  "instance.upgrade.compatibility.keep-all": {
+    "message": "Keep all"
+  },
+  "instance.upgrade.compatibility.keep-current": {
+    "message": "Keep current"
+  },
+  "instance.upgrade.compatibility.loader": {
+    "message": "Loader"
+  },
+  "instance.upgrade.compatibility.minecraft": {
+    "message": "Minecraft"
+  },
+  "instance.upgrade.compatibility.needs-attention": {
+    "message": "Needs attention"
+  },
+  "instance.upgrade.compatibility.no-compatible-explanation": {
+    "message": "No compatible release was found for the target Minecraft version. Keeping it may prevent the game from working; you can also disable it temporarily."
+  },
+  "instance.upgrade.compatibility.no-issues": {
+    "message": "No issues"
+  },
+  "instance.upgrade.compatibility.prerelease-explanation": {
+    "message": "No compatible stable release was found, but a beta or alpha release is available."
+  },
+  "instance.upgrade.compatibility.resolve-before-continue": {
+    "message": "Resolve blocking issues before continuing."
+  },
+  "instance.upgrade.compatibility.resolve-blockers-tooltip": {
+    "message": "Please resolve all blocking items before continuing."
+  },
+  "instance.upgrade.compatibility.resolved": {
+    "message": "Resolved {count}/{total}"
+  },
+  "instance.upgrade.compatibility.title": {
+    "message": "Compatibility"
+  },
+  "instance.upgrade.compatibility.undo": {
+    "message": "Undo"
+  },
+  "instance.upgrade.compatibility.unknown-version": {
+    "message": "Unknown version"
+  },
+  "instance.upgrade.compatibility.updates": {
+    "message": "Will update"
+  },
+  "instance.upgrade.compatibility.version-change": {
+    "message": "{current} → {target}"
+  },
+  "instance.upgrade.compatibility.warnings": {
+    "message": "Warnings"
+  },
+  "instance.upgrade.compatibility.warnings-description": {
+    "message": "Review these items before choosing an upgrade solution."
+  },
+  "instance.upgrade.confirm.active-job": {
+    "message": "An upgrade is already in progress"
+  },
+  "instance.upgrade.confirm.back": {
+    "message": "Back"
+  },
+  "instance.upgrade.confirm.backup.copy-mode": {
+    "message": "The original shared instance will not be modified, so no additional full backup will be created."
+  },
+  "instance.upgrade.confirm.backup.description": {
+    "message": "A separate instance copy preserves worlds and configuration for a later return."
+  },
+  "instance.upgrade.confirm.backup.instance-name": {
+    "message": "{name} (Pre-upgrade backup)"
+  },
+  "instance.upgrade.confirm.backup.off-body": {
+    "message": "World changes after launching the upgraded game may not be reversible."
+  },
+  "instance.upgrade.confirm.backup.off-title": {
+    "message": "No full backup will be created"
+  },
+  "instance.upgrade.confirm.backup.title": {
+    "message": "Full backup"
+  },
+  "instance.upgrade.confirm.backup.toggle": {
+    "message": "Create a full backup before upgrading"
+  },
+  "instance.upgrade.confirm.choose-shared-mode-tooltip": {
+    "message": "Choose how this shared instance should be upgraded."
+  },
+  "instance.upgrade.confirm.copy.instance-name": {
+    "message": "{name} (Upgraded copy)"
+  },
+  "instance.upgrade.confirm.dependencies-added": {
+    "message": "Dependencies added"
+  },
+  "instance.upgrade.confirm.dependencies-removed": {
+    "message": "Dependencies removed"
+  },
+  "instance.upgrade.confirm.dependencies-updated": {
+    "message": "Dependencies updated"
+  },
+  "instance.upgrade.confirm.description": {
+    "message": "Review the changes and backup options before starting the upgrade."
+  },
+  "instance.upgrade.confirm.details": {
+    "message": "Change details"
+  },
+  "instance.upgrade.confirm.details.content-item": {
+    "message": "Content item"
+  },
+  "instance.upgrade.confirm.details.dependencies": {
+    "message": "Dependency changes"
+  },
+  "instance.upgrade.confirm.details.disabled": {
+    "message": "Disabled content"
+  },
+  "instance.upgrade.confirm.details.disabled-state": {
+    "message": "Disabled"
+  },
+  "instance.upgrade.confirm.details.kept": {
+    "message": "Kept content"
+  },
+  "instance.upgrade.confirm.details.new-dependency": {
+    "message": "New {provider} dependency"
+  },
+  "instance.upgrade.confirm.details.updated": {
+    "message": "Updated content"
+  },
+  "instance.upgrade.confirm.details.version-current": {
+    "message": "Current {version}"
+  },
+  "instance.upgrade.confirm.details.version-target": {
+    "message": "Target {version}"
+  },
+  "instance.upgrade.confirm.disabled": {
+    "message": "Will disable"
+  },
+  "instance.upgrade.confirm.environment": {
+    "message": "Environment"
+  },
+  "instance.upgrade.confirm.kept": {
+    "message": "Will keep"
+  },
+  "instance.upgrade.confirm.loader": {
+    "message": "Loader"
+  },
+  "instance.upgrade.confirm.loader.automatic": {
+    "message": "automatic"
+  },
+  "instance.upgrade.confirm.preserved.body": {
+    "message": "Worlds, options, servers, and configuration files are preserved. Mods, resource packs, and shaders follow the selected upgrade solution."
+  },
+  "instance.upgrade.confirm.preserved.title": {
+    "message": "Preserved data"
+  },
+  "instance.upgrade.confirm.rollback.description": {
+    "message": "If file changes fail during the upgrade, the launcher automatically rolls back the operation. This is separate from a full user backup."
+  },
+  "instance.upgrade.confirm.rollback.title": {
+    "message": "Automatic technical rollback"
+  },
+  "instance.upgrade.confirm.shared.copy": {
+    "message": "Copy and upgrade"
+  },
+  "instance.upgrade.confirm.shared.copy-description": {
+    "message": "Create and upgrade a new local instance. The original link and external target remain untouched."
+  },
+  "instance.upgrade.confirm.shared.description": {
+    "message": "Choose whether to modify the external target or upgrade an independent local copy."
+  },
+  "instance.upgrade.confirm.shared.direct": {
+    "message": "Direct upgrade"
+  },
+  "instance.upgrade.confirm.shared.direct-description": {
+    "message": "Modify the real external target folder. The existing link remains in place."
+  },
+  "instance.upgrade.confirm.shared.title": {
+    "message": "Shared instance handling"
+  },
+  "instance.upgrade.confirm.start": {
+    "message": "Start upgrade"
+  },
+  "instance.upgrade.confirm.start-error": {
+    "message": "Unable to start upgrade"
+  },
+  "instance.upgrade.confirm.starting": {
+    "message": "Starting upgrade…"
+  },
+  "instance.upgrade.confirm.strategy": {
+    "message": "Upgrade strategy"
+  },
+  "instance.upgrade.confirm.strategy.custom": {
+    "message": "Custom"
+  },
+  "instance.upgrade.confirm.strategy.minimal": {
+    "message": "Change as little as possible"
+  },
+  "instance.upgrade.confirm.strategy.newest": {
+    "message": "Update as much as possible"
+  },
+  "instance.upgrade.confirm.title": {
+    "message": "Confirm upgrade"
+  },
+  "instance.upgrade.confirm.updated": {
+    "message": "Will update"
+  },
+  "instance.upgrade.confirm.world.body": {
+    "message": "Launching the upgraded instance may migrate worlds to a newer save format. Opening migrated worlds with an older Minecraft version may be unsafe or unsupported. A full backup is strongly recommended."
+  },
+  "instance.upgrade.confirm.world.datapacks": {
+    "message": "Datapacks inside {path} are preserved but are not automatically upgraded."
+  },
+  "instance.upgrade.confirm.world.title": {
+    "message": "World saves may be migrated irreversibly"
+  },
+  "instance.upgrade.customize.apply-before-continue": {
+    "message": "Apply your custom choices first."
+  },
+  "instance.upgrade.customize.back": {
+    "message": "Back"
+  },
+  "instance.upgrade.customize.baseline-hint": {
+    "message": "Current selected solution shown as the baseline. Apply custom choices to recalculate it."
+  },
+  "instance.upgrade.customize.cancel": {
+    "message": "Cancel"
+  },
+  "instance.upgrade.customize.channel.alpha": {
+    "message": "Alpha"
+  },
+  "instance.upgrade.customize.channel.beta": {
+    "message": "Beta"
+  },
+  "instance.upgrade.customize.channel.release": {
+    "message": "Release"
+  },
+  "instance.upgrade.customize.conflict.title": {
+    "message": "Custom choices conflict"
+  },
+  "instance.upgrade.customize.continue": {
+    "message": "Continue"
+  },
+  "instance.upgrade.customize.current-version": {
+    "message": "Current: {version}"
+  },
+  "instance.upgrade.customize.currently-disabled": {
+    "message": "Currently disabled"
+  },
+  "instance.upgrade.customize.custom.apply": {
+    "message": "Apply custom choices"
+  },
+  "instance.upgrade.customize.custom.automatic": {
+    "message": "Automatic"
+  },
+  "instance.upgrade.customize.custom.choice": {
+    "message": "Target version"
+  },
+  "instance.upgrade.customize.custom.choices": {
+    "message": "Custom choices"
+  },
+  "instance.upgrade.customize.custom.choices-description": {
+    "message": "Only user-owned root content is editable. Dependencies remain solver-managed."
+  },
+  "instance.upgrade.customize.custom.constraint-count": {
+    "message": "{count, plural, one {# exact choice} other {# exact choices}}"
+  },
+  "instance.upgrade.customize.custom.description": {
+    "message": "Fix exact versions for selected content and let Axolotl solve the remaining dependency graph."
+  },
+  "instance.upgrade.customize.custom.discard-switch": {
+    "message": "Discard and switch"
+  },
+  "instance.upgrade.customize.custom.issues": {
+    "message": "Unable to resolve custom choices"
+  },
+  "instance.upgrade.customize.custom.recalculate": {
+    "message": "Recalculate"
+  },
+  "instance.upgrade.customize.custom.specific-version": {
+    "message": "Exact release {version}"
+  },
+  "instance.upgrade.customize.custom.specific-version-channel": {
+    "message": "{version} ({channel})"
+  },
+  "instance.upgrade.customize.custom.title": {
+    "message": "Custom"
+  },
+  "instance.upgrade.customize.custom.unapplied-body": {
+    "message": "Apply these choices to calculate a globally compatible solution."
+  },
+  "instance.upgrade.customize.custom.unapplied-title": {
+    "message": "Custom choices have not been applied"
+  },
+  "instance.upgrade.customize.custom.unsaved-body": {
+    "message": "Switching strategy will discard changes that have not been calculated."
+  },
+  "instance.upgrade.customize.custom.unsaved-title": {
+    "message": "Discard unapplied custom choices?"
+  },
+  "instance.upgrade.customize.dependencies-title": {
+    "message": "Dependency changes"
+  },
+  "instance.upgrade.customize.dependency.add": {
+    "message": "Add dependency"
+  },
+  "instance.upgrade.customize.dependency.keep": {
+    "message": "Keep dependency"
+  },
+  "instance.upgrade.customize.dependency.new": {
+    "message": "New content: {target}"
+  },
+  "instance.upgrade.customize.dependency.remove": {
+    "message": "Remove dependency"
+  },
+  "instance.upgrade.customize.dependency.reused": {
+    "message": "Reuses existing content: {current} to {target}"
+  },
+  "instance.upgrade.customize.dependency.upgrade": {
+    "message": "Update dependency"
+  },
+  "instance.upgrade.customize.description": {
+    "message": "Choose how aggressively Axolotl should update content in this instance."
+  },
+  "instance.upgrade.customize.effective-changes": {
+    "message": "Effective changes"
+  },
+  "instance.upgrade.customize.effective-target": {
+    "message": "Calculated target: {version}"
+  },
+  "instance.upgrade.customize.effective-target-prefix": {
+    "message": "Calculated target: "
+  },
+  "instance.upgrade.customize.metric.added": {
+    "message": "Dependencies added"
+  },
+  "instance.upgrade.customize.metric.dependency-updated": {
+    "message": "Dependencies updated"
+  },
+  "instance.upgrade.customize.metric.disabled": {
+    "message": "Disabled"
+  },
+  "instance.upgrade.customize.metric.kept": {
+    "message": "Kept"
+  },
+  "instance.upgrade.customize.metric.removed": {
+    "message": "Dependencies removed"
+  },
+  "instance.upgrade.customize.metric.updated": {
+    "message": "Content updated"
+  },
+  "instance.upgrade.customize.minimal.description": {
+    "message": "Keep compatible current versions and change as little installed content as possible."
+  },
+  "instance.upgrade.customize.minimal.title": {
+    "message": "Minimal changes"
+  },
+  "instance.upgrade.customize.newest.description": {
+    "message": "Update compatible content to the newest versions available for the target environment."
+  },
+  "instance.upgrade.customize.newest.title": {
+    "message": "Newest versions"
+  },
+  "instance.upgrade.customize.no-target": {
+    "message": "No target release"
+  },
+  "instance.upgrade.customize.request-error-title": {
+    "message": "Strategy could not be updated"
+  },
+  "instance.upgrade.customize.resolve-before-continue": {
+    "message": "Resolve custom conflicts before continuing."
+  },
+  "instance.upgrade.customize.search-limit.body": {
+    "message": "Axolotl couldn't find a solution within the search limit. Try relaxing one of your custom choices."
+  },
+  "instance.upgrade.customize.search-limit.title": {
+    "message": "Search limit reached"
+  },
+  "instance.upgrade.customize.summary.roots": {
+    "message": "{updates} updates, {kept} kept, {disabled} disabled, {dependencies, plural, one {# dependency change} other {# dependency changes}}"
+  },
+  "instance.upgrade.customize.title": {
+    "message": "Upgrade strategy"
+  },
+  "instance.upgrade.flow.aria": {
+    "message": "Instance upgrade navigation"
+  },
+  "instance.upgrade.flow.back": {
+    "message": "Previous"
+  },
+  "instance.upgrade.flow.complete": {
+    "message": "Upgrade complete"
+  },
+  "instance.upgrade.flow.confirm": {
+    "message": "Confirm upgrade"
+  },
+  "instance.upgrade.flow.issues": {
+    "message": "Resolve issues"
+  },
+  "instance.upgrade.flow.next": {
+    "message": "Next"
+  },
+  "instance.upgrade.flow.preferences": {
+    "message": "Upgrade preferences"
+  },
+  "instance.upgrade.flow.progress": {
+    "message": "Upgrading"
+  },
+  "instance.upgrade.flow.steps": {
+    "message": "Upgrade steps"
+  },
+  "instance.upgrade.flow.target": {
+    "message": "Upgrade target"
+  },
+  "instance.upgrade.issue.dependency": {
+    "message": "Dependency conflict"
+  },
+  "instance.upgrade.issue.generic": {
+    "message": "Compatibility issue"
+  },
+  "instance.upgrade.issue.keep-incompatible": {
+    "message": "Keeping this version may make the upgraded instance incompatible."
+  },
+  "instance.upgrade.issue.no-compatible-release": {
+    "message": "No compatible release"
+  },
+  "instance.upgrade.issue.no-compatible-release.description": {
+    "message": "No compatible release was found for Minecraft {version}."
+  },
+  "instance.upgrade.issue.no-compatible-shader-runtime": {
+    "message": "No release supports the target Minecraft version and shader runtime."
+  },
+  "instance.upgrade.issue.prerelease-only": {
+    "message": "Prerelease confirmation required"
+  },
+  "instance.upgrade.issue.prerelease-only.description": {
+    "message": "Only a prerelease version is available for Minecraft {version}."
+  },
+  "instance.upgrade.issue.search-limit-reached": {
+    "message": "The bounded compatibility search could not prove a valid solution."
+  },
+  "instance.upgrade.issue.shader": {
+    "message": "Shader compatibility issue"
+  },
+  "instance.upgrade.issue.shader-runtime-missing": {
+    "message": "No shader runtime is planned for the target instance."
+  },
+  "instance.upgrade.issue.shader-runtime-unknown": {
+    "message": "The target shader runtime could not be determined."
+  },
+  "instance.upgrade.issue.unidentified": {
+    "message": "This local file could not be matched to a verified provider project."
+  },
+  "instance.upgrade.issue.unsupported-content-type": {
+    "message": "This content type cannot be migrated automatically."
+  },
+  "instance.upgrade.progress.opening-downloads": {
+    "message": "Opening download task…"
+  },
+  "instance.upgrade.provider.curseforge": {
+    "message": "CurseForge"
+  },
+  "instance.upgrade.provider.local": {
+    "message": "Local"
+  },
+  "instance.upgrade.provider.modrinth": {
+    "message": "Modrinth"
+  },
+  "instance.upgrade.provider.unknown": {
+    "message": "Unknown provider"
+  },
+  "instance.upgrade.result.action-add": {
+    "message": "Added"
+  },
+  "instance.upgrade.result.action-disable": {
+    "message": "Disabled"
+  },
+  "instance.upgrade.result.action-keep": {
+    "message": "Kept"
+  },
+  "instance.upgrade.result.action-remove": {
+    "message": "Removed"
+  },
+  "instance.upgrade.result.action-upgrade": {
+    "message": "Updated"
+  },
+  "instance.upgrade.result.automatic": {
+    "message": "Automatic"
+  },
+  "instance.upgrade.result.backup-description": {
+    "message": "A complete pre-upgrade copy was created separately from automatic technical rollback."
+  },
+  "instance.upgrade.result.backup-title": {
+    "message": "Backup created"
+  },
+  "instance.upgrade.result.change-added": {
+    "message": "Added"
+  },
+  "instance.upgrade.result.change-modified": {
+    "message": "Modified"
+  },
+  "instance.upgrade.result.change-removed": {
+    "message": "Removed"
+  },
+  "instance.upgrade.result.content-kind-content": {
+    "message": "Content"
+  },
+  "instance.upgrade.result.content-kind-datapack": {
+    "message": "Data pack"
+  },
+  "instance.upgrade.result.content-kind-mod": {
+    "message": "Mod"
+  },
+  "instance.upgrade.result.content-kind-resourcepack": {
+    "message": "Resource pack"
+  },
+  "instance.upgrade.result.content-kind-shaderpack": {
+    "message": "Shader pack"
+  },
+  "instance.upgrade.result.copy-description": {
+    "message": "An upgraded copy was created successfully. The original shared instance was left unchanged."
+  },
+  "instance.upgrade.result.dependencies-added": {
+    "message": "Dependencies added"
+  },
+  "instance.upgrade.result.dependencies-removed": {
+    "message": "Dependencies removed"
+  },
+  "instance.upgrade.result.dependencies-updated": {
+    "message": "Dependencies updated"
+  },
+  "instance.upgrade.result.dependency": {
+    "message": "Dependency"
+  },
+  "instance.upgrade.result.dependency-added": {
+    "message": "Dependency added"
+  },
+  "instance.upgrade.result.dependency-kept": {
+    "message": "Dependency kept"
+  },
+  "instance.upgrade.result.dependency-removed-status": {
+    "message": "Dependency removed"
+  },
+  "instance.upgrade.result.dependency-updated-status": {
+    "message": "Dependency updated"
+  },
+  "instance.upgrade.result.details-title": {
+    "message": "Upgrade details"
+  },
+  "instance.upgrade.result.direct-description": {
+    "message": "This instance was upgraded successfully."
+  },
+  "instance.upgrade.result.disabled": {
+    "message": "Disabled"
+  },
+  "instance.upgrade.result.environment": {
+    "message": "Environment"
+  },
+  "instance.upgrade.result.external-description": {
+    "message": "Files changed outside the launcher were detected, and user changes were given priority where applicable."
+  },
+  "instance.upgrade.result.external-title": {
+    "message": "Changes detected while upgrading"
+  },
+  "instance.upgrade.result.filter-all": {
+    "message": "All"
+  },
+  "instance.upgrade.result.filter-dependencies": {
+    "message": "Dependencies"
+  },
+  "instance.upgrade.result.filter-disabled": {
+    "message": "Disabled"
+  },
+  "instance.upgrade.result.filter-kept": {
+    "message": "Kept"
+  },
+  "instance.upgrade.result.filter-updated": {
+    "message": "Updated"
+  },
+  "instance.upgrade.result.filters": {
+    "message": "Filter upgrade details"
+  },
+  "instance.upgrade.result.kept": {
+    "message": "Kept"
+  },
+  "instance.upgrade.result.loader": {
+    "message": "Loader"
+  },
+  "instance.upgrade.result.local-content": {
+    "message": "Local content"
+  },
+  "instance.upgrade.result.metrics": {
+    "message": "Outcome"
+  },
+  "instance.upgrade.result.minecraft": {
+    "message": "Minecraft"
+  },
+  "instance.upgrade.result.missing": {
+    "message": "This persisted upgrade result could not be loaded."
+  },
+  "instance.upgrade.result.next": {
+    "message": "Next"
+  },
+  "instance.upgrade.result.no-backup-description": {
+    "message": "Automatic technical rollback protected this operation while it was running; it is not a permanent backup."
+  },
+  "instance.upgrade.result.no-backup-title": {
+    "message": "No complete backup was created"
+  },
+  "instance.upgrade.result.no-matching-items": {
+    "message": "No matching upgrade items."
+  },
+  "instance.upgrade.result.no-matching-warnings": {
+    "message": "No matching compatibility warnings."
+  },
+  "instance.upgrade.result.open-backup": {
+    "message": "Open backup"
+  },
+  "instance.upgrade.result.open-original": {
+    "message": "Open original instance"
+  },
+  "instance.upgrade.result.open-upgraded": {
+    "message": "Open upgraded instance"
+  },
+  "instance.upgrade.result.previous": {
+    "message": "Previous"
+  },
+  "instance.upgrade.result.provider-identity": {
+    "message": "Provider identity"
+  },
+  "instance.upgrade.result.relative-path": {
+    "message": "Relative path"
+  },
+  "instance.upgrade.result.search-details": {
+    "message": "Search upgrade details"
+  },
+  "instance.upgrade.result.showing": {
+    "message": "Showing {start}–{end} of {total}"
+  },
+  "instance.upgrade.result.skipped-description": {
+    "message": "These files changed while upgrading, so the user changes were preserved."
+  },
+  "instance.upgrade.result.skipped-title": {
+    "message": "Some planned changes were skipped"
+  },
+  "instance.upgrade.result.technical-details": {
+    "message": "Technical details"
+  },
+  "instance.upgrade.result.title": {
+    "message": "Upgrade complete"
+  },
+  "instance.upgrade.result.unavailable": {
+    "message": "Upgrade result unavailable"
+  },
+  "instance.upgrade.result.unknown": {
+    "message": "Unavailable"
+  },
+  "instance.upgrade.result.updated": {
+    "message": "Updated"
+  },
+  "instance.upgrade.result.warning-code": {
+    "message": "Warning"
+  },
+  "instance.upgrade.result.warning-conflict-description": {
+    "message": "This content requested dependency versions that could not all be used together. Review its dependencies if the game fails to start."
+  },
+  "instance.upgrade.result.warning-conflict-headline": {
+    "message": "Some dependency requirements conflicted"
+  },
+  "instance.upgrade.result.warning-dependency-description": {
+    "message": "The upgrade completed, but this dependency could not be verified normally. Review it if the game fails to start."
+  },
+  "instance.upgrade.result.warning-dependency-headline": {
+    "message": "A dependency needed a compatibility fallback"
+  },
+  "instance.upgrade.result.warning-disabled-description": {
+    "message": "The content was preserved on disk but disabled to avoid affecting the upgraded instance."
+  },
+  "instance.upgrade.result.warning-disabled-headline": {
+    "message": "This content was disabled"
+  },
+  "instance.upgrade.result.warning-filter-fallback": {
+    "message": "Compatibility fallback"
+  },
+  "instance.upgrade.result.warning-filter-unidentified": {
+    "message": "Unidentified"
+  },
+  "instance.upgrade.result.warning-filters": {
+    "message": "Filter compatibility warnings"
+  },
+  "instance.upgrade.result.warning-incompatible-dependency-description": {
+    "message": "A dependency could not satisfy the selected versions. Review or disable the affected content if the game has problems."
+  },
+  "instance.upgrade.result.warning-incompatible-dependency-headline": {
+    "message": "A dependency may be incompatible"
+  },
+  "instance.upgrade.result.warning-kept-description": {
+    "message": "No verified compatible replacement was selected. Update it manually or disable it if the game has problems."
+  },
+  "instance.upgrade.result.warning-kept-headline": {
+    "message": "The previous version was kept"
+  },
+  "instance.upgrade.result.warning-legacy-headline": {
+    "message": "Compatibility needs attention"
+  },
+  "instance.upgrade.result.warning-missing-dependency-description": {
+    "message": "The provider did not offer a required dependency for the target environment. Install a compatible dependency manually if needed."
+  },
+  "instance.upgrade.result.warning-missing-dependency-headline": {
+    "message": "A required dependency could not be found"
+  },
+  "instance.upgrade.result.warning-prerelease-description": {
+    "message": "This item used an alpha, beta, or release-candidate build because no stable target build was available."
+  },
+  "instance.upgrade.result.warning-prerelease-headline": {
+    "message": "A prerelease version was used"
+  },
+  "instance.upgrade.result.warning-reassurance": {
+    "message": "These warnings did not prevent the upgrade from completing. If the upgraded instance runs normally, no immediate action is required."
+  },
+  "instance.upgrade.result.warning-resolved-description": {
+    "message": "This warning occurred while planning, but the content was upgraded successfully. No immediate action is required."
+  },
+  "instance.upgrade.result.warning-resolved-headline": {
+    "message": "A compatibility fallback was applied"
+  },
+  "instance.upgrade.result.warning-search": {
+    "message": "Search compatibility warnings"
+  },
+  "instance.upgrade.result.warning-search-limit-description": {
+    "message": "The bounded compatibility search could not prove a complete result. Review this content if the game has problems."
+  },
+  "instance.upgrade.result.warning-search-limit-headline": {
+    "message": "Compatibility could not be fully verified"
+  },
+  "instance.upgrade.result.warning-shader-description": {
+    "message": "The shader was preserved, but compatibility with the target shader runtime is unknown. Disable it if rendering problems occur."
+  },
+  "instance.upgrade.result.warning-shader-headline": {
+    "message": "Shader compatibility could not be confirmed"
+  },
+  "instance.upgrade.result.warning-summary-fallback": {
+    "message": "{count, plural, one {# item used another compatibility fallback} other {# items used another compatibility fallback}}"
+  },
+  "instance.upgrade.result.warning-summary-kept": {
+    "message": "{count, plural, one {# item kept its previous version} other {# items kept their previous version}}"
+  },
+  "instance.upgrade.result.warning-summary-local": {
+    "message": "{count, plural, one {# local item could not be identified} other {# local items could not be identified}}"
+  },
+  "instance.upgrade.result.warning-unidentified-description": {
+    "message": "The launcher could not confirm whether it supports Minecraft {targetVersion}. If you notice problems, try disabling it temporarily."
+  },
+  "instance.upgrade.result.warning-unidentified-headline": {
+    "message": "This content was kept unchanged"
+  },
+  "instance.upgrade.result.warning-unsupported-description": {
+    "message": "This content type cannot be upgraded automatically. Check for a manual update if problems occur."
+  },
+  "instance.upgrade.result.warning-unsupported-headline": {
+    "message": "This content type was kept unchanged"
+  },
+  "instance.upgrade.result.warnings-title": {
+    "message": "Compatibility warnings"
+  },
+  "instance.upgrade.return": {
+    "message": "Return to instance upgrade"
+  },
+  "instance.upgrade.select.automatic": {
+    "message": "Automatic"
+  },
+  "instance.upgrade.select.check-compatibility": {
+    "message": "Check compatibility"
+  },
+  "instance.upgrade.select.current": {
+    "message": "Current"
+  },
+  "instance.upgrade.select.current-version-missing-body": {
+    "message": "Stable releases are shown without guessing their numeric order."
+  },
+  "instance.upgrade.select.current-version-missing-title": {
+    "message": "Current version not found in metadata"
+  },
+  "instance.upgrade.select.description": {
+    "message": "Choose which Minecraft version this instance should be upgraded to."
+  },
+  "instance.upgrade.select.fabric-version": {
+    "message": "Fabric version"
+  },
+  "instance.upgrade.select.fabric-versions-error": {
+    "message": "Fabric versions could not be loaded. Automatic remains available."
+  },
+  "instance.upgrade.select.loading-fabric-versions": {
+    "message": "Loading Fabric versions…"
+  },
+  "instance.upgrade.select.loading-versions": {
+    "message": "Loading Minecraft versions…"
+  },
+  "instance.upgrade.select.manual-fabric-version-unavailable": {
+    "message": "Manual Fabric version selection is unavailable."
+  },
+  "instance.upgrade.select.metadata-error-body": {
+    "message": "Check your connection and try again."
+  },
+  "instance.upgrade.select.metadata-error-title": {
+    "message": "Minecraft versions could not be loaded"
+  },
+  "instance.upgrade.select.minecraft": {
+    "message": "Minecraft version"
+  },
+  "instance.upgrade.select.minecraft-version": {
+    "message": "Minecraft {version}"
+  },
+  "instance.upgrade.select.no-newer-release": {
+    "message": "No newer stable Minecraft release is available."
+  },
+  "instance.upgrade.select.no-non-downgrade-fabric-version": {
+    "message": "No Fabric version that avoids downgrading is available for this target."
+  },
+  "instance.upgrade.select.planning-error-title": {
+    "message": "Compatibility analysis failed"
+  },
+  "instance.upgrade.select.planning-status": {
+    "message": "Analyzing compatibility for {count} content items…"
+  },
+  "instance.upgrade.select.review-compatibility": {
+    "message": "Review compatibility"
+  },
+  "instance.upgrade.select.target": {
+    "message": "Target"
+  },
+  "instance.upgrade.select.target-version-input": {
+    "message": "Target Minecraft version"
+  },
+  "instance.upgrade.select.title": {
+    "message": "Upgrade instance"
+  },
+  "instance.upgrade.warning.dependency-conflict": {
+    "message": "{path} has conflicting dependency requirements."
+  },
+  "instance.upgrade.warning.incompatible-dependency": {
+    "message": "{path} has an incompatible dependency."
+  },
+  "instance.upgrade.warning.keep-incompatible": {
+    "message": "{path} was kept unchanged and may be incompatible with the upgraded instance."
+  },
+  "instance.upgrade.warning.missing-required-dependency": {
+    "message": "{path} requires a dependency that could not be resolved."
+  },
+  "instance.upgrade.warning.no-compatible-release": {
+    "message": "{path} has no compatible release for the target environment."
+  },
+  "instance.upgrade.warning.no-compatible-shader-runtime": {
+    "message": "{path} has no release compatible with the target shader runtime."
+  },
+  "instance.upgrade.warning.prerelease-only": {
+    "message": "{path} only has prerelease builds for the target environment."
+  },
+  "instance.upgrade.warning.search-limit-reached": {
+    "message": "{path} could not be resolved within the bounded compatibility search."
+  },
+  "instance.upgrade.warning.shader-runtime-missing": {
+    "message": "{path} was preserved because no target shader runtime is configured."
+  },
+  "instance.upgrade.warning.shader-runtime-unknown": {
+    "message": "{path} was preserved because the target shader runtime is unknown."
+  },
+  "instance.upgrade.warning.unidentified": {
+    "message": "{path} could not be identified and was preserved unchanged."
+  },
+  "instance.upgrade.warning.unsupported-content-type": {
+    "message": "{path} uses a content type that cannot be upgraded automatically."
+  },
   "instance.worlds.a_minecraft_server": {
     "message": "A Minecraft Server"
   },
@@ -8527,6 +9604,9 @@
   },
   "search.filter.locked.server-loader.title": {
     "message": "Loader is provided by the server"
+  },
+  "settings.feature-flags.title": {
+    "message": "Feature flags"
   },
   "unknown-pack-warning-modal.body": {
     "message": "A file is only reviewed if it’s uploaded to Modrinth, regardless of its file format (including .mrpack)."

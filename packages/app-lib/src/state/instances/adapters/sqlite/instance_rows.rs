@@ -199,6 +199,7 @@ struct InstanceMetadataRow {
     content_set_protocol_version: Option<i64>,
     content_set_loader: Option<String>,
     content_set_loader_version: Option<String>,
+    content_set_revision: Option<i64>,
     content_set_created: Option<i64>,
     content_set_modified: Option<i64>,
     link_kind: String,
@@ -287,7 +288,13 @@ impl InstanceMetadataRow {
                 "instance_content_sets.loader",
             )?)?,
             loader_version: self.content_set_loader_version,
-            revision: 0,
+            revision: unsigned(
+                required_i64(
+                    self.content_set_revision,
+                    "instance_content_sets.revision",
+                )?,
+                "instance_content_sets.revision",
+            )?,
             created: timestamp(required_i64(
                 self.content_set_created,
                 "instance_content_sets.created",
@@ -504,6 +511,7 @@ pub(crate) async fn get_instance_metadata_by_id(
             cs.protocol_version AS "content_set_protocol_version?: i64",
             cs.loader AS "content_set_loader?: String",
             cs.loader_version AS "content_set_loader_version?: String",
+            cs.revision AS "content_set_revision?: i64",
             cs.created AS "content_set_created?: i64",
             cs.modified AS "content_set_modified?: i64",
             COALESCE(link.link_kind, 'unmanaged') AS "link_kind!: String",
@@ -589,6 +597,7 @@ pub(crate) async fn get_instance_metadata_many(
             cs.protocol_version AS "content_set_protocol_version?: i64",
             cs.loader AS "content_set_loader?: String",
             cs.loader_version AS "content_set_loader_version?: String",
+            cs.revision AS "content_set_revision?: i64",
             cs.created AS "content_set_created?: i64",
             cs.modified AS "content_set_modified?: i64",
             COALESCE(link.link_kind, 'unmanaged') AS "link_kind!: String",
@@ -668,6 +677,7 @@ pub(crate) async fn list_instance_metadata(
             cs.protocol_version AS "content_set_protocol_version?: i64",
             cs.loader AS "content_set_loader?: String",
             cs.loader_version AS "content_set_loader_version?: String",
+            cs.revision AS "content_set_revision?: i64",
             cs.created AS "content_set_created?: i64",
             cs.modified AS "content_set_modified?: i64",
             COALESCE(link.link_kind, 'unmanaged') AS "link_kind!: String",
@@ -744,6 +754,7 @@ pub(crate) async fn get_instance_launch_context(
             cs.protocol_version AS "content_set_protocol_version?: i64",
             cs.loader AS "content_set_loader?: String",
             cs.loader_version AS "content_set_loader_version?: String",
+            cs.revision AS "content_set_revision?: i64",
             cs.created AS "content_set_created?: i64",
             cs.modified AS "content_set_modified?: i64",
             COALESCE(link.link_kind, 'unmanaged') AS "link_kind!: String",
@@ -1418,4 +1429,139 @@ fn unsigned(value: i64, column: &str) -> crate::Result<u64> {
     }
 
     Ok(value as u64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::sqlite::SqlitePoolOptions;
+
+    #[tokio::test]
+    async fn metadata_queries_preserve_applied_content_set_revision() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::raw_sql(
+            r#"
+            CREATE TABLE instances (
+                id TEXT PRIMARY KEY,
+                path TEXT NOT NULL,
+                applied_content_set_id TEXT,
+                install_stage TEXT NOT NULL,
+                launcher_feature_version TEXT NOT NULL,
+                update_channel TEXT NOT NULL,
+                name TEXT NOT NULL,
+                icon_path TEXT,
+                symlink_target TEXT,
+                created INTEGER NOT NULL,
+                modified INTEGER NOT NULL,
+                last_played INTEGER,
+                pinned_at INTEGER,
+                submitted_time_played INTEGER NOT NULL,
+                recent_time_played INTEGER NOT NULL
+            );
+            CREATE TABLE instance_content_sets (
+                id TEXT PRIMARY KEY,
+                instance_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                source_kind TEXT NOT NULL,
+                status TEXT NOT NULL,
+                game_version TEXT NOT NULL,
+                protocol_version INTEGER,
+                loader TEXT NOT NULL,
+                loader_version TEXT,
+                revision INTEGER NOT NULL,
+                created INTEGER NOT NULL,
+                modified INTEGER NOT NULL
+            );
+            CREATE TABLE instance_links (
+                instance_id TEXT PRIMARY KEY,
+                link_kind TEXT,
+                modrinth_project_id TEXT,
+                modrinth_version_id TEXT,
+                server_project_id TEXT,
+                content_project_id TEXT,
+                content_version_id TEXT,
+                hosting_server_id TEXT,
+                hosting_instance_ids TEXT,
+                hosting_active_instance_id TEXT,
+                shared_instance_id TEXT,
+                imported_name TEXT,
+                imported_version_number TEXT,
+                imported_filename TEXT
+            );
+            CREATE TABLE instance_groups (
+                instance_id TEXT NOT NULL,
+                group_name TEXT NOT NULL
+            );
+            CREATE TABLE instance_launch_overrides (
+                instance_id TEXT PRIMARY KEY,
+                overrides TEXT
+            );
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            r#"
+            INSERT INTO instances (
+                id, path, applied_content_set_id, install_stage,
+                launcher_feature_version, update_channel, name, created,
+                modified, submitted_time_played, recent_time_played
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 0, 0)
+            "#,
+        )
+        .bind("instance")
+        .bind("instance-path")
+        .bind("content-set")
+        .bind(InstanceInstallStage::NotInstalled.as_str())
+        .bind(LauncherFeatureVersion::MOST_RECENT.as_str())
+        .bind(ReleaseChannel::Release.key())
+        .bind("Instance")
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            r#"
+            INSERT INTO instance_content_sets (
+                id, instance_id, name, source_kind, status, game_version,
+                loader, revision, created, modified
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 5, 1, 1)
+            "#,
+        )
+        .bind("content-set")
+        .bind("instance")
+        .bind("Default")
+        .bind(ContentSourceKind::Local.as_str())
+        .bind(ContentSetStatus::Available.as_str())
+        .bind("1.21.5")
+        .bind(ModLoader::Vanilla.as_str())
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let by_id = get_instance_metadata_by_id("instance", &pool)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(by_id.applied_content_set.revision, 5);
+
+        let many = get_instance_metadata_many(&["instance"], &pool)
+            .await
+            .unwrap();
+        assert_eq!(many[0].applied_content_set.revision, 5);
+
+        let listed = list_instance_metadata(&pool).await.unwrap();
+        assert_eq!(listed[0].applied_content_set.revision, 5);
+
+        let launch = get_instance_launch_context("instance", &pool)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(launch.applied_content_set.revision, 5);
+    }
 }

@@ -31,6 +31,30 @@ import type {
 	InstanceLoader,
 } from './types'
 
+export interface InstancePostUpgradeWarning {
+	code: import('./instance-upgrade').InstanceUpgradeIssueCode
+	contentId: string | null
+	relativePath: string | null
+}
+
+export interface InstancePostUpgradeNotice {
+	instanceId: string
+	upgradeJobId: string
+	targetGameVersion: string
+	consecutiveCleanLaunches: number
+	warnings: InstancePostUpgradeWarning[]
+}
+
+export async function get_post_upgrade_notice(
+	instanceId: string,
+): Promise<InstancePostUpgradeNotice | null> {
+	return await invoke('plugin:instance|instance_get_post_upgrade_notice', { instanceId })
+}
+
+export async function dismiss_post_upgrade_notice(instanceId: string): Promise<void> {
+	await invoke('plugin:instance|instance_dismiss_post_upgrade_notice', { instanceId })
+}
+
 export async function remove(instanceId: string): Promise<void> {
 	await invoke('plugin:instance|instance_remove', { instanceId })
 	removeInstanceCache(instanceId)

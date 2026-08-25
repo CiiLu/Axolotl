@@ -1580,9 +1580,7 @@ export function createContentInstall(opts: {
 			projectType: project.project_type,
 			ownershipKind: 'user_added' as const,
 			manualOperationKind: 'content_install' as const,
-			gameVersion: usesTargetGameVersion(project.project_type)
-				? instance.game_version
-				: undefined,
+			gameVersion: usesTargetGameVersion(project.project_type) ? instance.game_version : undefined,
 			modLoaderType: curseForgeLoaderType(instance.loader),
 			installDependencies: true,
 		}

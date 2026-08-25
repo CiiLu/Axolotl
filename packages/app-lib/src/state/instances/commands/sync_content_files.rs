@@ -76,12 +76,12 @@ pub(crate) async fn sync_instance_content_files(
             .push(file.clone());
         existing_files_by_path.insert(file.relative_path.clone(), file);
     }
-    let entry_file_ids = match sqlite::content_rows::get_applied_content_set(
+    let content_set = sqlite::content_rows::get_applied_content_set(
         &instance.id,
         &state.pool,
     )
-    .await?
-    {
+    .await?;
+    let entry_file_ids = match content_set.as_ref() {
         Some(content_set) => sqlite::content_rows::get_content_entries(
             &content_set.id,
             &state.pool,
@@ -98,18 +98,30 @@ pub(crate) async fn sync_instance_content_files(
     let mut reclaims: HashMap<String, String> = HashMap::new();
     let mut merges: HashMap<String, String> = HashMap::new();
     let mut claimed_reclaim_ids = HashSet::new();
+    let mut externally_changed_file_ids = HashSet::new();
 
     for file in scanned {
         let hash_key = file.hash_cache_key.trim_end_matches(".disabled");
-        let Some(hash) = hashes_by_key.get(hash_key) else {
-            continue;
-        };
         let existing_file = existing_files_by_path.get(&file.relative_path);
+        let (scanned_sha1, scanned_size) = if existing_file.is_some() {
+            let path = state
+                .directories
+                .instances_dir()
+                .join(&instance.path)
+                .join(&file.relative_path);
+            let (_, sha1) = fetch::sha1_file_async(&path).await?;
+            (sha1, file.size)
+        } else {
+            let Some(hash) = hashes_by_key.get(hash_key) else {
+                continue;
+            };
+            (hash.hash.clone(), hash.size)
+        };
         let reclaim_candidate = if existing_file.is_some() {
             None
         } else {
             reclaimable_existing_file(
-                &hash.hash,
+                &scanned_sha1,
                 &file.relative_path,
                 &existing_files_by_sha1,
                 &scanned_paths,
@@ -120,7 +132,7 @@ pub(crate) async fn sync_instance_content_files(
             .filter(|file| !entry_file_ids.contains(&file.id))
             .and_then(|file| {
                 mergeable_tracked_file(
-                    &hash.hash,
+                    &scanned_sha1,
                     &file.relative_path,
                     &file.id,
                     &existing_files_by_sha1,
@@ -130,6 +142,15 @@ pub(crate) async fn sync_instance_content_files(
                 )
             });
         let source_file = existing_file.or(reclaim_candidate);
+        if let Some(existing_file) = existing_file
+            && physical_file_identity_changed(
+                existing_file,
+                &scanned_sha1,
+                scanned_size,
+            )
+        {
+            externally_changed_file_ids.insert(existing_file.id.clone());
+        }
         if let Some(candidate) = reclaim_candidate {
             claimed_reclaim_ids.insert(candidate.id.clone());
             reclaims.insert(
@@ -150,8 +171,8 @@ pub(crate) async fn sync_instance_content_files(
             relative_path: file.relative_path,
             file_name: file.file_name,
             enabled: file.enabled,
-            sha1: hash.hash.clone(),
-            size: file.size,
+            sha1: scanned_sha1,
+            size: scanned_size,
             missing: false,
             added_at: source_file.map(|file| file.added_at).unwrap_or(now),
             modified_at: now,
@@ -247,6 +268,17 @@ pub(crate) async fn sync_instance_content_files(
     sqlite::content_rows::ensure_instance_exists(&instance.id, &mut tx).await?;
     sqlite::content_rows::mark_instance_files_missing(&instance.id, &mut tx)
         .await?;
+    let mut invalidated_provider_identity = false;
+    if let Some(content_set) = content_set.as_ref() {
+        for file_id in &externally_changed_file_ids {
+            invalidated_provider_identity |= sqlite::content_rows::invalidate_exact_provider_refs_for_file_in_transaction(
+                &content_set.id,
+                file_id,
+                &mut tx,
+            )
+            .await?;
+        }
+    }
 
     // Upsert with a fresh id lookup inside the transaction. The ids assigned
     // during the scan may be stale if a concurrent operation (e.g. batch
@@ -291,6 +323,16 @@ pub(crate) async fn sync_instance_content_files(
                 upsert_scanned_file(&instance.id, file, &mut tx).await?
             };
         synced_files.push(synced);
+    }
+
+    if invalidated_provider_identity
+        && let Some(content_set) = content_set.as_ref()
+    {
+        sqlite::content_rows::bump_content_set_revision_in_transaction(
+            &content_set.id,
+            &mut tx,
+        )
+        .await?;
     }
 
     tx.commit().await?;
@@ -412,6 +454,14 @@ pub(crate) fn modrinth_update_enabled(
 
 fn instance_file_id() -> String {
     format!("instance-file:{}", Uuid::new_v4())
+}
+
+fn physical_file_identity_changed(
+    existing: &InstanceFile,
+    scanned_sha1: &str,
+    scanned_size: u64,
+) -> bool {
+    existing.sha1 != scanned_sha1 || existing.size != scanned_size
 }
 
 async fn upsert_scanned_file(
@@ -654,5 +704,28 @@ mod tests {
             "expected the override-root mod to be scanned"
         );
         assert!(files[0].relative_path.ends_with("mods/my-mod.jar"));
+    }
+
+    #[test]
+    fn external_hash_or_size_change_invalidates_physical_identity() {
+        let now = Utc::now();
+        let file = InstanceFile {
+            id: "file".to_string(),
+            instance_id: "instance".to_string(),
+            relative_path: "mods/lithium.jar".to_string(),
+            file_name: "lithium.jar".to_string(),
+            enabled: true,
+            sha1: "official".to_string(),
+            size: 10,
+            missing: false,
+            added_at: now,
+            modified_at: now,
+            local_mod_data: None,
+            icon_path: None,
+        };
+
+        assert!(!physical_file_identity_changed(&file, "official", 10));
+        assert!(physical_file_identity_changed(&file, "external", 10));
+        assert!(physical_file_identity_changed(&file, "official", 11));
     }
 }

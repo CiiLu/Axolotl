@@ -1,5 +1,6 @@
 <template>
 	<div v-if="data">
+		<UpgradeProjectReturnBar />
 		<Teleport to="#sidebar-teleport-target">
 			<ProjectSidebarCompatibility
 				v-if="!isServerProject"
@@ -468,6 +469,8 @@ import { injectServerInstall } from '@/providers/server-install'
 import { createServerInstallContent } from '@/providers/setup/server-install-content'
 import { useBreadcrumbs } from '@/store/breadcrumbs'
 import { useTheming } from '@/store/state.js'
+
+import UpgradeProjectReturnBar from './UpgradeProjectReturnBar.vue'
 
 dayjs.extend(relativeTime)
 

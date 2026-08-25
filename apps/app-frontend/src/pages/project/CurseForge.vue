@@ -4,6 +4,7 @@
 		{{ formatMessage(messages.loading) }}
 	</div>
 	<div v-else-if="data">
+		<UpgradeProjectReturnBar />
 		<Teleport to="#sidebar-teleport-target">
 			<ProjectSidebarCompatibility
 				:project="data"
@@ -306,6 +307,7 @@ import { useBreadcrumbs } from '@/store/breadcrumbs'
 import { useTheming } from '@/store/state.js'
 
 import Gallery from './Gallery.vue'
+import UpgradeProjectReturnBar from './UpgradeProjectReturnBar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -732,7 +734,10 @@ async function loadProject(projectId: number) {
 		if (requestVersion !== projectRequestVersion) return
 		project.value = projectData
 		breadcrumbs.setName('Project', projectData.name)
-		breadcrumbs.setNameIcon('Project', projectData.logo?.thumbnailUrl ?? projectData.logo?.url ?? null)
+		breadcrumbs.setNameIcon(
+			'Project',
+			projectData.logo?.thumbnailUrl ?? projectData.logo?.url ?? null,
+		)
 		loading.value = false
 		void resolveMcmodUrl(projectData.slug, 'curseforge').then((url) => {
 			if (requestVersion === projectRequestVersion) mcmodUrl.value = url

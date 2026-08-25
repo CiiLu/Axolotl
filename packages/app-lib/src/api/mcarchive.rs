@@ -444,5 +444,4 @@ mod tests {
         normalize_mod_identity(&mut item);
         assert_eq!(item.uuid, "modloader");
     }
-
 }

@@ -323,6 +323,12 @@
   "console.crash.finding.amd-driver.title": {
     "defaultMessage": "The AMD graphics driver crashed"
   },
+  "console.crash.finding.connector-incompatible-fabric-mods.action": {
+    "defaultMessage": "Remove or replace the Fabric Mods named in the Connector error with Forge-compatible alternatives."
+  },
+  "console.crash.finding.connector-incompatible-fabric-mods.title": {
+    "defaultMessage": "Sinytra Connector found incompatible Fabric Mods"
+  },
   "console.crash.finding.content-verification.action": {
     "defaultMessage": "Remove and reinstall the file named in the evidence from a trusted source."
   },
@@ -340,6 +346,12 @@
   },
   "console.crash.finding.definite-mod.title": {
     "defaultMessage": "A specific Mod caused the crash"
+  },
+  "console.crash.finding.disk-space.action": {
+    "defaultMessage": "Free space on the drive containing the instance, then retry the launch or installation."
+  },
+  "console.crash.finding.disk-space.title": {
+    "defaultMessage": "The disk ran out of free space"
   },
   "console.crash.finding.duplicate-mod.action": {
     "defaultMessage": "Keep only one compatible version of each Mod in the mods folder."
@@ -364,6 +376,12 @@
   },
   "console.crash.finding.fallback-title": {
     "defaultMessage": "Unknown diagnosis: {finding}"
+  },
+  "console.crash.finding.file-in-use.action": {
+    "defaultMessage": "Close the program named in the evidence, including other launchers, backup tools, or antivirus scans, then retry."
+  },
+  "console.crash.finding.file-in-use.title": {
+    "defaultMessage": "Another process is using a required file"
   },
   "console.crash.finding.forge-error.action": {
     "defaultMessage": "Review the Forge failure evidence and test the named Mod without recent changes."
@@ -431,6 +449,12 @@
   "console.crash.finding.jvm-arguments.title": {
     "defaultMessage": "Invalid JVM arguments"
   },
+  "console.crash.finding.known-signature.action": {
+    "defaultMessage": "Review the evidence and the related Minecraft, loader, Java, graphics, or Mod versions before changing the instance."
+  },
+  "console.crash.finding.known-signature.title": {
+    "defaultMessage": "A known crash signature was detected"
+  },
   "console.crash.finding.large-resource-pack.action": {
     "defaultMessage": "Disable the resource pack or use a lower-resolution version."
   },
@@ -451,6 +475,18 @@
   },
   "console.crash.finding.missing-dependency.title": {
     "defaultMessage": "A Mod dependency is missing or unsupported"
+  },
+  "console.crash.finding.missing-embeddium.action": {
+    "defaultMessage": "Install the Embeddium version required by Oculus for this Minecraft and Forge version."
+  },
+  "console.crash.finding.missing-embeddium.title": {
+    "defaultMessage": "Oculus requires Embeddium"
+  },
+  "console.crash.finding.missing-indium.action": {
+    "defaultMessage": "Install the Indium version compatible with the installed Fabric Loader and Sodium version."
+  },
+  "console.crash.finding.missing-indium.title": {
+    "defaultMessage": "A Mod requires Indium"
   },
   "console.crash.finding.mixin-bootstrap.action": {
     "defaultMessage": "Repair the mod loader installation and verify that every mod targets the installed loader."
@@ -599,8 +635,29 @@
   "console.crash.local-header": {
     "defaultMessage": "{findings, plural, one {# local diagnosis result} other {# local diagnosis results}} from {sources, plural, one {# related file} other {# related files}}"
   },
+  "console.crash.mod-change": {
+    "defaultMessage": "{kind}: {filename}"
+  },
+  "console.crash.mod-change.added": {
+    "defaultMessage": "Added"
+  },
+  "console.crash.mod-change.modified": {
+    "defaultMessage": "Modified"
+  },
+  "console.crash.mod-change.removed": {
+    "defaultMessage": "Removed"
+  },
+  "console.crash.mod-changes.summary": {
+    "defaultMessage": "{added} added, {removed} removed, {modified} modified"
+  },
+  "console.crash.mod-changes.title": {
+    "defaultMessage": "Mod files changed since the last successful launch"
+  },
   "console.crash.problems-detected": {
     "defaultMessage": "{count, plural, one {# problem detected} other {# problems detected}}"
+  },
+  "console.crash.windows-events.title": {
+    "defaultMessage": "Related Windows application events"
   },
   "console.delete-modal.confirmation": {
     "defaultMessage": "Deleting this log file cannot be undone. Are you sure you want to continue?"
@@ -3680,6 +3737,33 @@
   "report.item-type.version": {
     "defaultMessage": "version"
   },
+  "search.filter.dependency_type.embedded": {
+    "defaultMessage": "Embedded"
+  },
+  "search.filter.dependency_type.optional": {
+    "defaultMessage": "Optional"
+  },
+  "search.filter.dependency_type.required": {
+    "defaultMessage": "Required"
+  },
+  "search.filter.dependent_project": {
+    "defaultMessage": "Depends on: {project}"
+  },
+  "search.filter.dependent_project.search_placeholder": {
+    "defaultMessage": "Search for a project..."
+  },
+  "search.filter.excluded_projects": {
+    "defaultMessage": "Excludes: {projects}"
+  },
+  "search.filter.included_content.remove_project.tooltip": {
+    "defaultMessage": "Remove project"
+  },
+  "search.filter.included_content.search_placeholder": {
+    "defaultMessage": "Search content..."
+  },
+  "search.filter.included_projects": {
+    "defaultMessage": "Includes: {projects}"
+  },
   "search.filter.locked.default": {
     "defaultMessage": "Filter locked"
   },
@@ -3722,6 +3806,9 @@
   "search.filter_type.advanced.exclude_plugin": {
     "defaultMessage": "Exclude plugins"
   },
+  "search.filter_type.compatible_dependency_project_ids": {
+    "defaultMessage": "Depends on"
+  },
   "search.filter_type.environment": {
     "defaultMessage": "Environment"
   },
@@ -3736,6 +3823,9 @@
   },
   "search.filter_type.game_version.all_versions": {
     "defaultMessage": "Show all versions"
+  },
+  "search.filter_type.included_content": {
+    "defaultMessage": "Included content"
   },
   "search.filter_type.license": {
     "defaultMessage": "License"

@@ -12,6 +12,7 @@ mod paths;
 mod planet_minecraft;
 mod projects;
 mod run;
+mod upgrade;
 
 pub use self::content::{
     apply_content_update_plan, get_content_items, get_content_items_by_paths,
@@ -66,5 +67,12 @@ pub use self::run::{
     GcLaunchIntent, GcLaunchReport, QuickPlayType, kill, run,
     run_with_extra_launch_args, run_with_extra_launch_args_with_gc,
     try_update_playtime_by_instance_id,
+};
+pub use self::upgrade::{
+    dismiss_instance_post_upgrade_notice, execute_instance_upgrade,
+    get_instance_post_upgrade_notice, get_instance_upgrade_plan,
+    plan_instance_upgrade, reset_instance_upgrade_resolution,
+    resolve_custom_instance_upgrade_solution, select_instance_upgrade_solution,
+    update_instance_upgrade_resolution, update_instance_upgrade_resolutions,
 };
 pub use crate::state::{DailyPlaytime, DailyPlaytimeEntry};
