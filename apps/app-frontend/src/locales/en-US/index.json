@@ -4781,8 +4781,17 @@
   "app.lab.skin-editor.export-skin": {
     "message": "Minecraft skin PNG"
   },
+  "app.lab.skin-editor.load-error-description": {
+    "message": "The embedded editor did not finish loading. Try again."
+  },
+  "app.lab.skin-editor.load-error-title": {
+    "message": "Skin editor could not be loaded"
+  },
   "app.lab.skin-editor.loading": {
     "message": "Loading skin editor"
+  },
+  "app.lab.skin-editor.retry": {
+    "message": "Try again"
   },
   "app.lab.skin-editor.title": {
     "message": "Skin editor"

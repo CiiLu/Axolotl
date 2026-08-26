@@ -4835,8 +4835,17 @@
 	"app.lab.skin-editor.export-skin": {
 		"message": "Minecraft 皮肤 PNG"
 	},
+	"app.lab.skin-editor.load-error-description": {
+		"message": "嵌入式编辑器未能完成加载，请重试。"
+	},
+	"app.lab.skin-editor.load-error-title": {
+		"message": "无法加载皮肤编辑器"
+	},
 	"app.lab.skin-editor.loading": {
 		"message": "正在加载皮肤编辑器"
+	},
+	"app.lab.skin-editor.retry": {
+		"message": "重试"
 	},
 	"app.lab.skin-editor.title": {
 		"message": "皮肤编辑器"

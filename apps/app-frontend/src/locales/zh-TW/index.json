@@ -3326,8 +3326,17 @@
   "app.lab.skin-editor.export-skin": {
     "message": "Minecraft 外觀 PNG"
   },
+  "app.lab.skin-editor.load-error-description": {
+    "message": "嵌入式編輯器未能完成載入，請再試一次。"
+  },
+  "app.lab.skin-editor.load-error-title": {
+    "message": "無法載入外觀編輯器"
+  },
   "app.lab.skin-editor.loading": {
     "message": "正在載入外觀編輯器"
+  },
+  "app.lab.skin-editor.retry": {
+    "message": "再試一次"
   },
   "app.lab.skin-editor.title": {
     "message": "外觀編輯器"
