@@ -662,6 +662,12 @@
   "app.browse.maps-unavailable-description": {
     "message": "Configure a CurseForge API key to browse and install maps."
   },
+  "app.browse.fuzzy-search.prefix": {
+    "message": "No results found for “{original}”. Showing results for"
+  },
+  "app.browse.fuzzy-search.suffix": {
+    "message": "instead"
+  },
   "app.browse.no-compatible-version": {
     "message": "No compatible version was found for the selected instance."
   },

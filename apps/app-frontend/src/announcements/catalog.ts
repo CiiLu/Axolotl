@@ -57,6 +57,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Added support for custom instance icons — when an icon file (icon.png/jpg/jpeg/webp) exists in the instance folder, it is now applied as the instance icon.',
 					'zh-CN': '当实例文件夹下有icon.png/jpg/jpeg/webp时 优先应用此图标。',
 				},
+				{
+					'en-US':
+						'When a search finds matches by automatically correcting the query, a hint now appears above the results — click the suggested search term to search with it directly.',
+					'zh-CN':
+						'当搜索未命中时，启动器会自动改写查询词重新搜索，并在结果上方显示提示；点击提示中的建议词可直接用它重新搜索。',
+				},
 			],
 			changed: [
 				{
@@ -69,8 +75,23 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						'Custom background now has higher opacity for hoverable folded items on instance content page.',
 				},
+				{
+					'en-US':
+						'Improved fuzzy search matching for mods and other content: queries typed without spaces or with hyphens (e.g. sodiumextra, example-mod) now find the right results on both Modrinth and CurseForge.',
+					'zh-CN':
+						'改进内容发现页的模糊搜索：无空格或带连字符的搜索词（如 sodiumextra、example-mod）现在能在 Modrinth 和 CurseForge 上找到正确结果。',
+				},
 			],
 			fixed: [
+				{
+					'en-US':
+						'Fixed an issue where instances with version isolation disabled could not be imported correctly.',
+					'zh-CN': '修复未开启版本隔离的实例无法正常导入的问题。',
+				},
+				{
+					'en-US': 'Fixed an issue where modpack unlinking was not complete.',
+					'zh-CN': '修复了整合包解除关联不彻底的问题。',
+				},
 				{
 					'en-US':
 						'Fixed the fullscreen toggle in the Schematic Workshop (button and F11) not taking effect — entering fullscreen now expands the 3D view to fill the screen, hides the surrounding interface, and leaves the exit-fullscreen button in place.',
@@ -88,6 +109,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed the issue of when clicking curseforge modpack title to enter modpack information page, the launcher will show Error loading project. (issue #405)',
 					'zh-CN':
 						'修复了点击 CurseForge 整合包标题进入整合包信息页时，启动器会显示Error loading project的问题。(issue #405)',
+				},
+				{
+					'zh-CN': '实例名含非 ASCII 字符（™）导致启动崩溃InvalidPathException(issue #397)',
+					'en-US':
+						'Fixed the issue of instance name containing non-ASCII characters (™) causing the launcher to crash with InvalidPathException(issue #397)',
 				},
 			],
 		},
