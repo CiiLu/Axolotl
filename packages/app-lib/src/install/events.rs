@@ -1110,6 +1110,7 @@ mod tests {
             adjuncts: Vec::new(),
             icon_path: None,
             link: InstanceLink::Unmanaged,
+            game_dir_override: None,
         });
         job.set_progress(
             InstallPhaseId::DownloadingMinecraft,
@@ -1134,6 +1135,7 @@ mod tests {
             adjuncts: Vec::new(),
             icon_path: None,
             link: InstanceLink::Unmanaged,
+            game_dir_override: None,
         });
 
         let first = InstallProgressReporter::new(job_id, state.clone());
@@ -1153,6 +1155,7 @@ mod tests {
             adjuncts: Vec::new(),
             icon_path: None,
             link: InstanceLink::Unmanaged,
+            game_dir_override: None,
         });
         let first = InstallProgressReporter::new(job_id, state.clone());
         let second = InstallProgressReporter::new(job_id, state);
@@ -1227,6 +1230,7 @@ mod tests {
             adjuncts: Vec::new(),
             icon_path: None,
             link: InstanceLink::Unmanaged,
+            game_dir_override: None,
         });
         job.record_event(InstallJobEventKind::ContentDownloadStarted {
             files: 1,
@@ -1400,6 +1404,7 @@ mod tests {
                 project_id: "123".to_string(),
                 version_id: "456".to_string(),
             },
+            game_dir_override: None,
         });
         job.record_event(InstallJobEventKind::ContentFileSkipped {
             path: path.clone(),

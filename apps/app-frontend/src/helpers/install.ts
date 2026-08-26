@@ -39,6 +39,7 @@ export interface InstallCreateInstanceRequest {
 	adjuncts?: LoaderComponent[]
 	iconPath: string | null
 	link?: InstanceLink | null
+	gameDirOverride?: string | null
 }
 
 export interface InstallPostInstallEdit {
@@ -347,6 +348,7 @@ export async function install_import_instance(
 	gameVersion?: string | null,
 	loader?: string | null,
 	loaderVersion?: string | null,
+	gameDirOverride?: string | null,
 ) {
 	return await invoke<InstallJobSnapshot>('plugin:install|install_import_instance', {
 		launcherType,
@@ -357,6 +359,7 @@ export async function install_import_instance(
 		gameVersion,
 		loader,
 		loaderVersion,
+		gameDirOverride,
 	})
 }
 

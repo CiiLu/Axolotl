@@ -43,6 +43,7 @@ export interface BatchDropItem {
 	gameVersion?: string | null
 	loader?: string | null
 	loaderVersion?: string | null
+	gameDirOverride?: string | null
 }
 
 export interface BatchDropGroup {

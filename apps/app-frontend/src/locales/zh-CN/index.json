@@ -8426,6 +8426,27 @@
 	"instance.settings.tabs.general.edit-icon.select": {
 		"message": "选择图标"
 	},
+	"instance.settings.tabs.general.game-dir": {
+		"message": "游戏目录"
+	},
+	"instance.settings.tabs.general.game-dir.current": {
+		"message": "当前目录"
+	},
+	"instance.settings.tabs.general.game-dir.description": {
+		"message": "将一个独立的文件夹作为此实例的工作目录。游戏会从该文件夹读取模组、存档、配置和资源包，而不是托管的实例文件夹。适用于共用 .minecraft 目录的非版本隔离实例。"
+	},
+	"instance.settings.tabs.general.game-dir.isolated": {
+		"message": "版本隔离（存放于 versions/）"
+	},
+	"instance.settings.tabs.general.game-dir.not-isolated": {
+		"message": "版本共享（.minecraft/）"
+	},
+	"instance.settings.tabs.general.game-dir.move-note": {
+		"message": "切换隔离仅更新启动器路径。请自行移动模组、存档和配置文件夹以保持一致。"
+	},
+	"instance.settings.tabs.general.game-dir.managed-note": {
+		"message": "此实例使用 Axolotl 托管目录。"
+	},
 	"instance.settings.tabs.general.icon": {
 		"message": "图标"
 	},

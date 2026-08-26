@@ -44,6 +44,12 @@ pub struct EditInstance {
         with = "serde_with::rust::double_option"
     )]
     pub symlink_target: Option<Option<String>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "serde_with::rust::double_option"
+    )]
+    pub game_dir_override: Option<Option<String>>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -293,6 +299,9 @@ fn apply_instance_patch(
     }
     if let Some(symlink_target) = &patch.symlink_target {
         instance.symlink_target = symlink_target.clone();
+    }
+    if let Some(game_dir_override) = &patch.game_dir_override {
+        instance.game_dir_override = game_dir_override.clone();
     }
 
     instance.modified = now;

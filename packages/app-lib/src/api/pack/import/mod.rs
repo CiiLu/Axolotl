@@ -1300,6 +1300,97 @@ async fn copy_files_with_progress(
     Ok(())
 }
 
+/// Determines the real game working directory for an import whose source is a
+/// `versions/<name>` folder.
+///
+/// The game body jar always lives at `<root>/versions/<name>/<name>.jar`
+/// regardless of version isolation (that layout has been stable since 1.6), so
+/// the jar alone cannot tell the two layouts apart — `dir_has_game_body` only
+/// proves "this is a Minecraft game root". The discriminator is where the game
+/// *content* (mods/saves/config/…) actually sits:
+///
+/// - inside the source folder → version-isolated: the version folder itself is
+///   the game dir (`<root>/versions/<name>` with its own mods/saves/config);
+/// - at an ancestor (normally the `.minecraft` root) → shared install: the
+///   `.minecraft` root is the game dir.
+///
+/// A source with no content anywhere (a fresh, never-launched instance) falls
+/// back to the source folder itself: the game creates the content folders
+/// there on first run, and for imports the user's explicit game-dir choice
+/// (or no override, i.e. the managed symlink) decides the rest.
+fn resolve_import_game_root(source: &Path) -> PathBuf {
+    // The source is itself the game root: either a whole Minecraft folder that
+    // carries a game body, or any folder that already holds game content
+    // (a version-isolated `versions/<name>` with mods/saves/config inside).
+    if source.is_dir()
+        && (dir_has_game_content(source) || dir_has_game_body(source))
+    {
+        return source.to_path_buf();
+    }
+
+    // Otherwise the source is a `versions/<name>` subfolder of a shared
+    // install: resolve to the nearest ancestor holding the game content
+    // (normally the `.minecraft` root). Never climb past `.minecraft`.
+    let mut cursor = source.parent();
+    while let Some(dir) = cursor {
+        if dir_has_game_content(dir) {
+            return dir.to_path_buf();
+        }
+        if dir.file_name().and_then(|n| n.to_str()) == Some(".minecraft") {
+            break;
+        }
+        cursor = dir.parent();
+    }
+
+    source.to_path_buf()
+}
+
+/// True if `root` is a Minecraft game root: it has at least one `.jar` game body
+/// under `versions/<name>/` (e.g. `versions/1.20.1/1.20.1.jar`).
+fn dir_has_game_body(root: &Path) -> bool {
+    let versions = root.join("versions");
+    let Ok(entries) = std::fs::read_dir(&versions) else {
+        return false;
+    };
+    for version_entry in entries.flatten() {
+        if !version_entry.path().is_dir() {
+            continue;
+        }
+        let Ok(version_files) = std::fs::read_dir(version_entry.path()) else {
+            continue;
+        };
+        for file in version_files.flatten() {
+            if file.path().extension().is_some_and(|ext| ext == "jar") {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// True if `root` directly holds game *content* — the folders/files the running
+/// game creates and writes in its working directory (mods, saves, config,
+/// resourcepacks, …). Unlike the game body jar (which sits at
+/// `<root>/versions/<name>/<name>.jar` in every layout), content appears only in
+/// the folder that actually acts as the game dir, so this is what distinguishes
+/// a version-isolated `versions/<name>` folder from a shared `.minecraft` root.
+fn dir_has_game_content(root: &Path) -> bool {
+    [
+        "mods",
+        "saves",
+        "config",
+        "resourcepacks",
+        "datapacks",
+        "shaderpacks",
+        "logs",
+        "crash-reports",
+    ]
+    .iter()
+    .any(|dir| root.join(dir).is_dir())
+        || root.join("options.txt").is_file()
+        || root.join("servers.dat").is_file()
+}
+
 pub(crate) async fn finish_import(
     instance_id: &str,
     dotminecraft: PathBuf,
@@ -1310,9 +1401,52 @@ pub(crate) async fn finish_import(
 ) -> crate::Result<()> {
     let local_source = LocalRuntimeSource::discover(&dotminecraft);
 
+    // Respect an explicitly chosen game-dir override (the user's isolated /
+    // not-isolated selection, already stored on the instance row at creation).
+    // Only fall back to auto-detection for symlink imports that did not carry
+    // an explicit override, so copy imports always stay built-in (no override)
+    // and the frontend's choice is never clobbered.
+    let state = crate::state::State::get().await?;
+    let pool = &state.pool;
+    let existing_override =
+        instance_rows::get_instance_path_and_game_dir_override_by_id(instance_id, pool)
+            .await?
+            .map(|(_, override_dir)| override_dir)
+            .unwrap_or(None);
+    if existing_override.is_none() && symlink {
+        // For a non-version-isolated import the game content (mods, saves, config)
+        // lives in the `.minecraft` root, not in the detected `versions/<name>`
+        // subfolder. Detect that and record the override so the instance uses the
+        // real game root directly instead of an empty version subfolder.
+        let game_root = resolve_import_game_root(&dotminecraft);
+        if game_root != dotminecraft {
+            crate::state::edit_instance(
+                instance_id,
+                crate::state::EditInstance {
+                    game_dir_override: Some(Some(
+                        game_root.to_string_lossy().to_string(),
+                    )),
+                    ..Default::default()
+                },
+                pool,
+            )
+            .await?;
+        }
+    }
+
     if symlink {
+        let state = State::get().await?;
+        let relative_path =
+            instance_rows::get_instance_path_by_id(instance_id, &state.pool)
+                .await?
+                .ok_or_else(|| {
+                    crate::ErrorKind::InputError("Unknown instance".to_string())
+                })?;
+        // The instance's managed folder lives at instances_dir/<path>. This is
+        // where the symlink is created; it must NOT go through the game-dir
+        // override (which points at the external .minecraft root).
         let instance_path =
-            crate::api::instance::get_full_path(instance_id).await?;
+            state.directories.instances_dir().join(&relative_path);
 
         if instance_path.exists() {
             // The instance folder is registered with the file watcher as soon
@@ -1320,19 +1454,10 @@ pub(crate) async fn finish_import(
             // an open directory handle, so renaming the folder fails with
             // ERROR_ACCESS_DENIED. Unwatch it first, then re-register once the
             // symlink is in place (or the backup has been restored).
-            let state = State::get().await?;
-            let relative_path = instance_rows::get_instance_path_by_id(
-                instance_id,
-                &state.pool,
-            )
-            .await?
-            .ok_or_else(|| {
-                crate::ErrorKind::InputError("Unknown instance".to_string())
-            })?;
             unwatch_instance_folder(
                 &relative_path,
+                &instance_path,
                 &state.file_watcher,
-                &state.directories,
             )
             .await;
 
@@ -1360,8 +1485,8 @@ pub(crate) async fn finish_import(
                 watch_instance_folder(
                     instance_id,
                     &relative_path,
+                    &instance_path,
                     &state.file_watcher,
-                    &state.directories,
                 )
                 .await;
                 return Err(error.into());
@@ -1373,8 +1498,8 @@ pub(crate) async fn finish_import(
                 watch_instance_folder(
                     instance_id,
                     &relative_path,
+                    &instance_path,
                     &state.file_watcher,
-                    &state.directories,
                 )
                 .await;
                 return Err(error.into());
@@ -1383,8 +1508,8 @@ pub(crate) async fn finish_import(
             watch_instance_folder(
                 instance_id,
                 &relative_path,
+                &instance_path,
                 &state.file_watcher,
-                &state.directories,
             )
             .await;
         } else {
@@ -1529,4 +1654,113 @@ pub async fn get_all_subfiles(
     }
 
     Ok(files)
+}
+
+#[cfg(test)]
+mod import_game_root_tests {
+    use super::{dir_has_game_body, resolve_import_game_root};
+    use std::fs;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    fn write_game_body(mc: &Path, name: &str) {
+        let version_dir = mc.join("versions").join(name);
+        fs::create_dir_all(&version_dir).unwrap();
+        fs::write(version_dir.join(format!("{name}.jar")), "game").unwrap();
+    }
+
+    #[test]
+    fn resolves_minecraft_root_when_game_body_is_there() {
+        let root = tempdir().unwrap();
+        let mc = root.path().join(".minecraft");
+        let version = mc.join("versions").join("My Pack");
+        // Shared install, played as vanilla: game body under the `.minecraft`
+        // root and content (saves) there too — a mod-less instance has no
+        // `mods/*.jar`, so the content location is what resolves the root.
+        write_game_body(&mc, "My Pack");
+        fs::create_dir_all(mc.join("saves")).unwrap();
+
+        let resolved = resolve_import_game_root(&version);
+        assert_eq!(resolved, mc);
+    }
+
+    #[test]
+    fn keeps_version_dir_when_it_has_the_content() {
+        let root = tempdir().unwrap();
+        let mc = root.path().join(".minecraft");
+        let version = mc.join("versions").join("My Pack");
+        // Version-isolated instance: the game body jar ALSO lives under the
+        // `.minecraft` root, but the content (mods) is inside the version
+        // folder — that folder is the real game dir.
+        write_game_body(&mc, "My Pack");
+        fs::create_dir_all(version.join("mods")).unwrap();
+
+        let resolved = resolve_import_game_root(&version);
+        assert_eq!(resolved, version);
+    }
+
+    #[test]
+    fn resolves_minecraft_root_for_shared_mods() {
+        let root = tempdir().unwrap();
+        let mc = root.path().join(".minecraft");
+        let version = mc.join("versions").join("My Pack");
+        write_game_body(&mc, "My Pack");
+        // Shared install with mods at the `.minecraft` root only.
+        fs::create_dir_all(mc.join("mods")).unwrap();
+        fs::write(mc.join("mods/mod-a.jar"), "a").unwrap();
+
+        let resolved = resolve_import_game_root(&version);
+        assert_eq!(resolved, mc);
+    }
+
+    #[test]
+    fn keeps_version_dir_for_fresh_isolated_instance() {
+        let root = tempdir().unwrap();
+        let mc = root.path().join(".minecraft");
+        let version = mc.join("versions").join("My Pack");
+        // Fresh instance, never launched: only the game body exists, no content
+        // folders anywhere. The jar's location is ambiguous (shared vs
+        // isolated), so fall back to the innermost folder — the launcher will
+        // create content there on first run.
+        write_game_body(&mc, "My Pack");
+
+        let resolved = resolve_import_game_root(&version);
+        assert_eq!(resolved, version);
+    }
+
+    #[test]
+    fn keeps_minecraft_root_when_source_is_root() {
+        let root = tempdir().unwrap();
+        let mc = root.path().join(".minecraft");
+        write_game_body(&mc, "My Pack");
+
+        let resolved = resolve_import_game_root(&mc);
+        assert_eq!(resolved, mc);
+    }
+
+    #[test]
+    fn no_game_body_falls_back_to_source() {
+        let root = tempdir().unwrap();
+        let version = root.path().join(".minecraft/versions/My Pack");
+        fs::create_dir_all(&version).unwrap();
+
+        let resolved = resolve_import_game_root(&version);
+        assert_eq!(resolved, version);
+    }
+
+    #[test]
+    fn detects_game_body_in_versions() {
+        let root = tempdir().unwrap();
+        let mc = root.path().join(".minecraft");
+        assert!(!dir_has_game_body(&mc));
+
+        write_game_body(&mc, "My Pack");
+        assert!(dir_has_game_body(&mc));
+
+        // A mods/ jar alone is not a game body signal.
+        let empty = root.path().join("no-versions");
+        fs::create_dir_all(empty.join("mods")).unwrap();
+        fs::write(empty.join("mods/mod.jar"), "mod").unwrap();
+        assert!(!dir_has_game_body(&empty));
+    }
 }
