@@ -384,10 +384,11 @@ async fn read_only_upgrade_source(
     )
     .await?
     .ok_or_else(|| crate::ErrorKind::InputError("Unknown instance".to_string()))?;
-    let scanned = crate::state::instances::adapters::filesystem::scan_content_files_from(
-        &state.directories.instance_game_dir(&instance),
-        &instance.path,
-    )?;
+    let scanned =
+        crate::state::instances::adapters::filesystem::scan_content_files_from(
+            &state.directories.instance_game_dir(&instance),
+            &instance.path,
+        )?;
     let file_states = scanned
         .iter()
         .map(|file| UpgradeSourceFileState {

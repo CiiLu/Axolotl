@@ -1409,10 +1409,13 @@ pub(crate) async fn finish_import(
     let state = crate::state::State::get().await?;
     let pool = &state.pool;
     let existing_override =
-        instance_rows::get_instance_path_and_game_dir_override_by_id(instance_id, pool)
-            .await?
-            .map(|(_, override_dir)| override_dir)
-            .unwrap_or(None);
+        instance_rows::get_instance_path_and_game_dir_override_by_id(
+            instance_id,
+            pool,
+        )
+        .await?
+        .map(|(_, override_dir)| override_dir)
+        .unwrap_or(None);
     if existing_override.is_none() && symlink {
         // For a non-version-isolated import the game content (mods, saves, config)
         // lives in the `.minecraft` root, not in the detected `versions/<name>`

@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use zhconv::{Variant, zhconv};
 
 const WIKI_ENTRIES_DATA: &str = include_str!("content_search/WikiEntries.txt");
-const SEARCHER_WORDS_DATA: &str = include_str!("content_search/searcher_words.txt");
+const SEARCHER_WORDS_DATA: &str =
+    include_str!("content_search/searcher_words.txt");
 const RADIX_DIGITS: &str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/+=!?@#$%^&*()[]{}<>;:',";
 const MAX_MATCHES: usize = 100;
 const MIN_SIMILARITY: f64 = 0.25;
@@ -23,7 +24,10 @@ static SEARCHER_WORDS: LazyLock<Vec<String>> = LazyLock::new(|| {
         .lines()
         .map(str::trim)
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .filter(|line| line.chars().all(|character| character.is_ascii_alphabetic()))
+        .filter(|line| {
+            line.chars()
+                .all(|character| character.is_ascii_alphabetic())
+        })
         .map(str::to_lowercase)
         .collect::<Vec<_>>();
     words.sort();
@@ -579,9 +583,9 @@ fn segment_compact_query(compact: &str) -> Option<String> {
 }
 
 fn longest_prefix_word<'a>(value: &'a str) -> Option<(&'a str, &'a str)> {
-    SEARCHER_WORDS
-        .iter()
-        .find_map(|word| value.strip_prefix(word).map(|rest| (word.as_str(), rest)))
+    SEARCHER_WORDS.iter().find_map(|word| {
+        value.strip_prefix(word).map(|rest| (word.as_str(), rest))
+    })
 }
 
 fn parse_wiki_entries(source: &str) -> Vec<WikiEntry> {
@@ -1227,15 +1231,21 @@ mod tests {
     #[test]
     fn segments_compact_queries_into_known_words() {
         assert_eq!(
-            expand_content_search_query("sodiumextra").suggested_split.as_deref(),
+            expand_content_search_query("sodiumextra")
+                .suggested_split
+                .as_deref(),
             Some("sodium extra")
         );
         assert_eq!(
-            expand_content_search_query("irisshaders").suggested_split.as_deref(),
+            expand_content_search_query("irisshaders")
+                .suggested_split
+                .as_deref(),
             Some("iris shaders")
         );
         assert_eq!(
-            expand_content_search_query("examplemod").suggested_split.as_deref(),
+            expand_content_search_query("examplemod")
+                .suggested_split
+                .as_deref(),
             Some("example mod")
         );
         assert_eq!(
@@ -1245,7 +1255,9 @@ mod tests {
             Some("the twilight forest")
         );
         assert_eq!(
-            expand_content_search_query("shulkerbox").suggested_split.as_deref(),
+            expand_content_search_query("shulkerbox")
+                .suggested_split
+                .as_deref(),
             Some("shulker box")
         );
     }
@@ -1262,11 +1274,15 @@ mod tests {
     #[test]
     fn segmentation_ignores_separators_and_case() {
         assert_eq!(
-            expand_content_search_query("Sodium-Extra").suggested_split.as_deref(),
+            expand_content_search_query("Sodium-Extra")
+                .suggested_split
+                .as_deref(),
             Some("sodium extra")
         );
         assert_eq!(
-            expand_content_search_query("sodium extra").suggested_split.as_deref(),
+            expand_content_search_query("sodium extra")
+                .suggested_split
+                .as_deref(),
             Some("sodium extra")
         );
     }

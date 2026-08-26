@@ -2699,9 +2699,8 @@ impl CachedEntry {
                 for key in &keys {
                     let path =
                         key.split_once('-').map(|x| x.1).unwrap_or_default();
-                    if let Some((instance_path, _)) = path
-                        .split_once('/')
-                        .or_else(|| path.split_once('\\'))
+                    if let Some((instance_path, _)) =
+                        path.split_once('/').or_else(|| path.split_once('\\'))
                     {
                         if !base_dirs.contains_key(instance_path) {
                             let override_dir = crate::state::instances::adapters::sqlite::instance_rows::get_game_dir_override_by_path(
