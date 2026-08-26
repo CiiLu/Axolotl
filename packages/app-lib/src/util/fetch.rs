@@ -249,6 +249,9 @@ pub struct DownloadRequest {
     /// Batch schedulers disable it so many small files share one connection
     /// budget instead of each file multiplying its connections.
     pub allow_segmented_download: bool,
+    /// Whether HTTP/1.1 may multiply one file into concurrent Range requests.
+    /// Multi-file batch schedulers disable this while retaining shared H2.
+    pub(crate) allow_http1_segmented_download: bool,
     /// Explicit shared-connection H2 range stream count for one large file.
     /// This is currently reserved for standalone modpack archive downloads.
     pub(crate) h2_range_concurrency: Option<usize>,
@@ -273,6 +276,7 @@ impl DownloadRequest {
             header: None,
             candidate_urls: Vec::new(),
             allow_segmented_download: true,
+            allow_http1_segmented_download: true,
             h2_range_concurrency: None,
             cancellation: None,
             install_tracking: None,
@@ -281,6 +285,12 @@ impl DownloadRequest {
 
     pub fn with_segmented_download(mut self, allow: bool) -> Self {
         self.allow_segmented_download = allow;
+        self.allow_http1_segmented_download = allow;
+        self
+    }
+
+    pub(crate) fn with_http1_segmented_download(mut self, allow: bool) -> Self {
+        self.allow_http1_segmented_download = allow;
         self
     }
 
@@ -5880,7 +5890,7 @@ async fn download_to_path_inner(
                 // Segmented downloads restart from scratch, so when a partial
                 // file already covers at least half of the expected data,
                 // resuming it over a single connection wastes less transfer.
-                if request.allow_segmented_download
+                if request.allow_http1_segmented_download
                     && !retry_with_single_thread
                     && !single_thread_routes.contains(&route.url)
                     && route.supports_range
@@ -7536,6 +7546,18 @@ mod tests {
         assert!(request.allow_segmented_download);
         let request = request.with_segmented_download(false);
         assert!(!request.allow_segmented_download);
+    }
+
+    #[test]
+    fn batch_requests_can_disable_http1_ranges_without_disabling_h2() {
+        let request = DownloadRequest::new(
+            "https://example.com/content.jar",
+            ResourceClass::Modpack,
+        )
+        .with_http1_segmented_download(false);
+
+        assert!(request.allow_segmented_download);
+        assert!(!request.allow_http1_segmented_download);
     }
 
     #[test]

@@ -1178,6 +1178,7 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                             content_context.download_meta.clone(),
                         )
                         .with_segmented_download(true)
+                        .with_http1_segmented_download(false)
                         .with_install_tracking(
                             content_context.reporter.clone(),
                             project_path.clone(),

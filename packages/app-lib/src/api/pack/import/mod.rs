@@ -1541,6 +1541,15 @@ pub(crate) async fn finish_import(
         .await?;
     }
 
+    crate::launcher::install_minecraft_for_instance_id_with_local_source(
+        instance_id,
+        local_source,
+        false,
+        Some(reporter),
+        crate::launcher::InstanceCompletionPolicy::DeferToInstallJob,
+    )
+    .await?;
+
     let recognition_instance_id = instance_id.to_string();
     tokio::spawn(async move {
         if let Err(error) = crate::api::curseforge::recognize_instance_files(
@@ -1555,15 +1564,6 @@ pub(crate) async fn finish_import(
             );
         }
     });
-
-    crate::launcher::install_minecraft_for_instance_id_with_local_source(
-        instance_id,
-        local_source,
-        false,
-        Some(reporter),
-        crate::launcher::InstanceCompletionPolicy::DeferToInstallJob,
-    )
-    .await?;
 
     Ok(())
 }
