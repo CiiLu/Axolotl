@@ -8,8 +8,8 @@ import {
 	SERVER_STATUS_META,
 } from '@/components/multiplayer/servers/server-status'
 import ServerIcon from '@/components/multiplayer/servers/ServerIcon.vue'
-import { type ServerView } from '@/composables/useServers'
 import { serverSetupStatus } from '@/composables/useServerInstalls'
+import type { ServerView } from '@/composables/useServers'
 
 const props = defineProps<{
 	server: ServerView

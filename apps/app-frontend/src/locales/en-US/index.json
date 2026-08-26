@@ -5990,11 +5990,14 @@
   "app.servers.eula.accept": {
     "message": "Accept and continue"
   },
+  "app.servers.eula.continue": {
+    "message": "Continue"
+  },
   "app.servers.eula.decline": {
     "message": "Cancel"
   },
   "app.servers.eula.description": {
-    "message": "The server must accept the Minecraft End User License Agreement before it can start. Review the notice below:"
+    "message": "By continuing, you agree to the Minecraft End User License Agreement (EULA)."
   },
   "app.servers.eula.title": {
     "message": "Minecraft EULA"
@@ -6371,6 +6374,9 @@
   "app.servers.status.crashed": {
     "message": "Crashed"
   },
+  "app.servers.status.downloading": {
+    "message": "Downloading"
+  },
   "app.servers.status.created": {
     "message": "Not set up"
   },
@@ -6451,6 +6457,15 @@
   },
   "app.servers.wizard.type-title": {
     "message": "Server type"
+  },
+  "app.servers.modpack.downloading": {
+    "message": "Downloading modpack files..."
+  },
+  "app.servers.modpack.preparing": {
+    "message": "Preparing server..."
+  },
+  "app.servers.modpack.done": {
+    "message": "Installation complete"
   },
   "app.settings.about.afdian": {
     "message": "Support on Afdian"

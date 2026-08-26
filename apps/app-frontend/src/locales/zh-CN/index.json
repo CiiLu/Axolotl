@@ -6044,11 +6044,14 @@
 	"app.servers.eula.accept": {
 		"message": "同意并继续"
 	},
+	"app.servers.eula.continue": {
+		"message": "继续"
+	},
 	"app.servers.eula.decline": {
 		"message": "取消"
 	},
 	"app.servers.eula.description": {
-		"message": "服务器启动前需要同意 Minecraft 最终用户许可协议（EULA）。请查看以下内容："
+		"message": "继续即表示同意 Minecraft 最终用户许可协议 (EULA)。"
 	},
 	"app.servers.eula.title": {
 		"message": "Minecraft EULA"
@@ -6425,6 +6428,9 @@
 	"app.servers.status.crashed": {
 		"message": "已崩溃"
 	},
+	"app.servers.status.downloading": {
+		"message": "下载中"
+	},
 	"app.servers.status.created": {
 		"message": "未配置"
 	},
@@ -6523,6 +6529,9 @@
 	},
 	"app.servers.modpack.preparing": {
 		"message": "正在准备服务器..."
+	},
+	"app.servers.modpack.done": {
+		"message": "安装完成"
 	},
 	"app.servers.modpack.unsupported-loader-description": {
 		"message": "此整合包使用 {loader}，但 Axolotl 目前仅支持原版、Fabric 和 Quilt 整合包服务端。{loader} 支持即将推出。"

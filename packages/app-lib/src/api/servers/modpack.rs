@@ -193,6 +193,15 @@ pub async fn install_modpack(
     write_manifest(&dir, &manifest).await?;
     drop(manifest);
 
+    // Set the icon path early so the server shows the modpack icon immediately
+    if let Some(icon_url) = modpack_icon_url.as_deref() {
+        if let Ok(icon_path) = download_icon(&dir, icon_url).await {
+            let mut manifest = read_manifest(&dir).await?;
+            manifest.icon_path = Some(icon_path.to_string_lossy().into_owned());
+            write_manifest(&dir, &manifest).await?;
+        }
+    }
+
     let result = run_modpack_install(
         server_id,
         &dir,
@@ -208,6 +217,7 @@ pub async fn install_modpack(
     match result {
         Ok(()) => {
             manifest.jar_name = Some(jar_filename.to_string());
+            // Icon was already downloaded at the start; only download if still missing
             if manifest.icon_path.is_none() {
                 if let Some(icon_url) = modpack_icon_url.as_deref() {
                     match download_icon(&dir, icon_url).await {
@@ -370,13 +380,38 @@ async fn run_modpack_install(
     remove_client_only_dirs(server_id, dir).await?;
     let unavailable_ids =
         fetch_excluded_mod_ids(server_id, &state, &excluded_files).await?;
-    prune_uninstallable_mods(server_id, dir, &unavailable_ids).await?;
+
+    // Build a set of mod IDs that are explicitly marked as server-installable in the modpack index
+    let explicitly_server_installable: HashSet<String> = installable_files
+        .iter()
+        .filter_map(|file| {
+            let path = file.path.replace('\\', "/");
+            if path.starts_with("mods/") && path.to_ascii_lowercase().ends_with(".jar") {
+                Some(path.rsplit('/').next().unwrap_or(&path).to_string())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    prune_uninstallable_mods(server_id, dir, &unavailable_ids, &explicitly_server_installable).await?;
 
     log(
         &server_id,
         &format!("Downloading server launcher ({jar_filename})"),
     )
     .await?;
+
+    // Create eula.txt with eula=false if it doesn't exist
+    let eula_path = dir.join("eula.txt");
+    if !eula_path.exists() {
+        tokio::fs::write(&eula_path, "eula=false\n")
+            .await
+            .map_err(|e| IOError::with_path(e, &eula_path))?;
+        log(server_id, "Created eula.txt with eula=false")
+            .await
+            .ok();
+    }
     download_to_dir(
         &server_id,
         dir,
@@ -625,10 +660,15 @@ async fn download_metadata_jar(
 /// themselves client-only in their Fabric metadata, and transitively any mod
 /// whose hard dependencies point to a removed or excluded mod. Left in place,
 /// such mods crash the server during dependency resolution.
+///
+/// Mods that are explicitly marked as server-installable in the modpack index
+/// (via `env.server != "unsupported"`) are never pruned, even if their own
+/// metadata declares them as client-only. This respects the pack author's intent.
 async fn prune_uninstallable_mods(
     server_id: &str,
     dir: &Path,
     unavailable_ids: &HashSet<String>,
+    explicitly_server_installable: &HashSet<String>,
 ) -> Result<()> {
     let mods_dir = dir.join("mods");
     if !mods_dir.is_dir() {
@@ -636,7 +676,7 @@ async fn prune_uninstallable_mods(
     }
 
     let metas = collect_mod_metadata(mods_dir).await?;
-    for (path, reason) in compute_prune_plan(&metas, unavailable_ids) {
+    for (path, reason) in compute_prune_plan(&metas, unavailable_ids, explicitly_server_installable) {
         log(
             server_id,
             &format!(
@@ -710,6 +750,7 @@ fn read_mod_metadata(path: &Path) -> Option<ModMetadata> {
 fn compute_prune_plan(
     metas: &[(PathBuf, ModMetadata)],
     unavailable_ids: &HashSet<String>,
+    explicitly_server_installable: &HashSet<String>,
 ) -> Vec<(PathBuf, String)> {
     let locally_owned: HashSet<&str> = metas
         .iter()
@@ -723,7 +764,18 @@ fn compute_prune_plan(
 
     let mut planned = vec![false; metas.len()];
     let mut reasons: Vec<Option<String>> = vec![None; metas.len()];
-    for (index, (_, metadata)) in metas.iter().enumerate() {
+    for (index, (path, metadata)) in metas.iter().enumerate() {
+        let filename = path.file_name().unwrap_or_default().to_string_lossy();
+        // Skip pruning if this mod is explicitly marked as server-installable in the modpack index
+        let is_explicitly_allowed = metadata
+            .id
+            .as_ref()
+            .map(|id| explicitly_server_installable.contains(id))
+            .unwrap_or(false)
+            || explicitly_server_installable.contains(&filename.to_string());
+        if is_explicitly_allowed {
+            continue;
+        }
         if metadata.environment.as_deref() == Some("client") {
             planned[index] = true;
             reasons[index] = Some("client-only".to_string());
@@ -946,7 +998,7 @@ mod tests {
         std::fs::write(mods.join("corrupt.jar"), b"not a zip").unwrap();
         std::fs::write(mods.join("readme.txt"), "keep me").unwrap();
 
-        prune_uninstallable_mods("test-server", dir.path(), &HashSet::new())
+        prune_uninstallable_mods("test-server", dir.path(), &HashSet::new(), &HashSet::new())
             .await
             .unwrap();
 
@@ -1001,7 +1053,7 @@ mod tests {
         // its env mark: only its mod ID is known (via fetch_excluded_mod_ids),
         // the jar itself never lands on disk.
         let unavailable = HashSet::from(["melody".to_string()]);
-        prune_uninstallable_mods("test-server", dir.path(), &unavailable)
+        prune_uninstallable_mods("test-server", dir.path(), &unavailable, &HashSet::new())
             .await
             .unwrap();
 
@@ -1041,6 +1093,7 @@ mod tests {
         let plan = compute_prune_plan(
             &metas,
             &HashSet::from(["missing-lib".to_string()]),
+            &HashSet::new(),
         );
 
         let removed: Vec<&str> = plan
@@ -1062,7 +1115,7 @@ mod tests {
         shim.provides = vec!["melody".to_string()];
         let metas = vec![("shim.jar".into(), shim), metas[1].clone()];
         assert!(
-            compute_prune_plan(&metas, &HashSet::from(["melody".to_string()]))
+            compute_prune_plan(&metas, &HashSet::from(["melody".to_string()]), &HashSet::new())
                 .is_empty()
         );
 
@@ -1074,6 +1127,7 @@ mod tests {
         let plan = compute_prune_plan(
             &metas,
             &HashSet::from(["melody".to_string(), "removed-core".to_string()]),
+            &HashSet::new(),
         );
         assert_eq!(plan.len(), 2);
     }
@@ -1113,7 +1167,7 @@ mod tests {
     #[tokio::test]
     async fn missing_mods_dir_is_tolerated_when_pruning() {
         let dir = tempfile::tempdir().unwrap();
-        prune_uninstallable_mods("test-server", dir.path(), &HashSet::new())
+        prune_uninstallable_mods("test-server", dir.path(), &HashSet::new(), &HashSet::new())
             .await
             .unwrap();
     }

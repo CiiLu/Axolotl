@@ -43,6 +43,7 @@ export type ServerEventPayload =
 	| { event: 'download_progress'; downloaded: number; total?: number }
 	| { event: 'started' }
 	| { event: 'stopped'; crashed: boolean; reason?: ServerExitReason }
+	| { event: 'eula_required'; server_id: string; eula_text: string }
 
 export interface PortProcessInfoData {
 	pid: number

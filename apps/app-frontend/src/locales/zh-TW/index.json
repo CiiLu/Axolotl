@@ -5873,11 +5873,14 @@
   "app.servers.eula.accept": {
     "message": "同意並繼續"
   },
+  "app.servers.eula.continue": {
+    "message": "繼續"
+  },
   "app.servers.eula.decline": {
     "message": "取消"
   },
   "app.servers.eula.description": {
-    "message": "伺服器啟動前需要同意 Minecraft 最終使用者授權條款（EULA）。請查看以下內容："
+    "message": "繼續即表示同意 Minecraft 最終使用者授權條款 (EULA)。"
   },
   "app.servers.eula.title": {
     "message": "Minecraft EULA"
@@ -6248,6 +6251,9 @@
   "app.servers.status.crashed": {
     "message": "已崩潰"
   },
+  "app.servers.status.downloading": {
+    "message": "下載中"
+  },
   "app.servers.status.created": {
     "message": "未設定"
   },
@@ -6331,6 +6337,9 @@
   },
   "app.servers.modpack.preparing": {
     "message": "正在準備伺服器..."
+  },
+  "app.servers.modpack.done": {
+    "message": "安裝完成"
   },
   "app.servers.modpack.current-file": {
     "message": "正在安裝 {file}"

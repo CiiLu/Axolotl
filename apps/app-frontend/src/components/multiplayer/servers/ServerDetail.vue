@@ -473,7 +473,7 @@ async function shareOnline() {
 				<ServerSettingsPanel :server="server" @deleted="router.push('/multiplayer/servers')" />
 			</div>
 
-			<EulaModal ref="eulaModal" :text="eulaText" @accept="acceptEula" @decline="declineEula" />
+			<EulaModal ref="eulaModal" :text="eulaText" @continue="acceptEula" @decline="declineEula" />
 		</template>
 	</div>
 </template>

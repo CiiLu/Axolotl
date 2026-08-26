@@ -17,12 +17,7 @@ const messages = defineMessages({
 		id: 'app.servers.modpack.preparing',
 		defaultMessage: 'Preparing server...',
 	},
-	firstRun: { id: 'app.servers.wizard.first-run', defaultMessage: 'Running first start...' },
-	eulaWait: {
-		id: 'app.servers.wizard.eula-wait',
-		defaultMessage: 'Waiting for EULA confirmation',
-	},
-	done: { id: 'app.servers.wizard.done', defaultMessage: 'Server ready' },
+	done: { id: 'app.servers.modpack.done', defaultMessage: 'Installation complete' },
 	failed: { id: 'app.servers.wizard.failed', defaultMessage: 'Setup failed' },
 	installLog: { id: 'app.servers.wizard.log', defaultMessage: 'Output' },
 	currentFile: {
@@ -45,10 +40,6 @@ const phaseText = computed(() => {
 	switch (ctx.installPhase.value) {
 		case 'preparing':
 			return formatMessage(messages.preparing)
-		case 'first-run':
-			return formatMessage(messages.firstRun)
-		case 'eula':
-			return formatMessage(messages.eulaWait)
 		case 'done':
 			return formatMessage(messages.done)
 		case 'error':
@@ -75,8 +66,7 @@ const currentFile = computed(() => {
 const isBusy = computed(
 	() =>
 		ctx.installPhase.value === 'preparing' ||
-		ctx.installPhase.value === 'downloading' ||
-		ctx.installPhase.value === 'first-run',
+		ctx.installPhase.value === 'downloading',
 )
 </script>
 
@@ -125,8 +115,6 @@ const isBusy = computed(
 
 		<div
 			v-if="
-				ctx.installPhase.value === 'first-run' ||
-				ctx.installPhase.value === 'eula' ||
 				ctx.installPhase.value === 'done' ||
 				ctx.installPhase.value === 'error'
 			"

@@ -58,7 +58,7 @@ defineExpose({ show, hide: () => modal.value?.hide() })
 	<EulaModal
 		ref="eulaModal"
 		:text="ctx.eulaText.value"
-		@accept="ctx.acceptEula"
+		@continue="ctx.acceptEula"
 		@decline="ctx.declineEula"
 	/>
 </template>

@@ -172,7 +172,7 @@ async function toggleRunning(server: ServerView) {
 		</div>
 
 		<CreateServerModal ref="createModal" />
-		<EulaModal ref="eulaModal" :text="eulaText" @accept="acceptEula" @decline="declineEula" />
+		<EulaModal ref="eulaModal" :text="eulaText" @continue="acceptEula" @decline="declineEula" />
 	</div>
 </template>
 

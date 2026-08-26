@@ -13,6 +13,7 @@ use tokio::process::{Child, ChildStdin, Command};
 use crate::event::ServerPayloadType;
 use crate::event::emit::emit_server;
 use crate::state::{clear_log_buffer, get_log_buffer};
+use crate::util::io::IOError;
 use crate::{ErrorKind, Result};
 
 use super::logs::{analyze_exit_reason, stream_server_output};
@@ -83,6 +84,14 @@ async fn start_inner(
     let memory = memory_mb
         .or(manifest.memory_mb)
         .unwrap_or(DEFAULT_MEMORY_MB);
+
+    // Ensure eula.txt exists (create with eula=false if missing)
+    let eula_path = dir.join("eula.txt");
+    if !eula_path.exists() {
+        tokio::fs::write(&eula_path, "eula=false\n")
+            .await
+            .map_err(|e| IOError::with_path(e, &eula_path))?;
+    }
 
     let mut command = Command::new(&java);
     command.arg(format!("-Xmx{memory}M"));

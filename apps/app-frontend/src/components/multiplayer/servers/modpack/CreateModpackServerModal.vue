@@ -33,15 +33,20 @@ const wizardShown = ref(false)
 const wasHiddenDuringInstall = ref(false)
 const creationReported = ref(false)
 
-const cancelButton = computed(() => ({
-	label: ctx.formatMessage(
-		ctx.installPhase.value === 'downloading'
-			? messages.downloadInBackground
-			: commonMessages.cancelButton,
-	),
-	disabled: ctx.installPhase.value === 'first-run',
-	onClick: () => modal.value?.hide(),
-}))
+const cancelButton = computed(() => {
+	if (ctx.installPhase.value === 'done') {
+		return null
+	}
+	return {
+		label: ctx.formatMessage(
+			ctx.installPhase.value === 'downloading'
+				? messages.downloadInBackground
+				: commonMessages.cancelButton,
+		),
+		disabled: ctx.installPhase.value === 'first-run',
+		onClick: () => modal.value?.hide(),
+	}
+})
 
 watch(ctx.showEulaModal, (visible) => {
 	if (visible) {
@@ -110,7 +115,7 @@ defineExpose({ show, hide: () => modal.value?.hide() })
 	<EulaModal
 		ref="eulaModal"
 		:text="ctx.eulaText.value"
-		@accept="ctx.acceptEula"
+		@continue="ctx.acceptEula"
 		@decline="ctx.declineEula"
 	/>
 </template>

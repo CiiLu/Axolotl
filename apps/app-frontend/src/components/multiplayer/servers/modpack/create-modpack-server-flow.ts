@@ -5,14 +5,13 @@ import {
 	createContext,
 	defineMessages,
 	type MultiStageModal,
-	type StageConfigInput,
 	useVIntl,
 } from '@modrinth/ui'
 import { computed, markRaw, type Ref, ref } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
-import { refresh as refreshServerList } from '@/composables/useServers'
 import { startModpackServerInstall } from '@/composables/useServerInstalls'
+import { refresh as refreshServerList } from '@/composables/useServers'
 import { find_filtered_jres, get_java_default_versions, get_max_memory } from '@/helpers/jre'
 import { get_loader_versions } from '@/helpers/metadata'
 import { serverEventListener, type ServerManifestData, servers } from '@/helpers/servers'
@@ -24,7 +23,6 @@ import {
 	toErrorMessage,
 	waitForServerStop,
 } from '../server-flow-utils'
-import ConfigureStage from '../stages/ConfigureStage.vue'
 import ModpackInstallStage from './stages/ModpackInstallStage.vue'
 import ModpackSetupStage from './stages/ModpackSetupStage.vue'
 
@@ -324,21 +322,8 @@ export function createModpackServerFlowContext(
 				})
 				if (isStale()) return
 
-				installPhase.value = 'first-run'
-				await servers.start(serverId)
-				const stopped = await waitForServerStop(serverId)
-				if (isStale()) return
-				if (stopped?.event === 'stopped' && stopped.crashed) {
-					throw new Error(formatMessage(wizardMessages.firstRunCrashed))
-				}
-
-				const eula = await servers.readFile(serverId, 'eula.txt').catch(() => null)
-				if (eula !== null && !eula.includes('eula=true')) {
-					eulaText.value = eula
-					showEulaModal.value = true
-					installPhase.value = 'eula'
-					return
-				}
+				// Modpack installation complete, no auto-start.
+				// User will click "Start" later, which will handle EULA check via tryStartServer.
 				installPhase.value = 'done'
 			} catch (error) {
 				if (!dispatched && createdServer.value) {
@@ -369,6 +354,14 @@ export function createModpackServerFlowContext(
 			await servers.writeFile(createdServer.value.id, 'eula.txt', updated)
 			showEulaModal.value = false
 			installPhase.value = 'done'
+			// Start the server after accepting EULA
+			await servers.start(createdServer.value.id)
+			// Wait for server to stop (crash or normal)
+			const stopped = await waitForServerStop(createdServer.value.id)
+			if (stopped?.event === 'stopped' && stopped.crashed) {
+				throw new Error(formatMessage(wizardMessages.firstRunCrashed))
+			}
+			installPhase.value = 'done'
 		} catch (error) {
 			installError.value = toErrorMessage(error)
 			installPhase.value = 'error'
@@ -395,7 +388,7 @@ export function createModpackServerFlowContext(
 		void loadMaxMemory()
 	}
 
-	const stageConfigs: StageConfigInput<CreateServerFlowContext>[] = [
+	const stageConfigs = [
 		{
 			id: 'setup',
 			stageContent: markRaw(ModpackSetupStage),
@@ -424,7 +417,11 @@ export function createModpackServerFlowContext(
 			leftButtonConfig: () => null,
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(
-					ctx.installPhase.value === 'error' ? wizardMessages.retry : wizardMessages.next,
+					ctx.installPhase.value === 'error'
+						? wizardMessages.retry
+						: ctx.installPhase.value === 'done'
+							? wizardMessages.finish
+							: wizardMessages.next,
 				),
 				color: 'brand',
 				icon: ctx.installPhase.value === 'error' ? RefreshCwIcon : null,
@@ -435,26 +432,14 @@ export function createModpackServerFlowContext(
 						void ctx.retryInstall()
 						return
 					}
+					if (ctx.installPhase.value === 'done') {
+						ctx.modal.value?.hide()
+						return
+					}
 					ctx.modal.value?.nextStage()
 				},
 			}),
-		},
-		{
-			id: 'configure',
-			stageContent: markRaw(ConfigureStage),
-			title: (ctx) => ctx.formatMessage(wizardMessages.configureTitle),
-			maxWidth: 'min(60rem, calc(95vw - 10rem))',
-			leftButtonConfig: () => null,
-			rightButtonConfig: (ctx) => ({
-				label: ctx.formatMessage(wizardMessages.finish),
-				color: 'brand',
-				onClick: async () => {
-					const save = ctx.saveServerProperties.value
-					if (save === null || (await save())) ctx.modal.value?.hide()
-				},
-			}),
-		},
-	]
+		},]
 
 	return {
 		modal,
@@ -489,7 +474,7 @@ export function createModpackServerFlowContext(
 		loaderLabel,
 		loaderSupported,
 		gameVersionLabel,
-		loadVersions,
+loadVersions,
 		loadLoaderVersions,
 		loadDefaultJava,
 		beginInstall,

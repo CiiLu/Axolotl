@@ -3,10 +3,10 @@ import { injectNotificationManager } from '@modrinth/ui'
 import { onScopeDispose, ref, useTemplateRef } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
-import EulaModal from '@/components/multiplayer/servers/EulaModal.vue'
-import { type ServerView, setServerExitReasonHandler, useServers } from '@/composables/useServers'
+import type EulaModal from '@/components/multiplayer/servers/EulaModal.vue'
 import { resumeModpackInstall } from '@/composables/useServerInstalls'
-import { servers as serversApi } from '@/helpers/servers'
+import { type ServerView, setServerExitReasonHandler, useServers } from '@/composables/useServers'
+import { serverEventListener,servers as serversApi } from '@/helpers/servers'
 
 /**
  * Shared "start with EULA gate" flow used by the servers overview and the
@@ -21,18 +21,38 @@ export function useServerLifecycle() {
 	const eulaText = ref('')
 	let pendingId = ''
 
+	// Listen for real-time EULA prompt detection from the Rust backend
+	let unregisterEulaListener: (() => void) | null = null
+	serverEventListener((serverId, payload) => {
+		if (payload.event === 'eula_required' && payload.server_id === pendingId) {
+			eulaText.value = payload.eula_text
+			eulaModal.value?.show()
+		}
+	}).then((unregister) => {
+		unregisterEulaListener = unregister
+	})
+	onScopeDispose(() => {
+		unregisterEulaListener?.()
+	})
+
 	/** Starts the server; if the EULA is unaccepted, shows the EULA modal first. */
 	async function tryStartServer(server: ServerView) {
-		if (!server.eulaAccepted && server.eulaExists) {
-			try {
-				eulaText.value = await serversApi.readFile(server.id, 'eula.txt')
+		// Always check the actual eula.txt file on the server
+		try {
+			const eulaTextContent = await serversApi.readFile(server.id, 'eula.txt')
+			const accepted = eulaTextContent.split('\n').some(line => line.trim() === 'eula=true')
+			
+			if (!accepted) {
+				// EULA not accepted, show modal
+				eulaText.value = eulaTextContent
 				pendingId = server.id
 				eulaModal.value?.show()
 				return
-			} catch {
-				// No eula.txt: a fresh start will generate it
 			}
+		} catch {
+			// eula.txt doesn't exist yet, will be created by the server
 		}
+		
 		await launchServer(server.id)
 	}
 
@@ -62,6 +82,7 @@ export function useServerLifecycle() {
 			await serversApi.writeFile(id, 'eula.txt', updated)
 			pendingId = ''
 			eulaModal.value?.hide()
+			// Start the server after accepting EULA
 			await startServer(id)
 		} catch (error) {
 			console.error(error)
