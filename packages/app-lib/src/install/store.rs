@@ -603,6 +603,7 @@ mod tests {
             None,
             crate::state::InstanceLink::Unmanaged,
             None,
+            None,
         )
         .await
         .unwrap();
@@ -884,6 +885,7 @@ mod tests {
             Some("0.18.4".to_string()),
             None,
             crate::state::InstanceLink::Unmanaged,
+            None,
             None,
         )
         .await

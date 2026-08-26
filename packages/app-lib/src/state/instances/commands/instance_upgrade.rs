@@ -385,8 +385,8 @@ async fn read_only_upgrade_source(
     .await?
     .ok_or_else(|| crate::ErrorKind::InputError("Unknown instance".to_string()))?;
     let scanned =
-        crate::state::instances::adapters::filesystem::scan_content_files(
-            &state.directories.instances_dir(),
+        crate::state::instances::adapters::filesystem::scan_content_files_from(
+            &state.directories.instance_game_dir(&instance),
             &instance.path,
         )?;
     let file_states = scanned
@@ -398,7 +398,7 @@ async fn read_only_upgrade_source(
             modified: file.modified,
         })
         .collect();
-    let instance_dir = state.directories.instances_dir().join(&instance.path);
+    let instance_dir = state.directories.instance_game_dir(&instance);
     let mut scanned_by_path = HashMap::new();
     let mut source_files = Vec::new();
     for file in scanned {
@@ -597,11 +597,20 @@ impl UpgradePlanRuntimeValidation {
         watch: &crate::state::instances::watcher::InstanceContentWatchSnapshot,
         state: &State,
     ) -> crate::Result<()> {
-        let scanned =
-            crate::state::instances::adapters::filesystem::scan_content_files(
-                &state.directories.instances_dir(),
+        let source_override =
+            crate::state::instances::adapters::sqlite::instance_rows::get_game_dir_override_by_path(
                 &self.source.instance_path,
-            )?;
+                &state.pool,
+            )
+            .await?;
+        let source_game_dir = state.directories.resolve_game_dir(
+            &self.source.instance_path,
+            source_override.as_deref(),
+        );
+        let scanned = crate::state::instances::adapters::filesystem::scan_content_files_from(
+            &source_game_dir,
+            &self.source.instance_path,
+        )?;
         let planned = self
             .source
             .source_files
@@ -624,10 +633,7 @@ impl UpgradePlanRuntimeValidation {
 
         let watcher_changed =
             self.validated_generation != Some(watch.generation);
-        let instance_dir = state
-            .directories
-            .instances_dir()
-            .join(&self.source.instance_path);
+        let instance_dir = &source_game_dir;
         for file in &scanned {
             let planned_file = planned[&file.relative_path.as_str()];
             if file.size != planned_file.size
@@ -6392,6 +6398,7 @@ mod tests {
                 icon_path: None,
                 link: InstanceLink::Unmanaged,
                 symlink_target: None,
+                game_dir_override: None,
             },
             &state,
         )

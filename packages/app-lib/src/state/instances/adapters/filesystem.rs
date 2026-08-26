@@ -1,5 +1,5 @@
 use crate::state::ProjectType;
-use crate::util::io::{self, IOError};
+use crate::util::io::IOError;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -22,21 +22,35 @@ pub(crate) struct ScannedBackupFile {
     pub modified: i64,
 }
 
+#[cfg(test)]
 pub(crate) fn scan_content_files(
     instances_dir: &Path,
     instance_path: &str,
 ) -> crate::Result<Vec<ScannedContentFile>> {
-    let instance_dir = io::canonicalize(instances_dir.join(instance_path))?;
+    let instance_dir =
+        crate::util::io::canonicalize(instances_dir.join(instance_path))?;
+    scan_content_files_from(&instance_dir, instance_path)
+}
+
+/// Variant of [`scan_content_files`] that takes an already-resolved game
+/// directory, so callers can pass a `game_dir_override` target as-is.
+/// `cache_key_path` is the *relative* instance path used as the hash-cache-key
+/// prefix (it must stay the launcher's relative `instance.path`, not the
+/// resolved override path, so content hashes remain stable across dirs).
+pub(crate) fn scan_content_files_from(
+    instance_dir: &Path,
+    cache_key_path: &str,
+) -> crate::Result<Vec<ScannedContentFile>> {
     let mut files = Vec::new();
 
     for_each_content_folder(
-        &instance_dir,
+        instance_dir,
         |folder_path, relative_dir, project_type| {
             scan_content_folder(
                 folder_path,
                 relative_dir,
                 project_type,
-                instance_path,
+                cache_key_path,
                 &mut files,
             )
         },
@@ -48,14 +62,24 @@ pub(crate) fn scan_content_files(
 /// Collects update backup files (`*.old`) across every content folder. Backups
 /// are never hashed or listed as content; they are matched back to their
 /// active file by the `{active}_{previous}.old` naming convention.
+#[cfg(test)]
 pub(crate) fn scan_content_backups(
     instances_dir: &Path,
     instance_path: &str,
 ) -> crate::Result<Vec<ScannedBackupFile>> {
-    let instance_dir = io::canonicalize(instances_dir.join(instance_path))?;
+    scan_content_backups_from(&crate::util::io::canonicalize(
+        instances_dir.join(instance_path),
+    )?)
+}
+
+/// Variant of [`scan_content_backups`] that takes an already-resolved game
+/// directory, so callers can pass a `game_dir_override` target as-is.
+pub(crate) fn scan_content_backups_from(
+    instance_dir: &Path,
+) -> crate::Result<Vec<ScannedBackupFile>> {
     let mut backups = Vec::new();
 
-    for_each_content_folder(&instance_dir, |folder_path, relative_dir, _| {
+    for_each_content_folder(instance_dir, |folder_path, relative_dir, _| {
         for entry in std::fs::read_dir(folder_path)
             .map_err(|err| IOError::with_path(err, folder_path))?
         {

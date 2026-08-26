@@ -85,13 +85,6 @@ export interface ImportContext {
 	basePath: string
 }
 
-export interface CompatibleModeCandidate {
-	basePath: string
-	versionName: string
-	versionPath: string
-	jsonPath: string
-}
-
 export interface BatchTargetInstanceInfo {
 	id: string
 	name: string
@@ -264,7 +257,7 @@ export function useDropImport(options: DropImportOptions) {
 	const contentInstallIncompatibilityWarningInstalling = ref(false)
 
 	// ── Symlink choice state ─────────────────────────────────────────────
-	let symlinkChoiceResolve: ((symlink: boolean) => void) | null = null
+	let symlinkChoiceResolve: ((choices: SymlinkMethodChoice[]) => void) | null = null
 
 	// ── Messages ─────────────────────────────────────────────────────────
 	const messages = defineMessages({
@@ -564,55 +557,6 @@ export function useDropImport(options: DropImportOptions) {
 			return resolveBatchClassification(result.resolved_to, depth + 1)
 		}
 		return result
-	}
-
-	// ── Compatible mode ──────────────────────────────────────────────────
-
-	function _checkForCompatibleMode(
-		basePath: string,
-		results: ScanResult[],
-	): CompatibleModeCandidate | null {
-		// Find the first instance flagged as compatible mode by the backend.
-		for (const result of results) {
-			for (const inst of result.instances) {
-				if (!inst.compatibleMode) continue
-
-				// Extract bare version name from path: .../versions/<name>
-				const pathParts = inst.path.replace(/\\/g, '/').split('/')
-				const versionsIdx = pathParts.lastIndexOf('versions')
-				if (versionsIdx < 0 || versionsIdx >= pathParts.length - 1) continue
-
-				const versionName = pathParts[versionsIdx + 1]
-				const gameDir = pathParts.slice(0, versionsIdx).join('/')
-				dropDebug('checkForCompatibleMode: found compatible instance', {
-					name: inst.name,
-					versionName,
-					gameDir,
-					path: inst.path,
-				})
-				return {
-					basePath: gameDir,
-					versionName,
-					versionPath: inst.path,
-					jsonPath: `${inst.path}/${versionName}.json`,
-				}
-			}
-		}
-		dropDebug('checkForCompatibleMode: no compatible instance found')
-		return null
-	}
-
-	function _showCompatibleModeModal(
-		candidate: CompatibleModeCandidate,
-		basePath: string,
-		results: ScanResult[],
-		launcherType = 'Generic',
-	) {
-		dropDebug('showCompatibleModeModal', { candidate, basePath, launcherType })
-		compatibleModeResults.value = results
-		compatibleModeGameDir.value = candidate.basePath
-		compatibleModeLauncherType.value = launcherType
-		compatibleModeConfirmModal.value?.show()
 	}
 
 	async function handleCompatibleModeConfirm(choice: 'compatible' | 'old-way' | 'cancel') {
@@ -1378,7 +1322,7 @@ export function useDropImport(options: DropImportOptions) {
 	function chooseImportMethod(options: {
 		instanceNames: string[]
 		symlinkCapable: 'supported' | 'requires_admin' | 'unsupported'
-	}): Promise<boolean> {
+	}): Promise<SymlinkMethodChoice[]> {
 		return new Promise((resolve) => {
 			symlinkChoiceResolve = resolve
 			symlinkCardsModal.value?.show({
@@ -1438,7 +1382,7 @@ export function useDropImport(options: DropImportOptions) {
 
 	function onSymlinkMethodCancelled() {
 		if (symlinkChoiceResolve) {
-			symlinkChoiceResolve(false)
+			symlinkChoiceResolve([])
 			symlinkChoiceResolve = null
 		}
 		symlinkCardsModal.value?.hide()
@@ -1467,7 +1411,7 @@ export function useDropImport(options: DropImportOptions) {
 
 	async function onSymlinkMethodConfirmed(choices: SymlinkMethodChoice[] | boolean) {
 		if (symlinkChoiceResolve) {
-			symlinkChoiceResolve(Array.isArray(choices) ? (choices[0]?.symlink ?? false) : choices)
+			symlinkChoiceResolve(Array.isArray(choices) ? choices : [])
 			symlinkChoiceResolve = null
 			return
 		}
@@ -1489,6 +1433,7 @@ export function useDropImport(options: DropImportOptions) {
 						item.gameVersion = choice.gameVersion
 						item.loader = choice.loader
 						item.loaderVersion = choice.loaderVersion
+						item.gameDirOverride = choice.gameDirOverride
 					}
 				}
 			}
@@ -1525,6 +1470,7 @@ export function useDropImport(options: DropImportOptions) {
 					inst.compatibleMode ? undefined : choice?.gameVersion,
 					inst.compatibleMode ? undefined : choice?.loader,
 					inst.compatibleMode ? undefined : choice?.loaderVersion,
+					choice?.gameDirOverride ?? null,
 				)
 				await wait_for_install_job(job.job_id)
 				addNotification({
@@ -1589,6 +1535,7 @@ export function useDropImport(options: DropImportOptions) {
 					inst.compatibleMode ? undefined : choice?.gameVersion,
 					inst.compatibleMode ? undefined : choice?.loader,
 					inst.compatibleMode ? undefined : choice?.loaderVersion,
+					choice?.gameDirOverride ?? null,
 				)
 				await wait_for_install_job(job.job_id)
 				completed++
@@ -2236,6 +2183,7 @@ export function useDropImport(options: DropImportOptions) {
 					item.gameVersion ?? undefined,
 					item.loader ?? undefined,
 					item.loaderVersion ?? undefined,
+					item.gameDirOverride ?? null,
 				)
 				await wait_for_install_job(job.job_id)
 				return

@@ -24,6 +24,7 @@ pub(crate) struct InstanceRow {
     pub name: String,
     pub icon_path: Option<String>,
     pub symlink_target: Option<String>,
+    pub game_dir_override: Option<String>,
     pub created: i64,
     pub modified: i64,
     pub last_played: Option<i64>,
@@ -48,6 +49,7 @@ impl TryFrom<InstanceRow> for Instance {
             name: row.name,
             icon_path: row.icon_path,
             symlink_target: row.symlink_target,
+            game_dir_override: row.game_dir_override,
             created: timestamp(row.created),
             modified: timestamp(row.modified),
             last_played: row.last_played.and_then(optional_timestamp),
@@ -181,6 +183,7 @@ struct InstanceMetadataRow {
     name: String,
     icon_path: Option<String>,
     symlink_target: Option<String>,
+    game_dir_override: Option<String>,
     created: i64,
     modified: i64,
     last_played: Option<i64>,
@@ -246,6 +249,7 @@ impl InstanceMetadataRow {
             name: self.name,
             icon_path: self.icon_path,
             symlink_target: self.symlink_target,
+            game_dir_override: self.game_dir_override,
             created: self.created,
             modified: self.modified,
             last_played: self.last_played,
@@ -407,6 +411,51 @@ where
     Ok(path)
 }
 
+pub(crate) async fn get_instance_path_and_game_dir_override_by_id<'e, E>(
+    id: &str,
+    exec: E,
+) -> crate::Result<Option<(String, Option<String>)>>
+where
+    E: Executor<'e, Database = Sqlite>,
+{
+    let row = sqlx::query!(
+        "
+        SELECT path AS \"path!: String\",
+               game_dir_override AS \"game_dir_override?: String\"
+        FROM instances
+        WHERE id = ?
+        ",
+        id,
+    )
+    .fetch_optional(exec)
+    .await?;
+
+    Ok(row.map(|r| (r.path, r.game_dir_override)))
+}
+
+/// Look up the game-dir override for an instance matched by its relative
+/// `path` (the file hash cache keys embed `instance.path`, not the instance id).
+pub(crate) async fn get_game_dir_override_by_path<'e, E>(
+    instance_path: &str,
+    exec: E,
+) -> crate::Result<Option<String>>
+where
+    E: Executor<'e, Database = Sqlite>,
+{
+    let row = sqlx::query!(
+        "
+        SELECT game_dir_override AS \"game_dir_override?: String\"
+        FROM instances
+        WHERE path = ?
+        ",
+        instance_path,
+    )
+    .fetch_optional(exec)
+    .await?;
+
+    Ok(row.and_then(|r| r.game_dir_override))
+}
+
 pub(crate) async fn get_instance_display_info<'e, E>(
     id: &str,
     exec: E,
@@ -446,6 +495,7 @@ pub(crate) async fn get_instance_metadata_by_id(
             i.name AS "name!: String",
             i.icon_path AS "icon_path?: String",
             i.symlink_target AS "symlink_target?: String",
+            i.game_dir_override AS "game_dir_override?: String",
             i.created AS "created!: i64",
             i.modified AS "modified!: i64",
             i.last_played AS "last_played?: i64",
@@ -531,6 +581,7 @@ pub(crate) async fn get_instance_metadata_many(
             i.name AS "name!: String",
             i.icon_path AS "icon_path?: String",
             i.symlink_target AS "symlink_target?: String",
+            i.game_dir_override AS "game_dir_override?: String",
             i.created AS "created!: i64",
             i.modified AS "modified!: i64",
             i.last_played AS "last_played?: i64",
@@ -610,6 +661,7 @@ pub(crate) async fn list_instance_metadata(
             i.name AS "name!: String",
             i.icon_path AS "icon_path?: String",
             i.symlink_target AS "symlink_target?: String",
+            i.game_dir_override AS "game_dir_override?: String",
             i.created AS "created!: i64",
             i.modified AS "modified!: i64",
             i.last_played AS "last_played?: i64",
@@ -686,6 +738,7 @@ pub(crate) async fn get_instance_launch_context(
             i.name AS "name!: String",
             i.icon_path AS "icon_path?: String",
             i.symlink_target AS "symlink_target?: String",
+            i.game_dir_override AS "game_dir_override?: String",
             i.created AS "created!: i64",
             i.modified AS "modified!: i64",
             i.last_played AS "last_played?: i64",
@@ -852,6 +905,7 @@ pub(crate) async fn insert_instance(
     let name = instance.name.as_str();
     let icon_path = instance.icon_path.as_deref();
     let symlink_target = instance.symlink_target.as_deref();
+    let game_dir_override = instance.game_dir_override.as_deref();
     let created = instance.created.timestamp();
     let modified = instance.modified.timestamp();
     let last_played = instance.last_played.map(|value| value.timestamp());
@@ -875,6 +929,7 @@ pub(crate) async fn insert_instance(
 			name,
 			icon_path,
 			symlink_target,
+			game_dir_override,
 			created,
 			modified,
 			last_played,
@@ -882,7 +937,7 @@ pub(crate) async fn insert_instance(
 			submitted_time_played,
 			recent_time_played
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		",
         id,
         path,
@@ -893,6 +948,7 @@ pub(crate) async fn insert_instance(
         name,
         icon_path,
         symlink_target,
+        game_dir_override,
         created,
         modified,
         last_played,
@@ -919,6 +975,7 @@ pub(crate) async fn update_instance(
     let name = instance.name.as_str();
     let icon_path = instance.icon_path.as_deref();
     let symlink_target = instance.symlink_target.as_deref();
+    let game_dir_override = instance.game_dir_override.as_deref();
     let modified = instance.modified.timestamp();
     let last_played = instance.last_played.map(|value| value.timestamp());
     let pinned_at = instance.pinned_at.map(|value| value.timestamp());
@@ -941,6 +998,7 @@ pub(crate) async fn update_instance(
 			name = ?,
 			icon_path = ?,
 			symlink_target = ?,
+			game_dir_override = ?,
 			modified = ?,
 			last_played = ?,
 			pinned_at = ?,
@@ -956,6 +1014,7 @@ pub(crate) async fn update_instance(
         name,
         icon_path,
         symlink_target,
+        game_dir_override,
         modified,
         last_played,
         pinned_at,

@@ -135,6 +135,7 @@ pub struct Instance {
     pub game_resolution: Option<WindowSize>,
     pub hooks: Hooks,
     pub symlink_target: Option<String>,
+    pub game_dir_override: Option<String>,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -240,6 +241,13 @@ pub struct EditInstance {
     )]
     pub game_resolution: Option<Option<WindowSize>>,
     pub hooks: Option<Hooks>,
+
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "serde_with::rust::double_option"
+    )]
+    pub game_dir_override: Option<Option<String>>,
 }
 
 impl From<InstanceMetadata> for Instance {
@@ -277,6 +285,7 @@ impl From<InstanceMetadata> for Instance {
             game_resolution: metadata.launch_overrides.game_resolution,
             hooks: metadata.launch_overrides.hooks,
             symlink_target: metadata.instance.symlink_target,
+            game_dir_override: metadata.instance.game_dir_override,
         }
     }
 }
@@ -428,6 +437,7 @@ fn edit_to_core(edit_instance: EditInstance) -> Result<CoreEditInstance> {
         submitted_time_played: None,
         recent_time_played: None,
         symlink_target: None,
+        game_dir_override: edit_instance.game_dir_override,
     })
 }
 

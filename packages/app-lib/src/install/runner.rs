@@ -56,6 +56,7 @@ pub async fn create_instance(
         Vec::new(),
         icon_path,
         link,
+        None,
     )
     .await
 }
@@ -68,6 +69,7 @@ pub async fn create_instance_with_adjuncts(
     adjuncts: Vec<crate::state::LoaderComponent>,
     icon_path: Option<String>,
     link: InstanceLink,
+    game_dir_override: Option<String>,
 ) -> crate::Result<InstallJobSnapshot> {
     start(InstallRequest::CreateInstance {
         name,
@@ -77,6 +79,7 @@ pub async fn create_instance_with_adjuncts(
         adjuncts,
         icon_path,
         link,
+        game_dir_override,
     })
     .await
 }
@@ -107,6 +110,7 @@ pub async fn import_instance(
         game_version: None,
         loader: None,
         loader_version: None,
+        game_dir_override: None,
     })
     .await
 }
@@ -130,6 +134,7 @@ pub async fn import_instance_with_path(
         game_version: None,
         loader: None,
         loader_version: None,
+        game_dir_override: None,
     })
     .await
 }
@@ -143,6 +148,7 @@ pub async fn import_instance_with_plan(
     game_version: Option<String>,
     loader: Option<crate::state::ModLoader>,
     loader_version: Option<String>,
+    game_dir_override: Option<String>,
 ) -> crate::Result<InstallJobSnapshot> {
     start(InstallRequest::ImportInstance {
         launcher_type,
@@ -153,6 +159,7 @@ pub async fn import_instance_with_plan(
         game_version,
         loader,
         loader_version,
+        game_dir_override,
     })
     .await
 }
@@ -738,6 +745,7 @@ async fn prepare_initial_instance(
             mut adjuncts,
             icon_path,
             link,
+            game_dir_override,
         } => {
             if let InstanceLink::CurseForgeModpack {
                 project_id,
@@ -770,6 +778,7 @@ async fn prepare_initial_instance(
                     adjuncts: Vec::new(),
                     icon_path: icon_path.clone(),
                     link: link.clone(),
+                    game_dir_override: game_dir_override.clone(),
                 };
             }
             resolve_required_adjuncts(
@@ -787,6 +796,7 @@ async fn prepare_initial_instance(
                 adjuncts: adjuncts.clone(),
                 icon_path: icon_path.clone(),
                 link: link.clone(),
+                game_dir_override: game_dir_override.clone(),
             };
             let metadata = crate::api::instance::create(
                 name,
@@ -796,6 +806,7 @@ async fn prepare_initial_instance(
                 icon_path,
                 link,
                 None,
+                game_dir_override,
             )
             .await?;
             if !adjuncts.is_empty() {
@@ -853,6 +864,7 @@ async fn prepare_initial_instance(
                 icon_path,
                 link,
                 None,
+                None,
             )
             .await?;
             set_display(
@@ -866,6 +878,7 @@ async fn prepare_initial_instance(
             instance_folder,
             symlink: _,
             base_path: _,
+            game_dir_override,
             ..
         } => {
             let metadata = crate::api::instance::create(
@@ -876,6 +889,7 @@ async fn prepare_initial_instance(
                 None,
                 InstanceLink::Unmanaged,
                 None,
+                game_dir_override,
             )
             .await?;
             set_display(
@@ -901,6 +915,7 @@ async fn prepare_initial_instance(
                 metadata.applied_content_set.loader_version,
                 metadata.instance.icon_path,
                 metadata.link,
+                None,
                 None,
             )
             .await?;
@@ -948,6 +963,7 @@ async fn prepare_initial_instance(
                         metadata.applied_content_set.loader_version.clone(),
                         metadata.instance.icon_path.clone(),
                         InstanceLink::Unmanaged,
+                        None,
                         None,
                     )
                     .await?;
@@ -1366,6 +1382,7 @@ async fn run_request(
             adjuncts,
             icon_path: _,
             link,
+            game_dir_override: _,
         } => {
             let Some(instance_id) = current_instance_id(job_state) else {
                 return Err(crate::ErrorKind::InputError(
@@ -1503,6 +1520,7 @@ async fn run_request(
             game_version,
             loader,
             loader_version,
+            game_dir_override: _,
         } => {
             tracing::debug!(
                 "InstallRequest::ImportInstance: launcher_type={launcher_type} base_path={} instance_folder={instance_folder} symlink={symlink}",
@@ -2552,6 +2570,7 @@ async fn create_upgrade_backup(
         source.applied_content_set.loader_version.clone(),
         source.instance.icon_path.clone(),
         InstanceLink::Unmanaged,
+        None,
         None,
     )
     .await?;
@@ -4765,10 +4784,7 @@ async fn install_adjunct_components(
     let metadata = crate::api::instance::get(instance_id)
         .await?
         .ok_or_else(|| ErrorKind::InputError("Unknown instance".to_string()))?;
-    let instance_path = state
-        .directories
-        .instances_dir()
-        .join(&metadata.instance.path);
+    let instance_path = state.directories.instance_game_dir(&metadata.instance);
     let mut components = metadata.loader_components.clone();
 
     for adjunct in adjuncts {
@@ -5836,6 +5852,7 @@ mod tests {
             None,
             InstanceLink::Unmanaged,
             None,
+            None,
         )
         .await
         .unwrap();
@@ -6118,6 +6135,7 @@ mod tests {
             Some("0.17.2".to_string()),
             None,
             InstanceLink::Unmanaged,
+            None,
             None,
         )
         .await

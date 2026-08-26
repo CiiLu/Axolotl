@@ -616,8 +616,11 @@ const RULES: &[Rule] = &[
 
 pub async fn analyze_crash(instance_id: &str) -> crate::Result<CrashAnalysis> {
     let state = State::get().await?;
-    let instance_path = resolve_instance_path(instance_id, &state).await?;
-    let instance_root = state.directories.instances_dir().join(&instance_path);
+    let (instance_path, game_dir_override) =
+        resolve_instance_path(instance_id, &state).await?;
+    let instance_root = state
+        .directories
+        .resolve_game_dir(&instance_path, game_dir_override.as_deref());
     let candidates =
         collect_candidates(&instance_root, &state.directories).await?;
     let selected = select_run_candidates(candidates);
@@ -707,11 +710,11 @@ pub async fn save_successful_mod_snapshot(
     instance_id: &str,
 ) -> crate::Result<()> {
     let state = State::get().await?;
-    let instance_path = resolve_instance_path(instance_id, &state).await?;
+    let (instance_path, game_dir_override) =
+        resolve_instance_path(instance_id, &state).await?;
     let mods_path = state
         .directories
-        .instances_dir()
-        .join(instance_path)
+        .resolve_game_dir(&instance_path, game_dir_override.as_deref())
         .join("mods");
     crate::state::sync_content_files(instance_id, &state).await?;
     let content =
@@ -753,11 +756,11 @@ pub async fn undo_added_mod(
     expected_hash: &str,
 ) -> crate::Result<()> {
     let state = State::get().await?;
-    let instance_path = resolve_instance_path(instance_id, &state).await?;
+    let (instance_path, game_dir_override) =
+        resolve_instance_path(instance_id, &state).await?;
     let path = state
         .directories
-        .instances_dir()
-        .join(instance_path)
+        .resolve_game_dir(&instance_path, game_dir_override.as_deref())
         .join("mods")
         .join(filename);
     if path.file_name().and_then(|name| name.to_str()) != Some(filename)
@@ -1179,17 +1182,10 @@ async fn collect_candidates(
     directories: &crate::prelude::DirectoryInfo,
 ) -> crate::Result<Vec<SourceCandidate>> {
     let mut candidates = Vec::new();
-    let relative_instance_path = instance_root
-        .strip_prefix(directories.instances_dir())
-        .unwrap_or(instance_root)
-        .to_string_lossy();
     let locations = [
+        (directories.game_logs_dir(instance_root), "minecraft_log"),
         (
-            directories.instance_logs_dir(&relative_instance_path),
-            "minecraft_log",
-        ),
-        (
-            directories.crash_reports_dir(&relative_instance_path),
+            directories.game_crash_reports_dir(instance_root),
             "crash_report",
         ),
         (instance_root.to_path_buf(), "instance_log"),

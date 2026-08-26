@@ -29,6 +29,8 @@ pub struct CreateInstance {
     pub link: InstanceLink,
     #[serde(default)]
     pub symlink_target: Option<String>,
+    #[serde(default)]
+    pub game_dir_override: Option<String>,
 }
 
 pub(crate) async fn create_instance(
@@ -80,6 +82,7 @@ pub(crate) async fn create_instance(
             name: input.name,
             icon_path,
             symlink_target: input.symlink_target,
+            game_dir_override: input.game_dir_override,
             created: now,
             modified: now,
             last_played: None,
@@ -136,8 +139,8 @@ pub(crate) async fn create_instance(
         crate::state::instances::watcher::watch_instance_folder(
             &instance.id,
             &instance.path,
+            &state.directories.instance_game_dir(&instance),
             &state.file_watcher,
-            &state.directories,
         )
         .await;
 

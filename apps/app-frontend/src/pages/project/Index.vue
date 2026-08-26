@@ -270,7 +270,8 @@
 									<HeartIcon /> {{ formatMessage(commonMessages.followButton) }}
 								</template>
 								<template v-if="favoriteSupported" #save>
-									<BookmarkIcon :class="{ 'text-brand': favoriteSaved }" />
+									<BookmarkFilledIcon v-if="favoriteSaved" class="text-brand" />
+									<BookmarkIcon v-else />
 									{{
 										formatMessage(
 											favoritePending
@@ -370,6 +371,7 @@
 
 <script setup>
 import {
+	BookmarkFilledIcon,
 	BookmarkIcon,
 	BookOpenIcon,
 	CheckIcon,

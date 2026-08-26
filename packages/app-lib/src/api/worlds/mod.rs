@@ -200,7 +200,6 @@ pub async fn get_recent_worlds(
     display_statuses: EnumSet<DisplayStatus>,
 ) -> Result<Vec<WorldWithInstance>> {
     let state = State::get().await?;
-    let instances_dir = state.directories.instances_dir();
 
     let mut instances = crate::state::list_instances(&state.pool).await?;
     instances.sort_by_key(|x| Reverse(x.instance.last_played));
@@ -215,8 +214,8 @@ pub async fn get_recent_worlds(
             break;
         }
         let instance_id = &instance.instance.id;
-        let instance_path = &instance.instance.path;
-        let instance_dir = instances_dir.join(instance_path);
+        let instance_dir =
+            state.directories.instance_game_dir(&instance.instance);
         let instance_worlds =
             get_all_worlds_in_instance(instance_id, &instance_dir).await;
         if let Err(e) = instance_worlds {
@@ -269,16 +268,16 @@ pub async fn get_instance_worlds(instance_id: &str) -> Result<Vec<World>> {
 async fn resolve_instance_id(instance: &str, state: &State) -> Result<String> {
     resolve_instance_identity(instance, state)
         .await
-        .map(|(instance_id, _)| instance_id)
+        .map(|(instance_id, _, _)| instance_id)
 }
 
 async fn resolve_instance_identity(
     instance: &str,
     state: &State,
-) -> Result<(String, String)> {
+) -> Result<(String, String, Option<String>)> {
     let row = sqlx::query!(
         "
-		SELECT id, path
+		SELECT id, path, game_dir_override
 		FROM instances
 		WHERE id = ? OR path = ?
 		ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END
@@ -297,7 +296,7 @@ async fn resolve_instance_identity(
         .as_error()
     })?;
 
-    Ok((row.id, row.path))
+    Ok((row.id, row.path, row.game_dir_override))
 }
 
 async fn get_all_worlds_in_instance(
@@ -364,9 +363,11 @@ pub async fn get_singleplayer_world(
     world: &str,
 ) -> Result<World> {
     let state = State::get().await?;
-    let (instance_id, instance_path) =
+    let (instance_id, instance_path, game_dir_override) =
         resolve_instance_identity(instance, &state).await?;
-    let instance_dir = state.directories.instances_dir().join(instance_path);
+    let instance_dir = state
+        .directories
+        .resolve_game_dir(&instance_path, game_dir_override.as_deref());
     let mut world =
         read_singleplayer_world(get_world_dir(&instance_dir, world)).await?;
 
@@ -825,9 +826,11 @@ pub async fn add_server_to_instance(
     content_kind: Option<String>,
 ) -> Result<usize> {
     let state = State::get().await?;
-    let (instance_id, instance_path) =
+    let (instance_id, instance_path, game_dir_override) =
         resolve_instance_identity(instance_id, &state).await?;
-    let instance_dir = state.directories.instances_dir().join(instance_path);
+    let instance_dir = state
+        .directories
+        .resolve_game_dir(&instance_path, game_dir_override.as_deref());
     let mut servers = servers_data::read(&instance_dir).await?;
     let insert_index = servers
         .iter()
@@ -879,9 +882,11 @@ pub async fn edit_server_in_instance(
     pack_status: ServerPackStatus,
 ) -> Result<()> {
     let state = State::get().await?;
-    let (_, instance_path) =
+    let (_, instance_path, game_dir_override) =
         resolve_instance_identity(instance_id, &state).await?;
-    let instance_dir = state.directories.instances_dir().join(instance_path);
+    let instance_dir = state
+        .directories
+        .resolve_game_dir(&instance_path, game_dir_override.as_deref());
     let mut servers = servers_data::read(&instance_dir).await?;
     let server =
         servers
@@ -905,9 +910,11 @@ pub async fn remove_server_from_instance(
     index: usize,
 ) -> Result<()> {
     let state = State::get().await?;
-    let (_, instance_path) =
+    let (_, instance_path, game_dir_override) =
         resolve_instance_identity(instance_id, &state).await?;
-    let instance_dir = state.directories.instances_dir().join(instance_path);
+    let instance_dir = state
+        .directories
+        .resolve_game_dir(&instance_path, game_dir_override.as_deref());
     let mut servers = servers_data::read(&instance_dir).await?;
     if servers.get(index).as_ref().is_none_or(|x| x.hidden) {
         return Err(ErrorKind::InputError(format!(

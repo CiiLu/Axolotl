@@ -3320,6 +3320,18 @@
   "app.lab.gradient-text.title": {
     "message": "漸變文字生成器"
   },
+  "app.lab.skin-editor.description": {
+    "message": "在本機建立和編輯 Minecraft 玩家外觀。"
+  },
+  "app.lab.skin-editor.export-skin": {
+    "message": "Minecraft 外觀 PNG"
+  },
+  "app.lab.skin-editor.loading": {
+    "message": "正在載入外觀編輯器"
+  },
+  "app.lab.skin-editor.title": {
+    "message": "外觀編輯器"
+  },
   "app.lab.mod-translation.active-count": {
     "message": "{count} 個任務進行中"
   },
