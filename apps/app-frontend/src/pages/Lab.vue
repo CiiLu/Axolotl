@@ -18,6 +18,7 @@ import modTranslationCover from '@/assets/lab/mod-translation-cover.png'
 import recipeGeneratorToolCover from '@/assets/lab/recipe-generator-tool-cover.png'
 import schematicPreviewToolCover from '@/assets/lab/schematic-preview-cover.png'
 import seedMapToolCover from '@/assets/lab/seed-map-tool-cover.png'
+import skinEditorToolCover from '@/assets/lab/skin-editor-tool-cover.png'
 import {
 	getLabCategoryFilter,
 	getLabFavoriteFilter,
@@ -42,6 +43,7 @@ const toolCoverImages: Record<string, string> = {
 	'schematic-preview': schematicPreviewToolCover,
 	'seed-map': seedMapToolCover,
 	'mod-translation': modTranslationCover,
+	'skin-editor': skinEditorToolCover,
 }
 
 const messages = defineMessages({

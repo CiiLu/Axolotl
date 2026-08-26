@@ -7241,6 +7241,9 @@
 	"app.skins.apply-button": {
 		"message": "应用"
 	},
+	"app.skins.create-skin": {
+		"message": "创建皮肤"
+	},
 	"app.skins.delete-button": {
 		"message": "删除皮肤"
 	},

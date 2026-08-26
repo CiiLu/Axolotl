@@ -7175,6 +7175,9 @@
   "app.skins.apply-button": {
     "message": "Apply"
   },
+  "app.skins.create-skin": {
+    "message": "Create skin"
+  },
   "app.skins.delete-button": {
     "message": "Delete skin"
   },

@@ -74,6 +74,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'Lab 工具页新增收藏功能：可收藏常用工具并置顶展示，支持按已收藏/未收藏筛选，收藏状态和分类筛选在重启后会保留。',
 				},
+				{
+					'en-US':
+						'Added a "Create skin" button to the top right of the Skin selector page that opens the Lab Skin editor tool.',
+					'zh-CN': '皮肤选择器页面右上角新增「创建皮肤」按钮，点击可打开 Lab 的皮肤编辑器。',
+				},
 			],
 			changed: [
 				{
