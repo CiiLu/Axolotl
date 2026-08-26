@@ -11,6 +11,7 @@ use std::sync::atomic::{AtomicU8, Ordering};
 pub mod h2_download;
 pub mod h2_pool;
 pub(crate) mod h2_receive;
+pub(crate) mod h2_stream_budget;
 pub mod legacy;
 pub mod log;
 pub(crate) mod native;
