@@ -2364,7 +2364,7 @@
 		"message": "文件 {file}"
 	},
 	"app.instance.dependencies.graph-direction": {
-		"message": "箭头从依赖方指向它所使用的内容。"
+		"defaultMessage": "箭头从依赖方指向它使用的内容。"
 	},
 	"app.instance.dependencies.graph-hint": {
 		"message": "拖动画布以浏览关系；拖动卡片可调整布局。"
@@ -2391,7 +2391,7 @@
 		"message": "未发现依赖关系。"
 	},
 	"app.instance.dependencies.no-graph-relations": {
-		"message": "当前筛选条件下没有可显示的关系。"
+		"defaultMessage": "当前筛选条件下没有可显示的关系。"
 	},
 	"app.instance.dependencies.no-matches": {
 		"message": "没有依赖项符合这些筛选条件。"
@@ -4807,6 +4807,18 @@
 	},
 	"app.lab.seed-map.zoom-to-show": {
 		"message": "放大以显示{layer}"
+	},
+	"app.lab.skin-editor.description": {
+		"message": "在本地创建和编辑 Minecraft 玩家皮肤。"
+	},
+	"app.lab.skin-editor.export-skin": {
+		"message": "Minecraft 皮肤 PNG"
+	},
+	"app.lab.skin-editor.loading": {
+		"message": "正在加载皮肤编辑器"
+	},
+	"app.lab.skin-editor.title": {
+		"message": "皮肤编辑器"
 	},
 	"app.lab.title": {
 		"message": "实验室"
@@ -9826,11 +9838,5 @@
 	},
 	"unknown-pack-warning-modal.warning.title": {
 		"message": "未知文件警告"
-	},
-	"app.instance.dependencies.graph-direction": {
-		"defaultMessage": "箭头从依赖方指向它使用的内容。"
-	},
-	"app.instance.dependencies.no-graph-relations": {
-		"defaultMessage": "当前筛选条件下没有可显示的关系。"
 	}
 }

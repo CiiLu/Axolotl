@@ -79,6 +79,11 @@ const messages = defineMessages({
 		id: 'app.lab.mod-translation.description',
 		defaultMessage: 'Translate any Minecraft mod JAR into Simplified Chinese.',
 	},
+	skinEditorTitle: { id: 'app.lab.skin-editor.title', defaultMessage: 'Skin editor' },
+	skinEditorDescription: {
+		id: 'app.lab.skin-editor.description',
+		defaultMessage: 'Create and edit Minecraft player skins locally.',
+	},
 })
 
 const categoryOptions: LabCategory[] = ['all', 'creation', 'maintenance', 'world']
@@ -99,6 +104,7 @@ const visibleTools = computed(() => {
 })
 
 function toolTitle(toolId: string, fallback: string) {
+	if (toolId === 'skin-editor') return formatMessage(messages.skinEditorTitle)
 	if (toolId === 'gradient-text') return formatMessage(messages.gradientTextTitle)
 	if (toolId === 'recipe-generator') return formatMessage(messages.recipeGeneratorTitle)
 	if (toolId === 'seed-map') return formatMessage(messages.seedMapTitle)
@@ -108,6 +114,7 @@ function toolTitle(toolId: string, fallback: string) {
 }
 
 function toolDescription(toolId: string, fallback: string) {
+	if (toolId === 'skin-editor') return formatMessage(messages.skinEditorDescription)
 	if (toolId === 'gradient-text') return formatMessage(messages.gradientTextDescription)
 	if (toolId === 'recipe-generator') return formatMessage(messages.recipeGeneratorDescription)
 	if (toolId === 'seed-map') return formatMessage(messages.seedMapDescription)

@@ -1,12 +1,66 @@
+use std::process::Command;
 use tauri_build::{DefaultPermissionRule, InlinedPlugin};
 
+#[cfg(windows)]
+const NPM_COMMAND: &str = "npm.cmd";
+#[cfg(not(windows))]
+const NPM_COMMAND: &str = "npm";
+
+fn run_command(command: &mut Command, description: &str) {
+    let status = command.status().unwrap_or_else(|error| {
+        panic!("Failed to start {description}: {error}")
+    });
+    assert!(
+        status.success(),
+        "{description} failed with status {status}"
+    );
+}
+
+fn build_blockbench_skin_editor() {
+    let blockbench_dir = std::path::Path::new("../../third-party/blockbench");
+    assert!(
+        blockbench_dir.join("package.json").is_file(),
+        "Blockbench skin editor submodule is missing. Run git submodule update --init --recursive."
+    );
+    if !blockbench_dir.join("node_modules").is_dir() {
+        run_command(
+            Command::new(NPM_COMMAND)
+                .arg("ci")
+                .current_dir(blockbench_dir),
+            "Blockbench skin editor dependency install",
+        );
+    }
+
+    run_command(
+        Command::new(NPM_COMMAND)
+            .arg("run")
+            .arg("build-skin")
+            .current_dir(blockbench_dir),
+        "Blockbench skin editor build",
+    );
+    run_command(
+        Command::new("node")
+            .arg("scripts/axolotl/sync-blockbench-skin-editor.mjs")
+            .current_dir("../.."),
+        "Blockbench skin editor resource sync",
+    );
+}
+
 fn main() {
+    println!("cargo:rerun-if-changed=tauri.conf.json");
+    println!("cargo:rerun-if-changed=tauri.windows.conf.json");
+    println!("cargo:rerun-if-changed=tauri.macos.conf.json");
+    println!("cargo:rerun-if-changed=tauri.linux.conf.json");
+    println!("cargo:rerun-if-changed=tauri-modern.conf.json");
+    println!("cargo:rerun-if-changed=tauri-release.conf.json");
+    println!("cargo:rerun-if-changed=../../third-party/blockbench");
     // Tauri validates frontendDist during Cargo metadata/check builds. The
     // frontend build runs in parallel in CI, so create the directory before
     // tauri-build reads the configuration. A real frontend build overwrites
     // this directory with the actual assets before packaging.
     std::fs::create_dir_all("../app-frontend/dist")
         .expect("Failed to create the frontend distribution directory");
+    build_blockbench_skin_editor();
 
     let cubiomes_dir = std::path::Path::new("vendor/cubiomes");
     cc::Build::new()

@@ -3398,6 +3398,18 @@
   "app.lab.gradient-text.title": {
     "message": "Gradient text generator"
   },
+  "app.lab.skin-editor.description": {
+    "message": "Create and edit Minecraft player skins locally."
+  },
+  "app.lab.skin-editor.export-skin": {
+    "message": "Minecraft skin PNG"
+  },
+  "app.lab.skin-editor.loading": {
+    "message": "Loading skin editor"
+  },
+  "app.lab.skin-editor.title": {
+    "message": "Skin editor"
+  },
   "app.lab.mod-translation.active-count": {
     "message": "{count} running"
   },
