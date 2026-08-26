@@ -528,6 +528,7 @@ pub(crate) async fn stage_curseforge_upgrade_file(
         curseforge_content_validation(&file.file_name),
         None,
         reporter.map(|reporter| (reporter, tracking.as_str())),
+        None,
     )
     .await?;
     verify_installed_curseforge_file(&path, &file).await?;
@@ -1495,6 +1496,7 @@ pub async fn install_world_with_reporter(
         curseforge_content_validation(&file.file_name),
         None,
         Some((&reporter, &tracking_path)),
+        None,
     )
     .await?;
     let world_name = crate::state::instances::commands::import_world_save(
@@ -7756,6 +7758,10 @@ fn curseforge_integrity(
     }
 }
 
+const fn curseforge_modpack_h2_range_concurrency() -> Option<usize> {
+    Some(16)
+}
+
 fn curseforge_candidate_urls(url: &str) -> crate::Result<Vec<String>> {
     let parsed = reqwest::Url::parse(url).map_err(|_| {
         ErrorKind::InputError(
@@ -7795,11 +7801,15 @@ async fn download_curseforge_path(
     validation: ContentValidation,
     progress: Option<&mut FetchProgressFn<'_>>,
     tracking: Option<(&InstallProgressReporter, &str)>,
+    h2_range_concurrency: Option<usize>,
 ) -> crate::Result<crate::util::fetch::DownloadResult> {
     let state = State::get().await?;
     let mut request = DownloadRequest::new(url, ResourceClass::CurseForge)
         .with_candidate_urls(curseforge_candidate_urls(url)?)
         .with_integrity(curseforge_integrity(file, validation));
+    if let Some(concurrency) = h2_range_concurrency {
+        request = request.with_h2_range_concurrency(concurrency);
+    }
     let parsed = reqwest::Url::parse(url)?;
     if is_forge_cdn_url(&parsed)
         && let Some(key) = api_key()
@@ -7849,6 +7859,7 @@ async fn download_curseforge_archive(
         ContentValidation::Jar,
         progress,
         reporter.map(|reporter| (reporter, tracking_item_id.as_str())),
+        curseforge_modpack_h2_range_concurrency(),
     )
     .await
 }
@@ -7906,6 +7917,7 @@ async fn download_installed_file(
         download_metrics
             .and_then(|metrics| metrics.reporter.as_ref())
             .map(|reporter| (reporter, relative_path.as_str())),
+        None,
     )
     .await?;
     if let Some(download_metrics) = download_metrics {
@@ -8515,6 +8527,11 @@ fn murmur2(data: &[u8], seed: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn modpack_archives_use_sixteen_h2_range_streams() {
+        assert_eq!(curseforge_modpack_h2_range_concurrency(), Some(16));
+    }
 
     #[test]
     fn dependency_fallback_requires_the_target_game_and_loader() {

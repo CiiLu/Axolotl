@@ -243,6 +243,19 @@ mod tests {
         );
     }
 
+    #[test]
+    fn splits_file_into_sixteen_contiguous_ranges() {
+        let ranges = split_ranges(1024 * 1024 + 7, 16);
+        assert_eq!(ranges.len(), 16);
+        assert_eq!(ranges.first().unwrap().start, 0);
+        assert_eq!(ranges.last().unwrap().end, 1024 * 1024 + 6);
+        assert!(
+            ranges
+                .windows(2)
+                .all(|pair| pair[0].end + 1 == pair[1].start)
+        );
+    }
+
     #[tokio::test]
     async fn downloads_one_file_over_eight_h2_range_streams() {
         let data = Arc::new(
