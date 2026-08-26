@@ -141,7 +141,8 @@
 								<BookOpenIcon /> {{ formatMessage(messages.openInMcmod) }}
 							</template>
 							<template v-if="favoriteSupported" #save>
-								<BookmarkIcon :class="{ 'text-brand': favoriteSaved }" />
+								<BookmarkFilledIcon v-if="favoriteSaved" class="text-brand" />
+								<BookmarkIcon v-else />
 								{{
 									formatMessage(
 										favoritePending
@@ -243,6 +244,7 @@
 
 <script setup lang="ts">
 import {
+	BookmarkFilledIcon,
 	BookmarkIcon,
 	BookOpenIcon,
 	DownloadIcon,

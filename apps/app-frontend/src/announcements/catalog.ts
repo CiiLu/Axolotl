@@ -81,6 +81,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'改进内容发现页的模糊搜索：无空格或带连字符的搜索词（如 sodiumextra、example-mod）现在能在 Modrinth 和 CurseForge 上找到正确结果。',
 				},
+				{
+					'en-US':
+						'Favorited content now shows a solid bookmark icon, making already-saved mods and other resources instantly recognizable next to hollow, not-yet-favorited items.',
+					'zh-CN':
+						'已收藏的资源现在显示实心书签图标，一眼即可看出已收藏，不再与空心图标的未收藏资源混淆。',
+				},
 			],
 			fixed: [
 				{

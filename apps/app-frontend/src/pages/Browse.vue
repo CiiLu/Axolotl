@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
 import {
+	BookmarkFilledIcon,
 	BookmarkIcon,
 	CheckIcon,
 	ChevronDownIcon,
@@ -1625,7 +1626,7 @@ function createFavoriteCardAction(
 	return {
 		key: 'favorite',
 		label: formatMessage(favorite ? messages.removeFromFavorites : messages.addToFavorites),
-		icon: pending ? SpinnerIcon : BookmarkIcon,
+		icon: pending ? SpinnerIcon : favorite ? BookmarkFilledIcon : BookmarkIcon,
 		iconClass: pending ? 'animate-spin' : undefined,
 		disabled: pending,
 		color: favorite ? 'brand' : undefined,
