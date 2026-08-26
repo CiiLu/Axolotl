@@ -3673,7 +3673,6 @@ struct SegmentDownloadCompletion {
 struct SegmentCleanupGuard {
     part_path: PathBuf,
     armed: bool,
-    part_dirty: bool,
 }
 
 impl SegmentCleanupGuard {
@@ -3681,16 +3680,7 @@ impl SegmentCleanupGuard {
         Self {
             part_path: part_path.to_path_buf(),
             armed: true,
-            part_dirty: false,
         }
-    }
-
-    /// Marks the `.part` file as written to by the segment merge, so cleanup
-    /// removes it. Before the merge, segments only write their own sibling
-    /// files, and the `.part` file may hold preserved resume data that must
-    /// survive a failed or abandoned segmented attempt.
-    fn mark_part_dirty(&mut self) {
-        self.part_dirty = true;
     }
 
     fn disarm(&mut self) {
@@ -3703,9 +3693,7 @@ impl Drop for SegmentCleanupGuard {
         if !self.armed {
             return;
         }
-        if self.part_dirty {
-            let _ = std::fs::remove_file(&self.part_path);
-        }
+        let _ = std::fs::remove_file(&self.part_path);
         for index in 0..MAX_SEGMENT_CONCURRENCY {
             let _ = std::fs::remove_file(segment_path(&self.part_path, index));
             for candidate in 0..2 {
@@ -4562,6 +4550,7 @@ async fn download_segment(
     credentials: Option<&crate::state::ModrinthCredentials>,
     download_meta: Option<&DownloadMeta>,
     part_path: &Path,
+    output: &Arc<crate::util::download::range_output::RangeOutput>,
     _permit: NativeConnectionPermit<'_>,
     system_client: &reqwest::Client,
     direct_client: &reqwest::Client,
@@ -4577,10 +4566,6 @@ async fn download_segment(
         .map(|state| state.begin_download_connection());
     let _range_guard = DownloadRangeGuard(Arc::clone(&range.state));
     let request_started = Instant::now();
-    let path = segment_path(part_path, range.index);
-    let mut file = create_download_file(&path)
-        .await
-        .map_err(|error| SegmentDownloadError::Fatal(error.into()))?;
     let mut pending_progress = 0_u64;
     let mut final_url = route.url.clone();
     let mut remote_addr = None;
@@ -4718,11 +4703,6 @@ async fn download_segment(
                         {
                             hedge_count.fetch_add(1, Ordering::AcqRel);
                             drop(stream);
-                            file.flush().await.map_err(|error| {
-                                SegmentDownloadError::Fatal(
-                                    IOError::with_path(error, &path).into(),
-                                )
-                            })?;
                             let raced = race_tail_candidates(
                                 route,
                                 &range,
@@ -4771,16 +4751,20 @@ async fn download_segment(
                                         if read == 0 {
                                             break;
                                         }
+                                        let write_offset = range.start
+                                            + range.state.lock().downloaded;
                                         let (accepted, _) =
                                             range.accept_chunk(read);
-                                        file.write_all(&buffer[..accepted])
+                                        output
+                                            .write_at(
+                                                write_offset,
+                                                &buffer[..accepted],
+                                                part_path,
+                                            )
                                             .await
                                             .map_err(|error| {
                                                 SegmentDownloadError::Fatal(
-                                                    IOError::with_path(
-                                                        error, &path,
-                                                    )
-                                                    .into(),
+                                                    error.into(),
                                                 )
                                             })?;
                                         pending_progress += accepted as u64;
@@ -4858,12 +4842,12 @@ async fn download_segment(
                     break;
                 }
             };
+            let write_offset = range.start + range.state.lock().downloaded;
             let (accepted, completed) = range.accept_chunk(chunk.len());
-            file.write_all(&chunk[..accepted]).await.map_err(|error| {
-                SegmentDownloadError::Fatal(
-                    IOError::with_path(error, &path).into(),
-                )
-            })?;
+            output
+                .write_at(write_offset, &chunk[..accepted], part_path)
+                .await
+                .map_err(|error| SegmentDownloadError::Fatal(error.into()))?;
             pending_progress += accepted as u64;
             speed.record_bytes(accepted as u64);
             if pending_progress >= MIN_SEGMENT_SIZE {
@@ -4903,10 +4887,6 @@ async fn download_segment(
     if pending_progress > 0 {
         let _ = progress.send(pending_progress);
     }
-    file.flush().await.map_err(|error| {
-        SegmentDownloadError::Fatal(IOError::with_path(error, &path).into())
-    })?;
-    drop(file);
     if !range.finish() {
         return Err(SegmentDownloadError::Protocol(
             "range response ended before expected boundary",
@@ -4937,10 +4917,6 @@ async fn try_segmented_download(
     max_attempts: usize,
     allow_low_throughput_abort: bool,
 ) -> SegmentedDownloadOutcome {
-    if let Err(error) = cleanup_segment_files(part_path, 256).await {
-        return SegmentedDownloadOutcome::Fatal(error);
-    }
-    let mut cleanup_guard = SegmentCleanupGuard::new(part_path);
     let configured_limit = configured_semaphore_limit(semaphore);
     let concurrency_cap =
         route_segmented_concurrency_cap(route, configured_limit);
@@ -4958,6 +4934,15 @@ async fn try_segmented_download(
             reason: "configured connection limit is one",
         };
     }
+    if tokio::fs::metadata(part_path)
+        .await
+        .is_ok_and(|metadata| metadata.len() > 0)
+    {
+        return SegmentedDownloadOutcome::FallbackSingle {
+            disable_range: false,
+            reason: "resumable partial uses a single stream",
+        };
+    }
     let permits = match acquire_initial_segment_permits(
         route,
         semaphore,
@@ -4967,6 +4952,15 @@ async fn try_segmented_download(
     {
         Ok(permits) => permits,
         Err(error) => return SegmentedDownloadOutcome::Fatal(error),
+    };
+    let mut cleanup_guard = SegmentCleanupGuard::new(part_path);
+    let output = match crate::util::download::range_output::RangeOutput::create(
+        part_path, size,
+    )
+    .await
+    {
+        Ok(output) => output,
+        Err(error) => return SegmentedDownloadOutcome::Fatal(error.into()),
     };
     record_install_download_started(request, route, attempt, max_attempts)
         .await;
@@ -4988,6 +4982,7 @@ async fn try_segmented_download(
             credentials,
             request.download_meta.as_ref(),
             part_path,
+            &output,
             permit,
             system_client,
             direct_client,
@@ -5207,6 +5202,7 @@ async fn try_segmented_download(
                             credentials,
                             None,
                             part_path,
+                            &output,
                             permit,
                             system_client,
                             direct_client,
@@ -5234,11 +5230,9 @@ async fn try_segmented_download(
     }
     record_install_download_progress(request, downloaded, size).await;
     if let Some(probe) = confirmed_switch {
-        let _ = cleanup_segment_files(part_path, 256).await;
         return SegmentedDownloadOutcome::SwitchRoute(probe);
     }
     if let Some(error) = segment_error {
-        let _ = cleanup_segment_files(part_path, 256).await;
         return match error {
             SegmentDownloadError::Protocol(reason) => {
                 SegmentedDownloadOutcome::FallbackSingle {
@@ -5255,67 +5249,23 @@ async fn try_segmented_download(
         };
     }
 
-    ranges.sort_unstable_by_key(|range| range.start);
     record_install_download_stage(request, DownloadItemStatus::Writing).await;
-    cleanup_guard.mark_part_dirty();
-    let mut output = match create_download_file(part_path).await {
-        Ok(file) => file,
-        Err(error) => {
-            return SegmentedDownloadOutcome::Fatal(error.into());
-        }
-    };
-    let mut hashers =
-        IntegrityHashers::new_integrity_hashers(&request.integrity);
-    let mut merged_size = 0_u64;
-    let mut buffer = vec![0_u8; 256 * 1024];
-    for range in &ranges {
-        let path = segment_path(part_path, range.index);
-        let mut segment = match File::open(&path).await {
-            Ok(file) => file,
-            Err(error) => {
-                return SegmentedDownloadOutcome::Fatal(
-                    IOError::with_path(error, &path).into(),
-                );
-            }
-        };
-        loop {
-            let read = match segment.read(&mut buffer).await {
-                Ok(read) => read,
-                Err(error) => {
-                    return SegmentedDownloadOutcome::Fatal(
-                        IOError::with_path(error, &path).into(),
-                    );
-                }
-            };
-            if read == 0 {
-                break;
-            }
-            if let Err(error) = output.write_all(&buffer[..read]).await {
-                return SegmentedDownloadOutcome::Fatal(
-                    IOError::with_path(error, part_path).into(),
-                );
-            }
-            hashers.update(&buffer[..read]);
-            merged_size += read as u64;
-        }
-        if let Err(error) = remove_if_exists(&path).await {
-            return SegmentedDownloadOutcome::Fatal(error);
-        }
+    if let Err(error) = output.flush(part_path).await {
+        return SegmentedDownloadOutcome::Fatal(error.into());
     }
-    if let Err(error) = output.flush().await {
-        return SegmentedDownloadOutcome::Fatal(
-            IOError::with_path(error, part_path).into(),
-        );
-    }
-    drop(output);
-    if merged_size != size {
+    if downloaded != size {
         let _ = remove_if_exists(part_path).await;
         return SegmentedDownloadOutcome::FallbackSingle {
             disable_range: true,
-            reason: "merged segment size mismatch",
+            reason: "range byte count mismatch",
         };
     }
-    let computed = hashers.finish(merged_size);
+    drop(output);
+    let computed =
+        match compute_file_integrity(part_path, &request.integrity).await {
+            Ok(computed) => computed,
+            Err(error) => return SegmentedDownloadOutcome::Fatal(error),
+        };
     record_install_download_stage(request, DownloadItemStatus::Verifying).await;
     if let Err(error) = verify_computed_integrity(&request.integrity, &computed)
     {
@@ -5341,7 +5291,7 @@ async fn try_segmented_download(
     record_range_splitting_success(route);
     cleanup_guard.disarm();
     SegmentedDownloadOutcome::Success(SegmentedDownloadSuccess {
-        size: merged_size,
+        size,
         final_url: final_url.unwrap_or_else(|| route.url.clone()),
         ttfb: initial_ttfb.unwrap_or_default(),
         transfer_elapsed: transfer_started.elapsed(),
@@ -8487,6 +8437,12 @@ mod tests {
             verify_file(&part_path, &request.integrity).await.unwrap(),
             size as u64
         );
+        for index in 0..MAX_SEGMENT_CONCURRENCY {
+            assert!(
+                !segment_path(&part_path, index).exists(),
+                "direct range output must not create segment files"
+            );
+        }
         server.abort();
     }
 
@@ -8703,6 +8659,12 @@ mod tests {
             acquire_native_connection(&route, &semaphore).await.unwrap();
         let speed = DownloadSpeedTracker::default();
         let validator = Mutex::new(None);
+        let output = crate::util::download::range_output::RangeOutput::create(
+            &part_path,
+            data.len() as u64,
+        )
+        .await
+        .unwrap();
         let result = download_segment(
             &route,
             DownloadRange::new(0, 0, data.len() as u64 - 1),
@@ -8711,6 +8673,7 @@ mod tests {
             None,
             None,
             &part_path,
+            &output,
             permit,
             &client,
             &client,

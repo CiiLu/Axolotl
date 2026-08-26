@@ -19,6 +19,7 @@ pub(crate) mod native_breaker;
 pub(crate) mod native_budget;
 pub(crate) mod native_reputation;
 pub(crate) mod native_slow;
+pub(crate) mod range_output;
 pub mod shared;
 pub mod slow;
 pub mod xmcl;
