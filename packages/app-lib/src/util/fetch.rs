@@ -20,6 +20,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::error::Error;
 use std::ffi::OsStr;
 use std::future::Future;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::{
@@ -102,6 +103,10 @@ const MAX_TASK_PROBE_STATES: usize = 64;
 const TASK_PROBE_WINDOW: time::Duration = time::Duration::from_secs(60);
 #[cfg(test)]
 const TASK_PROBE_WINDOW: time::Duration = time::Duration::from_secs(5);
+#[cfg(not(test))]
+const JOB_PROBE_WINDOW: time::Duration = time::Duration::from_secs(5 * 60);
+#[cfg(test)]
+const JOB_PROBE_WINDOW: time::Duration = time::Duration::from_secs(10);
 #[cfg(not(test))]
 const TASK_PROBE_MAX_WAIT: time::Duration = time::Duration::from_secs(10);
 #[cfg(test)]
@@ -390,8 +395,8 @@ static ROUTE_EFFECTIVE_AUTHORITIES: LazyLock<Mutex<HashMap<String, String>>> =
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum TaskProbeKey {
-    Job(Uuid),
-    Anonymous,
+    Job(Uuid, u64),
+    Anonymous(u64),
 }
 
 #[derive(Default)]
@@ -466,7 +471,7 @@ fn effective_route_authority(route: &DownloadRoute) -> Option<String> {
     let authority = original_route_authority(route)?;
     ROUTE_EFFECTIVE_AUTHORITIES
         .lock()
-        .get(&authority)
+        .get(&route.url)
         .cloned()
         .or(Some(authority))
 }
@@ -479,7 +484,7 @@ fn remember_effective_route_authority(route: &DownloadRoute, final_url: &str) {
     };
     let mut authorities = ROUTE_EFFECTIVE_AUTHORITIES.lock();
     if original == effective {
-        let removed = authorities.remove(&original).is_some();
+        let removed = authorities.remove(&route.url).is_some();
         drop(authorities);
         if removed {
             tracing::debug!(
@@ -489,13 +494,8 @@ fn remember_effective_route_authority(route: &DownloadRoute, final_url: &str) {
         }
         return;
     }
-    for authority in authorities.values_mut() {
-        if *authority == original {
-            *authority = effective.clone();
-        }
-    }
-    let changed = authorities.get(&original) != Some(&effective);
-    authorities.insert(original.clone(), effective.clone());
+    let changed = authorities.get(&route.url) != Some(&effective);
+    authorities.insert(route.url.clone(), effective.clone());
     drop(authorities);
     if changed {
         tracing::debug!(
@@ -507,25 +507,26 @@ fn remember_effective_route_authority(route: &DownloadRoute, final_url: &str) {
 }
 
 fn forget_effective_route_authority(route: &DownloadRoute, failed_url: &Url) {
-    let (Some(original), Some(failed)) = (
-        original_route_authority(route),
-        url_authority(failed_url.as_str()),
-    ) else {
+    let Some(failed) = url_authority(failed_url.as_str()) else {
         return;
     };
     let mut authorities = ROUTE_EFFECTIVE_AUTHORITIES.lock();
-    if authorities.get(&original) == Some(&failed) {
-        authorities.remove(&original);
+    if authorities.get(&route.url) == Some(&failed) {
+        authorities.remove(&route.url);
     }
 }
 
 fn deduplicate_download_routes(routes: &mut Vec<DownloadRoute>) {
     let mut seen = HashSet::new();
-    routes.retain(|route| {
-        effective_route_authority(route)
-            .map(|authority| seen.insert((authority, route.proxy)))
-            .unwrap_or(true)
-    });
+    routes.retain(|route| seen.insert((route.url.clone(), route.proxy)));
+}
+
+fn first_h2_route(routes: &[DownloadRoute]) -> Option<DownloadRoute> {
+    routes
+        .iter()
+        .find(|route| !crate::util::download::native_breaker::is_open(route))
+        .or_else(|| routes.first())
+        .cloned()
 }
 
 fn routes_share_effective_authority(
@@ -577,6 +578,25 @@ fn update_ewma(current: &mut Option<f64>, sample: f64) {
     }));
 }
 
+fn persisted_route_health(
+    key: &RouteHealthKey,
+    proxy: ProxyPolicy,
+) -> RouteHealth {
+    crate::util::download::native_reputation::get(
+        key.family.as_str(),
+        &key.authority,
+        proxy,
+    )
+    .map(|persisted| RouteHealth {
+        success_samples: persisted.success_samples,
+        ttfb_ms: persisted.ttfb_ms,
+        throughput_bps: persisted.throughput_bps,
+        consecutive_failures: persisted.consecutive_failures,
+        cooldown_until: None,
+    })
+    .unwrap_or_default()
+}
+
 fn modrinth_request_kind(url: &str) -> Option<&'static str> {
     if url.starts_with(env!("MODRINTH_API_URL"))
         || url.starts_with(env!("MODRINTH_API_URL_V3"))
@@ -616,7 +636,11 @@ fn is_forge_cdn_mirror_url(url: &str) -> bool {
     Url::parse(url).ok().is_some_and(|parsed| {
         matches!(
             parsed.host_str(),
-            Some("edge.forgecdn.net" | "media.forgecdn.net")
+            Some(
+                "edge.forgecdn.net"
+                    | "media.forgecdn.net"
+                    | "mediafilez.forgecdn.net"
+            )
         )
     })
 }
@@ -1154,21 +1178,10 @@ fn order_auto_routes(
             let Some(key) = route_health_key(route, resource) else {
                 return RouteHealth::default();
             };
-            health.get(&key).cloned().unwrap_or_else(|| {
-                crate::util::download::native_reputation::get(
-                    key.family.as_str(),
-                    &key.authority,
-                    route.proxy,
-                )
-                .map(|persisted| RouteHealth {
-                    success_samples: persisted.success_samples,
-                    ttfb_ms: persisted.ttfb_ms,
-                    throughput_bps: persisted.throughput_bps,
-                    consecutive_failures: persisted.consecutive_failures,
-                    cooldown_until: None,
-                })
-                .unwrap_or_default()
-            })
+            health
+                .get(&key)
+                .cloned()
+                .unwrap_or_else(|| persisted_route_health(&key, route.proxy))
         };
         let left_health = route_health(left);
         let right_health = route_health(right);
@@ -1612,6 +1625,7 @@ fn record_route_success(
         DOWNLOAD_DNS_RESOLVER.record_host_success(&host, remote_addr.ip());
     }
     if let Some(key) = route_health_key(route, resource) {
+        let baseline = persisted_route_health(&key, route.proxy);
         let throughput_bps = (!transfer_elapsed.is_zero())
             .then(|| bytes as f64 / transfer_elapsed.as_secs_f64());
         if crate::util::download::active_engine()
@@ -1627,7 +1641,7 @@ fn record_route_success(
             );
         }
         let mut health = ROUTE_HEALTH.lock();
-        let entry = health.entry(key).or_default();
+        let entry = health.entry(key).or_insert(baseline);
         entry.success_samples = entry.success_samples.saturating_add(1);
         entry.consecutive_failures = 0;
         entry.cooldown_until = None;
@@ -1639,6 +1653,35 @@ fn record_route_success(
             );
         }
     }
+}
+
+pub(crate) fn record_route_transfer_success(
+    route: &DownloadRoute,
+    resource: ResourceClass,
+    bytes: u64,
+    transfer_elapsed: time::Duration,
+) {
+    if transfer_elapsed.is_zero() {
+        return;
+    }
+    let Some(key) = route_health_key(route, resource) else {
+        return;
+    };
+    let baseline = persisted_route_health(&key, route.proxy);
+    let throughput_bps = bytes as f64 / transfer_elapsed.as_secs_f64();
+    crate::util::download::native_breaker::record_success(route);
+    crate::util::download::native_reputation::record_transfer_success(
+        key.family.as_str(),
+        &key.authority,
+        route.proxy,
+        throughput_bps,
+    );
+    let mut health = ROUTE_HEALTH.lock();
+    let entry = health.entry(key).or_insert(baseline);
+    entry.success_samples = entry.success_samples.saturating_add(1);
+    entry.consecutive_failures = 0;
+    entry.cooldown_until = None;
+    update_ewma(&mut entry.throughput_bps, throughput_bps);
 }
 
 fn record_route_failure(
@@ -1670,12 +1713,13 @@ fn record_native_transfer_failure(
     }
 }
 
-fn record_route_health_failure(
+pub(crate) fn record_route_health_failure(
     route: &DownloadRoute,
     resource: ResourceClass,
     cooldown: Option<time::Duration>,
 ) {
     if let Some(key) = route_health_key(route, resource) {
+        let baseline = persisted_route_health(&key, route.proxy);
         if crate::util::download::active_engine()
             != crate::util::download::DownloadEngine::XmclCompat
         {
@@ -1686,7 +1730,7 @@ fn record_route_health_failure(
             );
         }
         let mut health = ROUTE_HEALTH.lock();
-        let entry = health.entry(key).or_default();
+        let entry = health.entry(key).or_insert(baseline);
         entry.consecutive_failures =
             entry.consecutive_failures.saturating_add(1);
         if let Some(cooldown) = cooldown {
@@ -4177,9 +4221,15 @@ async fn ensure_task_routes_probed(
     if !route_health_is_cold(&routes[0], request.resource) {
         return;
     }
+    let mut candidate_keys = HashSet::new();
     let candidates: Vec<&DownloadRoute> = routes
         .iter()
         .filter(|route| route.supports_range && range_splitting_allowed(route))
+        .filter(|route| {
+            effective_route_authority(route).is_none_or(|authority| {
+                candidate_keys.insert((authority, route.proxy))
+            })
+        })
         .take(TASK_PROBE_MAX_ROUTES)
         .collect();
     if candidates.len() < 2 {
@@ -4188,11 +4238,23 @@ async fn ensure_task_routes_probed(
     if semaphore.0.available_permits() < candidates.len() {
         return;
     }
+    let mut probe_scope = candidates
+        .iter()
+        .filter_map(|route| {
+            effective_route_authority(route)
+                .map(|authority| format!("{authority}:{:?}", route.proxy))
+        })
+        .collect::<Vec<_>>();
+    probe_scope.sort_unstable();
+    let mut scope_hasher = std::collections::hash_map::DefaultHasher::new();
+    family.hash(&mut scope_hasher);
+    probe_scope.hash(&mut scope_hasher);
+    let scope = scope_hasher.finish();
     let task_key = request
         .install_tracking
         .as_ref()
-        .map(|tracking| TaskProbeKey::Job(tracking.reporter.job_id()))
-        .unwrap_or(TaskProbeKey::Anonymous);
+        .map(|tracking| TaskProbeKey::Job(tracking.reporter.job_id(), scope))
+        .unwrap_or(TaskProbeKey::Anonymous(scope));
     let state = {
         let mut tasks = TASK_PROBE_STATES.lock();
         if tasks.len() >= MAX_TASK_PROBE_STATES {
@@ -4209,8 +4271,12 @@ async fn ensure_task_routes_probed(
         let mut families = state.families.lock();
         let entry = families.entry(family).or_default();
         let recently_probed = entry.last_probed.is_some_and(|probed| {
-            matches!(task_key, TaskProbeKey::Job(_))
-                || probed.elapsed() < TASK_PROBE_WINDOW
+            probed.elapsed()
+                < if matches!(task_key, TaskProbeKey::Job(_, _)) {
+                    JOB_PROBE_WINDOW
+                } else {
+                    TASK_PROBE_WINDOW
+                }
         });
         if recently_probed {
             TaskProbeDecision::Done
@@ -5593,7 +5659,7 @@ async fn download_to_path_inner(
         && !part_resume_expected(&part_path).await
         && !request.url.starts_with("http://")
     {
-        if let Some(h2_route) = routes.first().cloned() {
+        if let Some(h2_route) = first_h2_route(&routes) {
             if request.h2_range_concurrency.is_some() {
                 crate::util::download::native::explicit_h2_policy(&h2_route)
             } else {
@@ -5625,14 +5691,21 @@ async fn download_to_path_inner(
             crate::util::download::h2_download::H2DownloadOutcome::Completed(
                 result,
             ) => {
-                crate::util::download::native_breaker::record_success(
+                record_route_transfer_success(
                     &h2_route,
+                    request.resource,
+                    result.size,
+                    h2_started.elapsed(),
                 );
                 if let Some(authority) = original_route_authority(&h2_route) {
                     crate::util::download::native_reputation::record_transport_success(
                         &authority,
                         h2_route.proxy,
-                        crate::util::download::native_reputation::NativeTransport::H2Single,
+                        if request.h2_range_concurrency.is_some() {
+                            crate::util::download::native_reputation::NativeTransport::H2MultiRange
+                        } else {
+                            crate::util::download::native_reputation::NativeTransport::H2Single
+                        },
                         result.size as f64
                             / h2_started.elapsed().as_secs_f64().max(0.001),
                     );
@@ -5679,6 +5752,11 @@ async fn download_to_path_inner(
                 }
                 if failure.is_transfer_failure() {
                     record_native_transfer_failure(&h2_route, None);
+                    record_route_health_failure(
+                        &h2_route,
+                        request.resource,
+                        None,
+                    );
                 }
                 tracing::debug!(
                     url = %sanitize_url_for_log(&h2_route.url),
@@ -8283,7 +8361,7 @@ mod tests {
     }
 
     #[test]
-    fn effective_authority_drives_health_and_route_deduplication() {
+    fn effective_authority_drives_health_without_removing_fallback_urls() {
         let alias = route(
             "https://effective-authority-alias.invalid/file.jar".to_string(),
             DownloadRouteSource::Mcim,
@@ -8309,8 +8387,94 @@ mod tests {
         let mut routes = vec![alias, direct, direct_without_proxy.clone()];
         deduplicate_download_routes(&mut routes);
 
-        assert_eq!(routes.len(), 2);
-        assert_eq!(routes[1], direct_without_proxy);
+        assert_eq!(routes.len(), 3);
+        assert_eq!(routes[2], direct_without_proxy);
+    }
+
+    #[test]
+    fn route_deduplication_preserves_distinct_paths_on_one_authority() {
+        let first = route(
+            "https://mirror.example/maven/library.jar".to_string(),
+            DownloadRouteSource::Bmclapi,
+            true,
+            true,
+        );
+        let mut second = first.clone();
+        second.url = "https://mirror.example/libraries/library.jar".to_string();
+        let mut routes = vec![first.clone(), second.clone(), first];
+
+        deduplicate_download_routes(&mut routes);
+
+        assert_eq!(
+            routes,
+            vec![
+                route(
+                    "https://mirror.example/maven/library.jar".to_string(),
+                    DownloadRouteSource::Bmclapi,
+                    true,
+                    true,
+                ),
+                second,
+            ]
+        );
+    }
+
+    #[test]
+    fn effective_authority_memory_is_scoped_to_the_exact_route_url() {
+        let redirected = route(
+            "https://route-scope.example/cache-miss.jar".to_string(),
+            DownloadRouteSource::Bmclapi,
+            true,
+            true,
+        );
+        let direct = route(
+            "https://route-scope.example/cache-hit.jar".to_string(),
+            DownloadRouteSource::Bmclapi,
+            true,
+            true,
+        );
+        remember_effective_route_authority(
+            &redirected,
+            "https://official.example/cache-miss.jar",
+        );
+
+        assert_eq!(
+            effective_route_authority(&redirected).as_deref(),
+            Some("official.example:443"),
+        );
+        assert_eq!(
+            effective_route_authority(&direct).as_deref(),
+            Some("route-scope.example:443"),
+        );
+    }
+
+    #[test]
+    fn h2_route_selection_skips_an_open_breaker_when_possible() {
+        let blocked = route(
+            "https://blocked-h2.example/file".to_string(),
+            DownloadRouteSource::Alternate,
+            true,
+            true,
+        );
+        let healthy = route(
+            "https://healthy-h2.example/file".to_string(),
+            DownloadRouteSource::Official,
+            false,
+            true,
+        );
+        for _ in 0..3 {
+            crate::util::download::native_breaker::record_failure(&blocked);
+        }
+
+        assert_eq!(
+            first_h2_route(&[blocked.clone(), healthy.clone()]),
+            Some(healthy)
+        );
+        assert_eq!(
+            first_h2_route(std::slice::from_ref(&blocked)),
+            Some(blocked.clone())
+        );
+        crate::util::download::native_breaker::record_success(&blocked);
     }
 
     #[tokio::test]

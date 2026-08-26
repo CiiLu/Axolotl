@@ -622,13 +622,15 @@ where
                 }
                 if apply_native_policy && failure.is_transfer_failure() {
                     super::native_breaker::record_failure(route);
+                    fetch::record_route_health_failure(
+                        route,
+                        fetch::ResourceClass::MinecraftAsset,
+                        None,
+                    );
                 }
                 return items;
             }
         };
-    if apply_native_policy {
-        super::native_breaker::record_success(route);
-    }
     let route_authority = fetch::url_authority(&route.url);
 
     // Items whose URL targets a different authority cannot be multiplexed on
@@ -645,6 +647,9 @@ where
         );
     }
 
+    let eligible_items = items.len();
+    let batch_started = std::time::Instant::now();
+    let mut completed_bytes = 0_u64;
     let callback = Arc::new(on_completed);
     for pass in 0..ASSET_BATCH_RETRY_PASSES {
         if items.is_empty() {
@@ -682,7 +687,9 @@ where
         items = Vec::new();
         for (item, result) in results {
             match result {
-                Ok(()) => {}
+                Ok(()) => {
+                    completed_bytes = completed_bytes.saturating_add(item.size);
+                }
                 Err(error) => {
                     tracing::debug!(
                         url = %fetch::sanitize_url_for_log(&item.url),
@@ -697,6 +704,23 @@ where
                     }
                 }
             }
+        }
+    }
+    if apply_native_policy {
+        if completed_bytes > 0 {
+            fetch::record_route_transfer_success(
+                route,
+                fetch::ResourceClass::MinecraftAsset,
+                completed_bytes,
+                batch_started.elapsed(),
+            );
+        } else if eligible_items > 0 {
+            super::native_breaker::record_failure(route);
+            fetch::record_route_health_failure(
+                route,
+                fetch::ResourceClass::MinecraftAsset,
+                None,
+            );
         }
     }
     if !failed.is_empty() {
