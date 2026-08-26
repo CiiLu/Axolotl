@@ -22,6 +22,7 @@ import { AxolotlBrandConfig } from '@/config'
 import { contributors, teamMembers } from '@/data/about'
 
 import QqChannelIcon from './QqChannelIcon.vue'
+import AboutScene from '../AboutScene.vue'
 
 const { formatMessage } = useVIntl()
 const version = await getVersion()
@@ -171,7 +172,15 @@ const projectLinks = [
 	<div class="about-page flex flex-col gap-6">
 		<section id="settings-target-about-product" tabindex="-1" class="about-panel">
 			<div class="flex items-center gap-4">
-				<img class="size-20 object-contain" src="@/assets/axolotl.png" alt="" />
+          <div
+				  class="m-0 w-full overflow-hidden h-200 rounded-xl"
+				  style="
+					  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+					  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+				  "
+			  >
+				  <AboutScene />
+			  </div>
 				<div class="min-w-0">
 					<h2 class="m-0 text-xl font-semibold text-contrast">
 						{{
@@ -185,7 +194,7 @@ const projectLinks = [
 					</p>
 				</div>
 			</div>
-			<p class="m-0 mt-4 text-primary">
+			<p class="m-5 mt-9 text-primary">
 				{{ formatMessage(messages.productDescription) }}
 			</p>
 		</section>
