@@ -96,7 +96,7 @@ pub(crate) async fn try_download_via_h2(
             preserve_partial: false,
         };
     }
-    let connection = match connect_authority(&route.url).await {
+    let connection = match connect_authority(route, true).await {
         Ok(connection) => connection,
         Err(failure) => {
             return H2DownloadOutcome::Fallback {
@@ -124,6 +124,16 @@ pub(crate) async fn try_download_via_h2(
     let total_size = if let Some(size) = expected_size {
         size
     } else {
+        let _probe_stream_permit =
+            match super::h2_stream_budget::acquire(route).await {
+                Ok(permit) => permit,
+                Err(_) => {
+                    return H2DownloadOutcome::Fallback {
+                        failure: H2DownloadFailure::Connect,
+                        preserve_partial: false,
+                    };
+                }
+            };
         let mut probe_headers = request_headers(request, route);
         probe_headers.insert(RANGE, HeaderValue::from_static("bytes=0-0"));
         probe_headers
@@ -174,6 +184,15 @@ pub(crate) async fn try_download_via_h2(
         total_size
     };
 
+    let _stream_permit = match super::h2_stream_budget::acquire(route).await {
+        Ok(permit) => permit,
+        Err(_) => {
+            return H2DownloadOutcome::Fallback {
+                failure: H2DownloadFailure::Connect,
+                preserve_partial: false,
+            };
+        }
+    };
     let result = single_stream(
         &connection,
         &uri,
@@ -205,10 +224,13 @@ pub(crate) async fn try_download_via_h2(
 }
 
 async fn connect_authority(
-    url: &str,
+    route: &DownloadRoute,
+    reserve_native_budget: bool,
 ) -> Result<Arc<SharedH2Connection>, H2DownloadFailure> {
-    let authority = fetch::url_authority(url).ok_or(H2DownloadFailure::Http)?;
-    match super::h2_pool::shared_connection(&authority).await {
+    let authority =
+        fetch::url_authority(&route.url).ok_or(H2DownloadFailure::Http)?;
+    match super::h2_pool::shared_connection(route, reserve_native_budget).await
+    {
         Ok(connection) => Ok(connection),
         Err(error) => {
             tracing::debug!(
@@ -545,14 +567,6 @@ where
     {
         return items;
     }
-    let _authority_permit = if apply_native_policy {
-        match super::native_budget::acquire(route).await {
-            Ok(permit) => Some(permit),
-            Err(_) => return items,
-        }
-    } else {
-        None
-    };
     let _global_permit = if let Some(semaphore) = native_semaphore {
         match semaphore.0.acquire().await {
             Ok(permit) => Some(permit),
@@ -561,7 +575,7 @@ where
     } else {
         None
     };
-    let connection = match connect_authority(&route.url).await {
+    let connection = match connect_authority(route, apply_native_policy).await {
         Ok(connection) => connection,
         Err(failure) => {
             if apply_native_policy
@@ -612,8 +626,14 @@ where
                             ));
                         return (item, Err(error));
                     };
-                    let result =
-                        download_asset_item(&connection, &uri, &item).await;
+                    let result = download_asset_item(
+                        &connection,
+                        &uri,
+                        &item,
+                        route,
+                        apply_native_policy,
+                    )
+                    .await;
                     if result.is_ok() {
                         let mut callback = callback.lock().await;
                         callback(item.clone()).await;
@@ -661,7 +681,14 @@ async fn download_asset_item(
     connection: &SharedH2Connection,
     uri: &Uri,
     item: &H2BatchAsset,
+    route: &DownloadRoute,
+    apply_native_policy: bool,
 ) -> crate::Result<()> {
+    let _stream_permit = if apply_native_policy {
+        Some(super::h2_stream_budget::acquire(route).await?)
+    } else {
+        None
+    };
     let mut headers = HeaderMap::new();
     headers.insert(
         USER_AGENT,

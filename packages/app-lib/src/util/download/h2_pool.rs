@@ -20,6 +20,8 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex as AsyncMutex;
 use tokio_rustls::TlsConnector;
 
+use crate::util::fetch::DownloadRoute;
+
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const TLS_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -53,20 +55,41 @@ impl H2ConnectError {
 /// A live shared HTTP/2 connection to one authority.
 pub struct SharedH2Connection {
     sender: Mutex<SendRequest<Bytes>>,
+    // One permit represents the shared TCP/TLS connection, not every H2
+    // stream opened through it.
+    physical_budget: Mutex<Option<super::native_budget::NativeBudgetPermit>>,
     /// Set to true by the driver task when the connection terminates.
     dead: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl SharedH2Connection {
-    fn new(sender: SendRequest<Bytes>) -> Self {
+    fn new(
+        sender: SendRequest<Bytes>,
+        physical_budget: Option<super::native_budget::NativeBudgetPermit>,
+    ) -> Self {
         Self {
             sender: Mutex::new(sender),
+            physical_budget: Mutex::new(physical_budget),
             dead: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         }
     }
 
     pub fn is_dead(&self) -> bool {
         self.dead.load(std::sync::atomic::Ordering::Acquire)
+    }
+
+    fn has_physical_budget(&self) -> bool {
+        self.physical_budget
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .is_some()
+    }
+
+    fn release_physical_budget(&self) {
+        self.physical_budget
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .take();
     }
 
     /// Sends a request on the shared connection and awaits the response
@@ -194,12 +217,30 @@ async fn connect_tcp(host: &str, port: u16) -> std::io::Result<TcpStream> {
 
 /// Connects a new shared HTTP/2 connection to `authority` (host[:port]).
 async fn establish(
-    authority: &str,
+    route: &DownloadRoute,
+    reserve_native_budget: bool,
 ) -> Result<Arc<SharedH2Connection>, H2ConnectError> {
+    let authority =
+        crate::util::fetch::url_authority(&route.url).ok_or_else(|| {
+            H2ConnectError::new(
+                H2ConnectFailureKind::Protocol,
+                "HTTP/2 route has no authority".to_string(),
+            )
+        })?;
+    let physical_budget = if reserve_native_budget {
+        Some(super::native_budget::acquire(route).await.map_err(|error| {
+            H2ConnectError::new(
+                H2ConnectFailureKind::Tcp,
+                format!("failed to reserve HTTP/2 connection capacity: {error}"),
+            )
+        })?)
+    } else {
+        None
+    };
     let (host, port) = authority
         .rsplit_once(':')
         .map(|(host, port)| (host, port.parse::<u16>().unwrap_or(443)))
-        .unwrap_or((authority, 443));
+        .unwrap_or((&authority, 443));
 
     // Pre-resolve so `connect_tcp` gets the ordered, reliability-ranked
     // address list shared with the legacy reqwest path.
@@ -263,13 +304,15 @@ async fn establish(
     // window configured before the handshake.
     connection.set_target_window_size(64 * 1024 * 1024);
 
-    let shared = Arc::new(SharedH2Connection::new(sender));
+    let shared = Arc::new(SharedH2Connection::new(sender, physical_budget));
 
     let dead = Arc::clone(&shared.dead);
+    let connection_budget = Arc::clone(&shared);
     let authority = authority.to_string();
     tokio::spawn(async move {
         let _ = connection.await;
         dead.store(true, std::sync::atomic::Ordering::Release);
+        connection_budget.release_physical_budget();
         tracing::debug!(authority, "Shared HTTP/2 connection closed");
     });
 
@@ -279,16 +322,31 @@ async fn establish(
 /// Returns the live shared connection for `authority`, establishing one on
 /// first use or after a previous connection died.
 pub(crate) async fn shared_connection(
-    authority: &str,
+    route: &DownloadRoute,
+    reserve_native_budget: bool,
 ) -> Result<Arc<SharedH2Connection>, H2ConnectError> {
-    let slot = connection_slot(authority).await;
+    let authority =
+        crate::util::fetch::url_authority(&route.url).ok_or_else(|| {
+            H2ConnectError::new(
+                H2ConnectFailureKind::Protocol,
+                "HTTP/2 route has no authority".to_string(),
+            )
+        })?;
+    let slot = connection_slot(&authority).await;
     let mut cached = slot.lock().await;
     if let Some(connection) =
         cached.as_ref().filter(|connection| !connection.is_dead())
     {
-        return Ok(Arc::clone(connection));
+        if !reserve_native_budget || connection.has_physical_budget() {
+            return Ok(Arc::clone(connection));
+        }
+        return Err(H2ConnectError::new(
+            H2ConnectFailureKind::Protocol,
+            "shared HTTP/2 connection is not covered by the native connection budget"
+                .to_string(),
+        ));
     }
-    let connection = establish(authority).await?;
+    let connection = establish(route, reserve_native_budget).await?;
     *cached = Some(Arc::clone(&connection));
     Ok(connection)
 }

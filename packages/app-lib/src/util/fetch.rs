@@ -5642,7 +5642,7 @@ async fn download_to_path_inner(
         None
     };
     if let Some((h2_route, h2_policy)) = h2_selection {
-        let h2_permit = acquire_native_connection(&h2_route, semaphore).await?;
+        let h2_permit = semaphore.0.acquire().await?;
         let h2_started = Instant::now();
         match crate::util::download::h2_download::try_download_via_h2(
             &request,
