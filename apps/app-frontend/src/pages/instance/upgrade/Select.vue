@@ -41,7 +41,7 @@
 				<p v-else class="m-0 text-sm text-secondary">
 					{{ formatMessage(messages.noNewerRelease) }}
 				</p>
-				<template v-if="isFabric">
+				<template v-if="isFabric && selectedGameVersion">
 					<label class="mb-2 mt-4 block text-sm font-medium text-contrast">
 						{{ formatMessage(messages.fabricVersion) }}
 					</label>
@@ -55,7 +55,10 @@
 						auto-placement
 					/>
 					<p
-						v-if="fabricLoaderVersionsQuery.isPending.value"
+						v-if="
+							fabricLoaderVersionsQuery.isPending.value &&
+							fabricLoaderVersionsQuery.isFetching.value
+						"
 						class="mb-0 mt-2 text-sm text-secondary"
 					>
 						{{ formatMessage(messages.loadingFabricVersions) }}
@@ -73,7 +76,9 @@
 						{{ formatMessage(messages.noNonDowngradeFabricVersion) }}
 					</p>
 				</template>
-				<p v-else class="mb-0 mt-3 text-secondary">{{ formatLoaderLabel(instance.loader) }}</p>
+				<p v-else-if="!isFabric" class="mb-0 mt-3 text-secondary">
+					{{ formatLoaderLabel(instance.loader) }}
+				</p>
 			</Card>
 		</div>
 
@@ -188,7 +193,7 @@ const messages = defineMessages({
 	},
 	noNewerRelease: {
 		id: 'instance.upgrade.select.no-newer-release',
-		defaultMessage: 'No newer stable Minecraft release is available.',
+		defaultMessage: 'This instance already uses the latest stable Minecraft version.',
 	},
 	metadataErrorTitle: {
 		id: 'instance.upgrade.select.metadata-error-title',

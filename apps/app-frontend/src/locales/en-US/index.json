@@ -9435,7 +9435,7 @@
     "message": "Minecraft {version}"
   },
   "instance.upgrade.select.no-newer-release": {
-    "message": "No newer stable Minecraft release is available."
+    "message": "This instance already uses the latest stable Minecraft version."
   },
   "instance.upgrade.select.no-non-downgrade-fabric-version": {
     "message": "No Fabric version that avoids downgrading is available for this target."

@@ -9501,7 +9501,7 @@
 		"message": "Minecraft 版本 {version}"
 	},
 	"instance.upgrade.select.no-newer-release": {
-		"message": "没有更新的 Minecraft 稳定版。"
+		"message": "此实例已是最新的 Minecraft 稳定版。"
 	},
 	"instance.upgrade.select.no-non-downgrade-fabric-version": {
 		"message": "此目标没有可避免降级的 Fabric 版本。"

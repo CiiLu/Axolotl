@@ -73,6 +73,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US':
+						'Fixed the instance upgrade page continuously showing Fabric versions as loading when Minecraft and Fabric were already up to date. (issue #415)',
+					'zh-CN':
+						'修复 Minecraft 和 Fabric 均已是最新版时，实例升级页面仍持续显示正在加载 Fabric 版本的问题。(issue #415)',
+				},
+				{
+					'en-US':
 						'Fixed the fullscreen toggle in the Schematic Workshop (button and F11) not taking effect — entering fullscreen now expands the 3D view to fill the screen, hides the surrounding interface, and leaves the exit-fullscreen button in place.',
 					'zh-CN':
 						'修复投影工坊全屏不生效的问题（按钮和 F11 均无效）：进入全屏后 3D 视图铺满屏幕并隐藏周边界面，原位置保留退出全屏按钮。',
