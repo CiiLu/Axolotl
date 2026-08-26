@@ -35,7 +35,7 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
 		id: 'launcher-1.8.15',
 		version: '1.8.15',
-		publishedAt: '2026-08-25',
+		publishedAt: '2026-08-26',
 		title: {
 			'en-US': 'Axolotl Launcher 1.8.15',
 			'zh-CN': 'Axolotl Launcher 1.8.15',
@@ -63,6 +63,17 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'当搜索未命中时，启动器会自动改写查询词重新搜索，并在结果上方显示提示；点击提示中的建议词可直接用它重新搜索。',
 				},
+				{
+					'en-US':
+						'Added a Skin editor tool to the Lab for creating and editing Minecraft player skins locally.',
+					'zh-CN': 'Lab 新增皮肤编辑工具，可本地创建和编辑 Minecraft 皮肤。',
+				},
+				{
+					'en-US':
+						'Lab tools can now be favorited: starred tools stay marked and are listed first, with new Favorited / Not favorited filters; favorites and the category filter are remembered between restarts.',
+					'zh-CN':
+						'Lab 工具页新增收藏功能：可收藏常用工具并置顶展示，支持按已收藏/未收藏筛选，收藏状态和分类筛选在重启后会保留。',
+				},
 			],
 			changed: [
 				{
@@ -86,6 +97,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Favorited content now shows a solid bookmark icon, making already-saved mods and other resources instantly recognizable next to hollow, not-yet-favorited items.',
 					'zh-CN':
 						'已收藏的资源现在显示实心书签图标，一眼即可看出已收藏，不再与空心图标的未收藏资源混淆。',
+				},
+				{
+					'en-US':
+						'Redesigned the Lab tools list: each tool is now shown as a card with its cover image, category tag, and an explicit Enter button.',
+					'zh-CN': 'Lab 工具列表改用卡片式布局，展示工具封面、分类标签和「进入」按钮。',
 				},
 			],
 			fixed: [
@@ -120,6 +136,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': '实例名含非 ASCII 字符（™）导致启动崩溃InvalidPathException(issue #397)',
 					'en-US':
 						'Fixed the issue of instance name containing non-ASCII characters (™) causing the launcher to crash with InvalidPathException(issue #397)',
+				},
+				{
+					'en-US':
+						'Fixed the Downloads page layout when there are no tasks: the empty-state card now fills the available space instead of splitting the page between themed and transparent areas. (issue #239)',
+					'zh-CN':
+						'修复下载页无任务时的排版问题：空状态卡片现在会占满剩余空间，不再出现主题色与透明区域各半的割裂布局。(issue #239)',
 				},
 			],
 		},
