@@ -190,6 +190,19 @@ pub(crate) async fn try_download_via_h2(
         total_size
     };
 
+    if let Some(concurrency) = request.h2_range_concurrency {
+        return super::h2_range::download(
+            &connection,
+            &uri,
+            request,
+            route,
+            destination,
+            part_path,
+            total_size,
+            concurrency,
+        )
+        .await;
+    }
     let _stream_permit = match super::h2_stream_budget::acquire(route).await {
         Ok(permit) => permit,
         Err(_) => {
@@ -297,7 +310,7 @@ fn classify_download_error(error: &crate::Error) -> H2DownloadFailure {
     }
 }
 
-fn request_headers(
+pub(crate) fn request_headers(
     request: &DownloadRequest,
     route: &DownloadRoute,
 ) -> HeaderMap {
@@ -352,7 +365,7 @@ fn parse_content_range_total(headers: &HeaderMap) -> Option<u64> {
 
 type StreamPair = (http::Response<()>, h2::RecvStream);
 
-async fn open_stream(
+pub(crate) async fn open_stream(
     connection: &SharedH2Connection,
     uri: &Uri,
     headers: HeaderMap,
@@ -484,7 +497,7 @@ async fn record_install_stage(request: &DownloadRequest) {
     }
 }
 
-async fn record_install_progress(
+pub(crate) async fn record_install_progress(
     request: &DownloadRequest,
     downloaded: u64,
     total_size: u64,

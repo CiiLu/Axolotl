@@ -98,12 +98,17 @@ Remaining work:
 
 ## P4: Reduce Range Disk Amplification
 
-Implement only if post-P1/P2 profiles show Range merge I/O is material.
+Implemented with a portable shared output writer. Range tasks write validated,
+non-overlapping bytes directly to a preallocated `.part` file. The writer uses
+a short async mutex around seek-and-write operations, preserving cross-platform
+behavior without platform-specific `pwrite` APIs.
 
-1. Preallocate the final `.part` file.
-2. Write validated ranges directly at non-overlapping offsets.
-3. Hash the completed `.part` once before content validation and finalization.
-4. Preserve cancellation, cleanup, retry, resume, and Windows sharing semantics.
+1. Preallocate the final `.part` file. Done.
+2. Write validated ranges directly at non-overlapping offsets. Done.
+3. Hash the completed `.part` once before content validation and finalization. Done.
+4. Preserve cancellation, cleanup, retry, resume, and Windows sharing semantics. Done.
+5. Keep existing resumable partial files on the single-stream path because a
+   partial sequential prefix cannot safely be mixed with sparse direct ranges. Done.
 
 Target I/O reduction:
 
@@ -112,11 +117,27 @@ Target I/O reduction:
 
 ## P5: Modpack Pipeline Optimization
 
-1. Combine managed-override cache hashing with actual extraction to avoid duplicate decompression.
-2. Benchmark controlled override extraction concurrency of 2-4 workers.
-3. Consolidate per-item and aggregate progress sampling where both update the same reporter state.
-4. Reduce full install-job JSON serialization and snapshot IPC on large jobs, favoring incremental summaries and updates.
-5. Audit legacy pack formats for the same Minecraft-install overlap already used by `.mrpack` installation.
+Implemented:
+
+1. Combine managed-override cache hashing with actual extraction to avoid duplicate decompression. Client overrides now contribute their extraction SHA-1 directly to the pack cache; server-only overrides are still hashed separately because they are not extracted by the client. Done.
+2. Extract independent override entries with up to four workers, each using an independent ZIP reader and the existing global I/O semaphore. Duplicate destination paths are placed in later batches to preserve archive-order overwrite semantics. Done.
+3. Consolidate per-item and aggregate content progress. Live network bytes now use the existing lightweight install-tracking request updates; aggregate phase bytes advance when files settle, removing the second reporter update and active-download map from each progress sample. Done.
+
+Deferred pending profiling or a separate storage-contract change:
+
+1. Split full install-job JSON persistence into a new incremental database/IPC schema. Existing persistence is already throttled, and removing aggregate live updates eliminates the high-frequency caller in the modpack path without changing recovery compatibility.
+2. Audit legacy pack formats for the same Minecraft-install overlap already used by `.mrpack` installation.
+
+## Standalone Mrpack Archive Transport
+
+Implemented a dedicated native transport for the `.mrpack` archive itself:
+
+1. The Modrinth pack archive request explicitly asks for eight H2 range streams.
+2. The streams share one physical H2 connection and use the native H2 stream budget.
+3. Validated ranges write directly into one preallocated `.part` file.
+4. The completed archive passes the existing SHA-1/SHA-512 and ZIP/JAR validation before atomic finalization.
+5. Servers that reject or misreport ranges fall back to the existing native transport path.
+6. Pack content files do not inherit this setting; only the standalone archive request enables it.
 
 ## Benchmark Matrix
 

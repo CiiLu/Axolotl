@@ -244,6 +244,9 @@ pub struct DownloadRequest {
     /// Batch schedulers disable it so many small files share one connection
     /// budget instead of each file multiplying its connections.
     pub allow_segmented_download: bool,
+    /// Explicit shared-connection H2 range stream count for one large file.
+    /// This is currently reserved for standalone modpack archive downloads.
+    pub(crate) h2_range_concurrency: Option<usize>,
     pub(crate) install_tracking: Option<DownloadInstallTracking>,
 }
 
@@ -264,12 +267,21 @@ impl DownloadRequest {
             header: None,
             candidate_urls: Vec::new(),
             allow_segmented_download: true,
+            h2_range_concurrency: None,
             install_tracking: None,
         }
     }
 
     pub fn with_segmented_download(mut self, allow: bool) -> Self {
         self.allow_segmented_download = allow;
+        self
+    }
+
+    pub(crate) fn with_h2_range_concurrency(
+        mut self,
+        concurrency: usize,
+    ) -> Self {
+        self.h2_range_concurrency = Some(concurrency.max(1));
         self
     }
 
@@ -5579,11 +5591,15 @@ async fn download_to_path_inner(
         && !request.url.starts_with("http://")
     {
         if let Some(h2_route) = routes.first().cloned() {
-            crate::util::download::native::h2_policy(
-                &h2_route,
-                request.integrity.size,
-            )
-            .await
+            if request.h2_range_concurrency.is_some() {
+                crate::util::download::native::explicit_h2_policy(&h2_route)
+            } else {
+                crate::util::download::native::h2_policy(
+                    &h2_route,
+                    request.integrity.size,
+                )
+                .await
+            }
             .map(|policy| (h2_route, policy))
         } else {
             None
@@ -7433,6 +7449,19 @@ mod tests {
         assert!(request.allow_segmented_download);
         let request = request.with_segmented_download(false);
         assert!(!request.allow_segmented_download);
+    }
+
+    #[test]
+    fn h2_range_concurrency_is_explicit_per_request() {
+        let request = DownloadRequest::new(
+            "https://example.com/pack.mrpack",
+            ResourceClass::Modpack,
+        );
+        assert_eq!(request.h2_range_concurrency, None);
+        assert_eq!(
+            request.with_h2_range_concurrency(8).h2_range_concurrency,
+            Some(8)
+        );
     }
 
     #[tokio::test]

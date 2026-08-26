@@ -74,6 +74,11 @@ impl SharedH2Connection {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn for_test(sender: SendRequest<Bytes>) -> Self {
+        Self::new(sender, None)
+    }
+
     pub fn is_dead(&self) -> bool {
         self.dead.load(std::sync::atomic::Ordering::Acquire)
     }

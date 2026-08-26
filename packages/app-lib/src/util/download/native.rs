@@ -43,6 +43,18 @@ pub(crate) fn h2_ineligible_reason(
     None
 }
 
+pub(crate) fn explicit_h2_policy(
+    route: &DownloadRoute,
+) -> Option<NativeH2Policy> {
+    h2_ineligible_reason(route)
+        .is_none()
+        .then_some(NativeH2Policy {
+            allow_cold_connection: true,
+            abort_if_slow: true,
+            expected_speed: None,
+        })
+}
+
 pub(crate) async fn h2_policy(
     route: &DownloadRoute,
     size: Option<u64>,
