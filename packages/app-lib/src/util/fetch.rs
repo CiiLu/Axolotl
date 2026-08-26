@@ -247,6 +247,7 @@ pub struct DownloadRequest {
     /// Explicit shared-connection H2 range stream count for one large file.
     /// This is currently reserved for standalone modpack archive downloads.
     pub(crate) h2_range_concurrency: Option<usize>,
+    pub(crate) cancellation: Option<tokio_util::sync::CancellationToken>,
     pub(crate) install_tracking: Option<DownloadInstallTracking>,
 }
 
@@ -268,6 +269,7 @@ impl DownloadRequest {
             candidate_urls: Vec::new(),
             allow_segmented_download: true,
             h2_range_concurrency: None,
+            cancellation: None,
             install_tracking: None,
         }
     }
@@ -319,6 +321,7 @@ impl DownloadRequest {
         item_id: impl Into<String>,
         item_name: impl Into<String>,
     ) -> Self {
+        self.cancellation = Some(reporter.cancellation_token());
         self.install_tracking = Some(DownloadInstallTracking {
             reporter,
             item_id: item_id.into(),
@@ -5649,6 +5652,12 @@ async fn download_to_path_inner(
                     );
                 }
                 return Ok(result);
+            }
+            crate::util::download::h2_download::H2DownloadOutcome::Canceled => {
+                return Err(crate::ErrorKind::OtherError(
+                    "download canceled".to_string(),
+                )
+                .into());
             }
             crate::util::download::h2_download::H2DownloadOutcome::Fallback {
                 failure,

@@ -33,6 +33,8 @@ const ASSET_BATCH_RETRY_PASSES: usize = 2;
 pub(crate) enum H2DownloadOutcome {
     /// The download completed through the multiplexed path.
     Completed(DownloadResult),
+    /// The install job canceled this transfer; do not enter fallback.
+    Canceled,
     /// The multiplexed path cannot be used; the caller should fall back to
     /// the legacy path.
     Fallback {
@@ -90,6 +92,13 @@ pub(crate) async fn try_download_via_h2(
     part_path: &Path,
     policy: super::native::NativeH2Policy,
 ) -> H2DownloadOutcome {
+    if request
+        .cancellation
+        .as_ref()
+        .is_some_and(tokio_util::sync::CancellationToken::is_cancelled)
+    {
+        return H2DownloadOutcome::Canceled;
+    }
     if let Some(reason) = super::native::h2_ineligible_reason(route) {
         return H2DownloadOutcome::Fallback {
             failure: H2DownloadFailure::Ineligible(reason.as_str()),

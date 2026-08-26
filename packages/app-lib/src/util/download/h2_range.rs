@@ -9,12 +9,39 @@ use futures::stream::{FuturesUnordered, StreamExt};
 use http::header::{ACCEPT_ENCODING, RANGE};
 use http::{HeaderValue, StatusCode, Uri};
 use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 struct H2Range {
     start: u64,
     end: u64,
+}
+
+struct PartCleanupGuard {
+    path: PathBuf,
+    armed: bool,
+}
+
+impl PartCleanupGuard {
+    fn new(path: &Path) -> Self {
+        Self {
+            path: path.to_path_buf(),
+            armed: true,
+        }
+    }
+
+    fn disarm(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for PartCleanupGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            let _ = std::fs::remove_file(&self.path);
+        }
+    }
 }
 
 pub(crate) async fn download(
@@ -27,6 +54,13 @@ pub(crate) async fn download(
     total_size: u64,
     concurrency: usize,
 ) -> H2DownloadOutcome {
+    if request
+        .cancellation
+        .as_ref()
+        .is_some_and(tokio_util::sync::CancellationToken::is_cancelled)
+    {
+        return H2DownloadOutcome::Canceled;
+    }
     if total_size == 0 {
         return H2DownloadOutcome::Fallback {
             failure: H2DownloadFailure::Content,
@@ -36,6 +70,7 @@ pub(crate) async fn download(
     let count = concurrency
         .max(1)
         .min(usize::try_from(total_size).unwrap_or(usize::MAX).max(1));
+    let mut cleanup = PartCleanupGuard::new(part_path);
     let output =
         match super::range_output::RangeOutput::create(part_path, total_size)
             .await
@@ -68,11 +103,26 @@ pub(crate) async fn download(
             progress_delta,
         ));
     }
-    while let Some(result) = tasks.next().await {
+    loop {
+        let next = if let Some(cancellation) = request.cancellation.as_ref() {
+            tokio::select! {
+                biased;
+                _ = cancellation.cancelled() => {
+                    drop(tasks);
+                    drop(output);
+                    return H2DownloadOutcome::Canceled;
+                }
+                result = tasks.next() => result,
+            }
+        } else {
+            tasks.next().await
+        };
+        let Some(result) = next else {
+            break;
+        };
         if let Err(failure) = result {
             drop(tasks);
             drop(output);
-            let _ = tokio::fs::remove_file(part_path).await;
             return H2DownloadOutcome::Fallback {
                 failure,
                 preserve_partial: false,
@@ -88,28 +138,43 @@ pub(crate) async fn download(
         };
     }
     drop(output);
-    if let Err(error) = fetch::verify_file(part_path, &request.integrity).await
+    let verification = if let Some(cancellation) = request.cancellation.as_ref()
     {
+        tokio::select! {
+            biased;
+            _ = cancellation.cancelled() => return H2DownloadOutcome::Canceled,
+            result = fetch::verify_file(part_path, &request.integrity) => result,
+        }
+    } else {
+        fetch::verify_file(part_path, &request.integrity).await
+    };
+    if let Err(error) = verification {
         let failure = if fetch::is_integrity_error(&error) {
             H2DownloadFailure::Integrity
         } else {
             H2DownloadFailure::Content
         };
-        let _ = tokio::fs::remove_file(part_path).await;
         return H2DownloadOutcome::Fallback {
             failure,
             preserve_partial: false,
         };
     }
-    if fetch::finalize_download(part_path, destination)
-        .await
-        .is_err()
-    {
+    let finalized = if let Some(cancellation) = request.cancellation.as_ref() {
+        tokio::select! {
+            biased;
+            _ = cancellation.cancelled() => return H2DownloadOutcome::Canceled,
+            result = fetch::finalize_download(part_path, destination) => result,
+        }
+    } else {
+        fetch::finalize_download(part_path, destination).await
+    };
+    if finalized.is_err() {
         return H2DownloadOutcome::Fallback {
             failure: H2DownloadFailure::Io,
             preserve_partial: false,
         };
     }
+    cleanup.disarm();
     H2DownloadOutcome::Completed(DownloadResult {
         path: destination.to_path_buf(),
         url: uri.to_string(),
@@ -360,6 +425,98 @@ mod tests {
         assert!(matches!(result, H2DownloadOutcome::Completed(_)));
         assert_eq!(request_count.load(Ordering::Relaxed), 8);
         assert_eq!(tokio::fs::read(destination).await.unwrap(), *data);
+        client_driver.abort();
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn cancellation_stops_all_ranges_and_removes_partial_output() {
+        let request_count = Arc::new(AtomicU64::new(0));
+        let (client_io, server_io) = tokio::io::duplex(256 * 1024);
+        let server_requests = Arc::clone(&request_count);
+        let server = tokio::spawn(async move {
+            let mut connection =
+                h2::server::handshake(server_io).await.unwrap();
+            while let Some(result) = connection.accept().await {
+                let (request, mut respond) = result.unwrap();
+                let requests = Arc::clone(&server_requests);
+                tokio::spawn(async move {
+                    requests.fetch_add(1, Ordering::Relaxed);
+                    let value = request.headers()[RANGE].to_str().unwrap();
+                    let value = value.strip_prefix("bytes=").unwrap();
+                    let (start, end) = value.split_once('-').unwrap();
+                    let response = Response::builder()
+                        .status(StatusCode::PARTIAL_CONTENT)
+                        .header(
+                            http::header::CONTENT_RANGE,
+                            format!("bytes {start}-{end}/2097152"),
+                        )
+                        .body(())
+                        .unwrap();
+                    let _stream =
+                        respond.send_response(response, false).unwrap();
+                    futures::future::pending::<()>().await;
+                });
+            }
+        });
+
+        let (sender, driver) = h2::client::handshake(client_io).await.unwrap();
+        let client_driver = tokio::spawn(async move { driver.await });
+        let connection = Arc::new(SharedH2Connection::for_test(sender));
+        let directory = tempfile::tempdir().unwrap();
+        let destination = directory.path().join("pack.zip");
+        let part_path = directory.path().join("pack.zip.part");
+        let cancellation = tokio_util::sync::CancellationToken::new();
+        let mut request = DownloadRequest::new(
+            "https://h2-range.test/pack.zip",
+            fetch::ResourceClass::CurseForge,
+        )
+        .with_integrity(fetch::Integrity::default().with_size(2 * 1024 * 1024));
+        request.cancellation = Some(cancellation.clone());
+        let route = DownloadRoute {
+            url: request.url.clone(),
+            source: fetch::DownloadRouteSource::Official,
+            is_mirror: false,
+            allow_sensitive_headers: true,
+            supports_range: true,
+            proxy: fetch::ProxyPolicy::Direct,
+        };
+        let uri = route.url.parse().unwrap();
+        let part_for_task = part_path.clone();
+        let destination_for_task = destination.clone();
+        let download_task = tokio::spawn(async move {
+            download(
+                &connection,
+                &uri,
+                &request,
+                &route,
+                &destination_for_task,
+                &part_for_task,
+                2 * 1024 * 1024,
+                16,
+            )
+            .await
+        });
+        tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            while request_count.load(Ordering::Relaxed) < 16 {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+
+        cancellation.cancel();
+        let outcome = tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            download_task,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+
+        assert!(matches!(outcome, H2DownloadOutcome::Canceled));
+        assert!(!part_path.exists());
+        assert!(!destination.exists());
         client_driver.abort();
         server.abort();
     }
