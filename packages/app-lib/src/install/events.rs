@@ -1069,8 +1069,10 @@ mod tests {
     use crate::install::model::{
         InstallJobEventKind, InstallJobExecutionMode, InstallJobKind,
         InstallJobStatus, InstallPauseReason, InstallPhaseDetails,
-        InstallPhaseId, InstallProgress, MissingModpackContentState,
+        InstallPhaseId, MissingModpackContentState,
     };
+    #[cfg(not(feature = "tauri"))]
+    use crate::install::model::InstallProgress;
     use crate::state::{InstanceLink, ModLoader};
 
     #[cfg(not(feature = "tauri"))]

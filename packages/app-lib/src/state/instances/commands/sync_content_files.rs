@@ -637,6 +637,7 @@ mod tests {
     /// external `.minecraft` root must have its content scanned from that root,
     /// not from the (empty) managed instance folder. This is the split-brain
     /// the content page empty-state used to hit.
+    #[cfg(not(feature = "tauri"))]
     #[tokio::test]
     async fn content_scan_uses_game_dir_override() {
         crate::event::EventState::init().await.unwrap();

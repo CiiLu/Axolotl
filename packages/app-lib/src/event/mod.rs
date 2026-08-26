@@ -317,6 +317,7 @@ pub enum ServerPayloadType {
         #[serde(skip_serializing_if = "Option::is_none")]
         reason: Option<ExitReason>,
     },
+    #[allow(dead_code)]
     EulaRequired {
         server_id: String,
         eula_text: String,
