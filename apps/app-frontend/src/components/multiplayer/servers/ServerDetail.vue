@@ -38,9 +38,9 @@ import ServerFilesPanel from '@/components/multiplayer/servers/ServerFilesPanel.
 import ServerIcon from '@/components/multiplayer/servers/ServerIcon.vue'
 import ServerSettingsPanel from '@/components/multiplayer/servers/ServerSettingsPanel.vue'
 import { useMultiplayerSession } from '@/composables/useMultiplayerSession'
+import { serverSetupStatus } from '@/composables/useServerInstalls'
 import { useServerLifecycle } from '@/composables/useServerLifecycle'
 import { useServers } from '@/composables/useServers'
-import { serverSetupStatus } from '@/composables/useServerInstalls'
 import { type PortProcessInfoData, servers as serversApi } from '@/helpers/servers'
 import { openPath } from '@/helpers/utils'
 

@@ -1,11 +1,11 @@
 import type { Labrinth } from '@modrinth/api-client'
 import { reactive } from 'vue'
 
-import { get_version } from '@/helpers/cache.js'
 import { resolveServerLauncher } from '@/components/multiplayer/servers/server-flow-utils'
+import { get_version } from '@/helpers/cache.js'
 import {
-	serverEventListener,
 	type InstallModpackOptions,
+	serverEventListener,
 	type ServerInfoData,
 	servers,
 } from '@/helpers/servers'
@@ -29,7 +29,7 @@ export interface ActiveServerInstall {
 export type ServerSetupStatus = 'installing' | 'interrupted' | 'failed'
 
 /** Module-level singleton: install activity is global to the app. */
-const activeInstalls = reactive<Record<string, ActiveServerInstall>>({})
+const activeInstalls = reactive<Record<string, ActiveServerInstall | undefined>>({})
 
 export function activeInstallFor(serverId: string): ActiveServerInstall | null {
 	return activeInstalls[serverId] ?? null
@@ -71,7 +71,7 @@ export async function startModpackServerInstall(
 	} finally {
 		unlistenProgress()
 		unlistenLogs()
-		delete activeInstalls[serverId]
+		activeInstalls[serverId] = undefined
 		void refreshServerList()
 	}
 }

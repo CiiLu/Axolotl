@@ -59,9 +59,9 @@ export interface LoaderVersionOption {
 	stable: boolean
 }
 
-export interface CreateServerFlowContext {
+export interface CreateServerFlowContext<TCtx extends CreateServerFlowContext<TCtx>> {
 	modal: Ref<ComponentExposed<typeof MultiStageModal> | null>
-	stageConfigs: StageConfigInput<CreateServerFlowContext>[]
+	stageConfigs: StageConfigInput<TCtx>[]
 	formatMessage: ReturnType<typeof useVIntl>['formatMessage']
 
 	serverType: Ref<ServerTypeId>
@@ -103,8 +103,11 @@ export interface CreateServerFlowContext {
 	reset: () => void
 }
 
+/** Concrete context used by the vanilla (non-modpack) server creation flow. */
+export type CreateServerFlowContextValue = CreateServerFlowContext<CreateServerFlowContextValue>
+
 export const [injectCreateServerFlow, provideCreateServerFlow] =
-	createContext<CreateServerFlowContext>('CreateServerFlow')
+	createContext<CreateServerFlowContextValue>('CreateServerFlow')
 
 interface VanillaVersionEntry {
 	id: string
@@ -186,7 +189,7 @@ function javaMajorFromVersion(version: string): number | null {
 
 export function createCreateServerFlowContext(
 	modal: Ref<ComponentExposed<typeof MultiStageModal> | null>,
-): CreateServerFlowContext {
+): CreateServerFlowContextValue {
 	const { formatMessage } = useVIntl()
 
 	const wizardMessages = defineMessages({
@@ -482,7 +485,7 @@ export function createCreateServerFlowContext(
 			(!needsLoaderVersion.value || selectedLoaderVersion.value !== ''),
 	)
 
-	const stageConfigs: StageConfigInput<CreateServerFlowContext>[] = [
+	const stageConfigs: StageConfigInput<CreateServerFlowContextValue>[] = [
 		{
 			id: 'type',
 			stageContent: markRaw(TypeStage),

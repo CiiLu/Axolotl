@@ -5,6 +5,7 @@ import {
 	createContext,
 	defineMessages,
 	type MultiStageModal,
+	type StageConfigInput,
 	useVIntl,
 } from '@modrinth/ui'
 import { computed, markRaw, type Ref, ref } from 'vue'
@@ -40,7 +41,7 @@ export interface ModpackServerOptions {
 	version: Labrinth.Versions.v2.Version
 }
 
-export interface ModpackServerFlowContext extends CreateServerFlowContext {
+export interface ModpackServerFlowContext extends CreateServerFlowContext<ModpackServerFlowContext> {
 	modpackTitle: Ref<string>
 	modpackVersionNumber: Ref<string>
 	modpackIconUrl: Ref<string | undefined>
@@ -388,15 +389,15 @@ export function createModpackServerFlowContext(
 		void loadMaxMemory()
 	}
 
-	const stageConfigs = [
+	const stageConfigs: StageConfigInput<ModpackServerFlowContext>[] = [
 		{
 			id: 'setup',
 			stageContent: markRaw(ModpackSetupStage),
-			title: (ctx) => ctx.formatMessage(wizardMessages.setupTitle),
-			cannotNavigateForward: (ctx) =>
+			title: (ctx: ModpackServerFlowContext) => ctx.formatMessage(wizardMessages.setupTitle),
+			cannotNavigateForward: (ctx: ModpackServerFlowContext) =>
 				ctx.name.value.trim() === '' || !ctx.canContinueFromType.value,
 			leftButtonConfig: () => null,
-			rightButtonConfig: (ctx) => ({
+			rightButtonConfig: (ctx: ModpackServerFlowContext) => ({
 				label: ctx.formatMessage(wizardMessages.next),
 				color: 'brand',
 				disabled: ctx.name.value.trim() === '' || !ctx.canContinueFromType.value,
@@ -409,13 +410,13 @@ export function createModpackServerFlowContext(
 		{
 			id: 'install',
 			stageContent: markRaw(ModpackInstallStage),
-			title: (ctx) => ctx.formatMessage(wizardMessages.installTitle),
-			cannotNavigateForward: (ctx) => ctx.installPhase.value !== 'done',
+			title: (ctx: ModpackServerFlowContext) => ctx.formatMessage(wizardMessages.installTitle),
+			cannotNavigateForward: (ctx: ModpackServerFlowContext) => ctx.installPhase.value !== 'done',
 			// Downloads continue in the background once the wizard closes; only
 			// the first-run boot locks closing.
-			disableClose: (ctx) => ctx.installPhase.value === 'first-run',
+			disableClose: (ctx: ModpackServerFlowContext) => ctx.installPhase.value === 'first-run',
 			leftButtonConfig: () => null,
-			rightButtonConfig: (ctx) => ({
+			rightButtonConfig: (ctx: ModpackServerFlowContext) => ({
 				label: ctx.formatMessage(
 					ctx.installPhase.value === 'error'
 						? wizardMessages.retry
@@ -439,7 +440,8 @@ export function createModpackServerFlowContext(
 					ctx.modal.value?.nextStage()
 				},
 			}),
-		},]
+		},
+	]
 
 	return {
 		modal,
@@ -474,7 +476,7 @@ export function createModpackServerFlowContext(
 		loaderLabel,
 		loaderSupported,
 		gameVersionLabel,
-loadVersions,
+		loadVersions,
 		loadLoaderVersions,
 		loadDefaultJava,
 		beginInstall,
