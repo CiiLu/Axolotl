@@ -324,6 +324,7 @@ async fn establish(
 pub(crate) async fn shared_connection(
     route: &DownloadRoute,
     reserve_native_budget: bool,
+    allow_cold_connection: bool,
 ) -> Result<Arc<SharedH2Connection>, H2ConnectError> {
     let authority =
         crate::util::fetch::url_authority(&route.url).ok_or_else(|| {
@@ -338,6 +339,7 @@ pub(crate) async fn shared_connection(
         cached.as_ref().filter(|connection| !connection.is_dead())
     {
         if !reserve_native_budget || connection.has_physical_budget() {
+            tracing::debug!(authority, "Reusing shared HTTP/2 connection");
             return Ok(Arc::clone(connection));
         }
         return Err(H2ConnectError::new(
@@ -346,6 +348,13 @@ pub(crate) async fn shared_connection(
                 .to_string(),
         ));
     }
+    if !allow_cold_connection {
+        return Err(H2ConnectError::new(
+            H2ConnectFailureKind::Protocol,
+            "HTTP/2 policy requires an existing shared connection".to_string(),
+        ));
+    }
+    tracing::debug!(authority, "Establishing cold shared HTTP/2 connection");
     let connection = establish(route, reserve_native_budget).await?;
     *cached = Some(Arc::clone(&connection));
     Ok(connection)

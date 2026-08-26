@@ -96,7 +96,13 @@ pub(crate) async fn try_download_via_h2(
             preserve_partial: false,
         };
     }
-    let connection = match connect_authority(route, true).await {
+    let connection = match connect_authority(
+        route,
+        true,
+        policy.allow_cold_connection,
+    )
+    .await
+    {
         Ok(connection) => connection,
         Err(failure) => {
             return H2DownloadOutcome::Fallback {
@@ -226,10 +232,16 @@ pub(crate) async fn try_download_via_h2(
 async fn connect_authority(
     route: &DownloadRoute,
     reserve_native_budget: bool,
+    allow_cold_connection: bool,
 ) -> Result<Arc<SharedH2Connection>, H2DownloadFailure> {
     let authority =
         fetch::url_authority(&route.url).ok_or(H2DownloadFailure::Http)?;
-    match super::h2_pool::shared_connection(route, reserve_native_budget).await
+    match super::h2_pool::shared_connection(
+        route,
+        reserve_native_budget,
+        allow_cold_connection,
+    )
+    .await
     {
         Ok(connection) => Ok(connection),
         Err(error) => {
@@ -575,21 +587,22 @@ where
     } else {
         None
     };
-    let connection = match connect_authority(route, apply_native_policy).await {
-        Ok(connection) => connection,
-        Err(failure) => {
-            if apply_native_policy
-                && failure.should_cooldown_authority()
-                && let Some(authority) = fetch::url_authority(&route.url)
-            {
-                fetch::record_authority_h2_failure(&authority);
+    let connection =
+        match connect_authority(route, apply_native_policy, true).await {
+            Ok(connection) => connection,
+            Err(failure) => {
+                if apply_native_policy
+                    && failure.should_cooldown_authority()
+                    && let Some(authority) = fetch::url_authority(&route.url)
+                {
+                    fetch::record_authority_h2_failure(&authority);
+                }
+                if apply_native_policy && failure.is_transfer_failure() {
+                    super::native_breaker::record_failure(route);
+                }
+                return items;
             }
-            if apply_native_policy && failure.is_transfer_failure() {
-                super::native_breaker::record_failure(route);
-            }
-            return items;
-        }
-    };
+        };
     if apply_native_policy {
         super::native_breaker::record_success(route);
     }
