@@ -1119,10 +1119,23 @@ impl Process {
                     .into_iter();
 
                 if let Some(command) = cmd.next() {
+                    // The post-exit hook runs in the instance's game working
+                    // directory, which honours a per-instance override.
+                    let game_dir = crate::state::instances::adapters::sqlite::instance_rows::get_instance_path_and_game_dir_override_by_id(
+                        &instance_id,
+                        &state.pool,
+                    )
+                    .await?
+                    .map(|(path, override_dir)| {
+                        state
+                            .directories
+                            .resolve_game_dir(&path, override_dir.as_deref())
+                    })
+                    .unwrap_or_else(|| {
+                        state.directories.instances_dir().join(&instance_path)
+                    });
                     let mut command = Command::new(command);
-                    command.args(cmd).current_dir(
-                        state.directories.instances_dir().join(&instance_path),
-                    );
+                    command.args(cmd).current_dir(game_dir);
                     command.spawn().map_err(IOError::from)?;
                 }
             }

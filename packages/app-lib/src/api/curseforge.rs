@@ -4726,10 +4726,7 @@ async fn create_curseforge_update_backup(
     let directory = tempfile::Builder::new()
         .prefix("curseforge-pack-update-")
         .tempdir_in(state.directories.caches_dir())?;
-    let instance_path = state
-        .directories
-        .instances_dir()
-        .join(&metadata.instance.path);
+    let instance_path = state.directories.instance_game_dir(&metadata.instance);
     let mut backups = Vec::new();
     for member in members {
         let Some(entry_id) = member.content_entry_id.as_ref() else {
@@ -4769,10 +4766,7 @@ async fn rollback_curseforge_update(
     installed: &[CurseForgeInstalledFile],
     state: &State,
 ) -> crate::Result<()> {
-    let instance_path = state
-        .directories
-        .instances_dir()
-        .join(&metadata.instance.path);
+    let instance_path = state.directories.instance_game_dir(&metadata.instance);
     let old_paths = backup
         .files
         .iter()
@@ -8778,6 +8772,7 @@ mod tests {
             None,
             InstanceLink::Unmanaged,
             None,
+            None,
         )
         .await
         .unwrap();
@@ -10683,6 +10678,7 @@ mod tests {
             None,
             InstanceLink::Unmanaged,
             None,
+            None,
         )
         .await
         .unwrap();
@@ -10772,8 +10768,7 @@ mod tests {
         assert_eq!(imported.expected_relative_path, relative_path);
         let instance_path = state
             .directories
-            .instances_dir()
-            .join(created.instance.path)
+            .instance_game_dir(&created.instance)
             .join(relative_path);
         assert_eq!(crate::util::io::read(&instance_path).await.unwrap(), bytes);
         assert!(source.exists());

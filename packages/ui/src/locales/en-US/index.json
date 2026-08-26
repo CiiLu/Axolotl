@@ -1163,6 +1163,21 @@
   "creation-flow.modal.custom-setup.content-loader.label": {
     "defaultMessage": "Content loader"
   },
+  "creation-flow.modal.custom-setup.game-dir.choose-folder": {
+    "defaultMessage": "Choose folder"
+  },
+  "creation-flow.modal.custom-setup.game-dir.isolated": {
+    "defaultMessage": "Custom · Version isolated (.minecraft/versions/instance name/)"
+  },
+  "creation-flow.modal.custom-setup.game-dir.label": {
+    "defaultMessage": "Game directory"
+  },
+  "creation-flow.modal.custom-setup.game-dir.managed": {
+    "defaultMessage": "Axolotl directory"
+  },
+  "creation-flow.modal.custom-setup.game-dir.not-isolated": {
+    "defaultMessage": "Custom · Version shared (.minecraft/)"
+  },
   "creation-flow.modal.custom-setup.game-version-type.alpha": {
     "defaultMessage": "April Fools"
   },
@@ -1438,6 +1453,15 @@
   },
   "drop.symlink_method.detecting": {
     "defaultMessage": "Detecting..."
+  },
+  "drop.symlink_method.game-dir.isolated": {
+    "defaultMessage": "Version isolated"
+  },
+  "drop.symlink_method.game-dir.label": {
+    "defaultMessage": "Game directory"
+  },
+  "drop.symlink_method.game-dir.not-isolated": {
+    "defaultMessage": "Version shared (.minecraft/)"
   },
   "drop.symlink_method.game_version": {
     "defaultMessage": "Game version"

@@ -1,5 +1,5 @@
 <template>
-	<div class="flex flex-col gap-3 p-6">
+	<div class="box-border flex min-h-full w-full flex-col gap-3 p-6">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div data-onboarding-id="downloads-tabs">
 				<NavTabs
@@ -358,8 +358,9 @@
 			</Card>
 		</div>
 
-		<Card v-else>
+		<Card v-else class="flex flex-1">
 			<EmptyState
+				class="my-auto"
 				:type="query ? 'no-search-result' : 'no-tasks'"
 				:heading="formatMessage(query ? messages.noResultsTitle : messages.emptyTitle)"
 				:description="

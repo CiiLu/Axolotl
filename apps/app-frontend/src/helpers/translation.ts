@@ -427,7 +427,7 @@ export async function translateSearchDescriptions<T extends TranslatableHit>(
 		}))
 		const request: TranslationRequest = {
 			target_language: targetLanguage,
-			source_language: 'en',
+			source_language: 'auto',
 			segments,
 			context: {
 				title: hits[0]?.title ?? '',

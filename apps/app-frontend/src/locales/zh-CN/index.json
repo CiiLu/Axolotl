@@ -662,6 +662,12 @@
 	"app.browse.maps-unavailable-description": {
 		"message": "请配置 CurseForge API Key 以浏览和安装地图。"
 	},
+	"app.browse.fuzzy-search.prefix": {
+		"message": "未找到「{original}」的结果，已为您显示"
+	},
+	"app.browse.fuzzy-search.suffix": {
+		"message": "的相关结果"
+	},
 	"app.browse.no-compatible-version": {
 		"message": "未找到与所选实例兼容的版本。"
 	},
@@ -2358,7 +2364,7 @@
 		"message": "文件 {file}"
 	},
 	"app.instance.dependencies.graph-direction": {
-		"message": "箭头从依赖方指向它所使用的内容。"
+		"defaultMessage": "箭头从依赖方指向它使用的内容。"
 	},
 	"app.instance.dependencies.graph-hint": {
 		"message": "拖动画布以浏览关系；拖动卡片可调整布局。"
@@ -2385,7 +2391,7 @@
 		"message": "未发现依赖关系。"
 	},
 	"app.instance.dependencies.no-graph-relations": {
-		"message": "当前筛选条件下没有可显示的关系。"
+		"defaultMessage": "当前筛选条件下没有可显示的关系。"
 	},
 	"app.instance.dependencies.no-matches": {
 		"message": "没有依赖项符合这些筛选条件。"
@@ -3275,6 +3281,24 @@
 	"app.lab.category.world": {
 		"message": "世界"
 	},
+	"app.lab.enter": {
+		"message": "进入"
+	},
+	"app.lab.favorite-filter.all": {
+		"message": "全部"
+	},
+	"app.lab.favorite-filter.favorite": {
+		"message": "已收藏"
+	},
+	"app.lab.favorite-filter.unfavorite": {
+		"message": "未收藏"
+	},
+	"app.lab.favorite.add": {
+		"message": "加入收藏"
+	},
+	"app.lab.favorite.remove": {
+		"message": "取消收藏"
+	},
 	"app.lab.gradient-text.adapter.bbcode": {
 		"message": "BBCode"
 	},
@@ -3604,6 +3628,9 @@
 	},
 	"app.lab.mod-translation.title": {
 		"message": "模组翻译"
+	},
+	"app.lab.no-favorites": {
+		"message": "还没有收藏任何工具。"
 	},
 	"app.lab.no-results": {
 		"message": "没有匹配的工具。"
@@ -4801,6 +4828,27 @@
 	},
 	"app.lab.seed-map.zoom-to-show": {
 		"message": "放大以显示{layer}"
+	},
+	"app.lab.skin-editor.description": {
+		"message": "在本地创建和编辑 Minecraft 玩家皮肤。"
+	},
+	"app.lab.skin-editor.export-skin": {
+		"message": "Minecraft 皮肤 PNG"
+	},
+	"app.lab.skin-editor.load-error-description": {
+		"message": "嵌入式编辑器未能完成加载，请重试。"
+	},
+	"app.lab.skin-editor.load-error-title": {
+		"message": "无法加载皮肤编辑器"
+	},
+	"app.lab.skin-editor.loading": {
+		"message": "正在加载皮肤编辑器"
+	},
+	"app.lab.skin-editor.retry": {
+		"message": "重试"
+	},
+	"app.lab.skin-editor.title": {
+		"message": "皮肤编辑器"
 	},
 	"app.lab.title": {
 		"message": "实验室"
@@ -7193,6 +7241,9 @@
 	"app.skins.apply-button": {
 		"message": "应用"
 	},
+	"app.skins.create-skin": {
+		"message": "创建皮肤"
+	},
 	"app.skins.delete-button": {
 		"message": "删除皮肤"
 	},
@@ -8420,6 +8471,27 @@
 	"instance.settings.tabs.general.edit-icon.select": {
 		"message": "选择图标"
 	},
+	"instance.settings.tabs.general.game-dir": {
+		"message": "游戏目录"
+	},
+	"instance.settings.tabs.general.game-dir.current": {
+		"message": "当前目录"
+	},
+	"instance.settings.tabs.general.game-dir.description": {
+		"message": "将一个独立的文件夹作为此实例的工作目录。游戏会从该文件夹读取模组、存档、配置和资源包，而不是托管的实例文件夹。适用于共用 .minecraft 目录的非版本隔离实例。"
+	},
+	"instance.settings.tabs.general.game-dir.isolated": {
+		"message": "版本隔离（存放于 versions/）"
+	},
+	"instance.settings.tabs.general.game-dir.not-isolated": {
+		"message": "版本共享（.minecraft/）"
+	},
+	"instance.settings.tabs.general.game-dir.move-note": {
+		"message": "切换隔离仅更新启动器路径。请自行移动模组、存档和配置文件夹以保持一致。"
+	},
+	"instance.settings.tabs.general.game-dir.managed-note": {
+		"message": "此实例使用 Axolotl 托管目录。"
+	},
 	"instance.settings.tabs.general.icon": {
 		"message": "图标"
 	},
@@ -9501,7 +9573,7 @@
 		"message": "Minecraft 版本 {version}"
 	},
 	"instance.upgrade.select.no-newer-release": {
-		"message": "没有更新的 Minecraft 稳定版。"
+		"message": "此实例已是最新的 Minecraft 稳定版。"
 	},
 	"instance.upgrade.select.no-non-downgrade-fabric-version": {
 		"message": "此目标没有可避免降级的 Fabric 版本。"
@@ -9799,11 +9871,5 @@
 	},
 	"unknown-pack-warning-modal.warning.title": {
 		"message": "未知文件警告"
-	},
-	"app.instance.dependencies.graph-direction": {
-		"defaultMessage": "箭头从依赖方指向它使用的内容。"
-	},
-	"app.instance.dependencies.no-graph-relations": {
-		"defaultMessage": "当前筛选条件下没有可显示的关系。"
 	}
 }

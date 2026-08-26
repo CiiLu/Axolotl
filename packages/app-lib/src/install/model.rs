@@ -232,6 +232,7 @@ mod tests {
             adjuncts: Vec::new(),
             icon_path: None,
             link: InstanceLink::Unmanaged,
+            game_dir_override: None,
         })
     }
 
@@ -342,6 +343,7 @@ mod tests {
                     name: "Test".to_string(),
                     icon_path: None,
                     symlink_target: None,
+                    game_dir_override: None,
                     created: now,
                     modified: now,
                     last_played: None,
@@ -870,6 +872,7 @@ mod tests {
                 project_id: "123".to_string(),
                 version_id: "456".to_string(),
             },
+            game_dir_override: None,
         });
 
         assert_eq!(job.provider(), InstallJobProvider::CurseForge);
@@ -1376,6 +1379,8 @@ pub enum InstallRequest {
         adjuncts: Vec<crate::state::LoaderComponent>,
         icon_path: Option<String>,
         link: InstanceLink,
+        #[serde(default)]
+        game_dir_override: Option<String>,
     },
     CreateModpackInstance {
         location: CreatePackLocation,
@@ -1396,6 +1401,8 @@ pub enum InstallRequest {
         loader: Option<ModLoader>,
         #[serde(default)]
         loader_version: Option<String>,
+        #[serde(default)]
+        game_dir_override: Option<String>,
     },
     DuplicateInstance {
         source_instance_id: String,

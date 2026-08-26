@@ -141,6 +141,15 @@ export default new createRouter({
 			},
 		},
 		{
+			path: '/lab/skin-editor',
+			name: 'Skin editor',
+			component: () => import('@/pages/LabSkinEditor.vue'),
+			meta: {
+				breadcrumb: [{ name: 'Lab', link: '/lab' }, { name: 'Skin editor' }],
+				discordActivity: 'Editing a skin...',
+			},
+		},
+		{
 			path: '/lab/gradient-text',
 			name: 'Gradient text generator',
 			component: () => import('@/pages/LabGradientText.vue'),

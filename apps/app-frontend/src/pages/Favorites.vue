@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
 import {
+	BookmarkFilledIcon,
 	BookmarkIcon,
 	CheckIcon,
 	ChevronDownIcon,
@@ -907,7 +908,7 @@ onMounted(async () => {
 									v-if="contentFavorites.isPending(project.provider, project.projectId)"
 									class="animate-spin"
 								/>
-								<BookmarkIcon v-else />
+								<BookmarkFilledIcon v-else />
 							</button>
 						</ButtonStyled>
 					</div>
