@@ -108,6 +108,7 @@ export function useServers() {
 	}
 
 	async function startServer(serverId: string) {
+		await ensureListener()
 		logLines[serverId] = []
 		const ok = await run(() => servers.start(serverId))
 		if (ok) await refresh()

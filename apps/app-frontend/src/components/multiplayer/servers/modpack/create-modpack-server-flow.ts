@@ -16,6 +16,7 @@ import { refresh as refreshServerList } from '@/composables/useServers'
 import { find_filtered_jres, get_java_default_versions, get_max_memory } from '@/helpers/jre'
 import { get_loader_versions } from '@/helpers/metadata'
 import { serverEventListener, type ServerManifestData, servers } from '@/helpers/servers'
+import { injectDownloadManager } from '@/providers/download-manager'
 
 import type { CreateServerFlowContext, JavaSelection } from '../create-server-flow'
 import {
@@ -76,6 +77,17 @@ export function createModpackServerFlowContext(
 	modal: Ref<ComponentExposed<typeof MultiStageModal> | null>,
 ): ModpackServerFlowContext {
 	const { formatMessage } = useVIntl()
+
+	// [SERVER-DOWNLOAD-BRIDGE] Capture the download manager once during Vue
+	// setup context.  Vue's inject() only works in the synchronous setup
+	// scope — after any `await` the injection context is lost.  We store
+	// the reference here and pass it explicitly to `startModpackServerInstall`.
+	let downloadManager: ReturnType<typeof injectDownloadManager> | null = null
+	try {
+		downloadManager = injectDownloadManager()
+	} catch {
+		// Not inside a provider tree — server downloads will not appear in sidebar.
+	}
 
 	const wizardMessages = defineMessages({
 		setupTitle: { id: 'app.servers.wizard.setup-title', defaultMessage: 'Setup' },
@@ -306,11 +318,15 @@ export function createModpackServerFlowContext(
 					throw new Error('Modpack has no downloadable file')
 				}
 
-				// The download runs through the shared background runner, so closing
-				// the wizard keeps it going; progress renders from the shared registry.
-				dispatched = true
-				installPhase.value = 'downloading'
-				await startModpackServerInstall(serverId, {
+			// The download runs through the shared background runner, so closing
+			// the wizard keeps it going; progress renders from the shared registry.
+			dispatched = true
+			installPhase.value = 'downloading'
+			// [SERVER-DOWNLOAD-BRIDGE] Pass the download manager reference
+			// captured during setup so the synthetic job appears in sidebar.
+			await startModpackServerInstall(
+				serverId,
+				{
 					mrpackUrl: primaryFile.url,
 					mrpackSha1: primaryFile.hashes?.sha1,
 					jarUrl: jar.url,
@@ -320,7 +336,9 @@ export function createModpackServerFlowContext(
 					modpackVersionId: version.value.id,
 					modpackTitle: modpackTitle.value,
 					modpackIconUrl: modpackIconUrl.value,
-				})
+				},
+				downloadManager,
+			)
 				if (isStale()) return
 
 				// Modpack installation complete, no auto-start.

@@ -925,8 +925,8 @@ export function useDropImport(options: DropImportOptions) {
 			dropDebug('handleDropConfirm: data pack requires a world target', {
 				filePath,
 			})
-			pendingInstall.value = { type, filePath, innerBase }
-			dataPackWorldModal.value?.show(isInInstance.value ? instanceId.value : undefined)
+		pendingInstall.value = { type, filePath, innerBase }
+		dataPackWorldModal.value?.show(isInInstance.value ? (instanceId.value ?? undefined) : undefined)
 			return
 		}
 

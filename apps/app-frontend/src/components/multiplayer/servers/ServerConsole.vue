@@ -33,11 +33,15 @@ const loading = ref(true)
 const hasLogs = computed(() => consoleState.output.value.length > 0)
 let consumedLines = 0
 
-onMounted(async () => {
+async function hydrateAndDisplay() {
 	await hydrateLog(props.server.id)
 	const buffer = logLines[props.server.id] ?? []
 	if (buffer.length > 0) await consoleState.addLegacyLog(buffer.join('\n'))
 	consumedLines = buffer.length
+}
+
+onMounted(async () => {
+	await hydrateAndDisplay()
 	loading.value = false
 })
 
@@ -71,11 +75,12 @@ async function handleSendCommand(command: string) {
 const consoleLayout = ref<InstanceType<typeof ConsolePageLayout> | null>(null)
 watch(
 	() => props.server.running,
-	(running, previousRunning) => {
+	async (running, previousRunning) => {
 		if (!running || previousRunning) return
 		consoleState.clear()
 		consumedLines = 0
 		logLines[props.server.id] = []
+		await hydrateAndDisplay()
 		consoleLayout.value?.scrollToBottom()
 	},
 )

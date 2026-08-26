@@ -220,7 +220,11 @@
 								<ExternalIcon />{{ formatMessage(messages.openInstance) }}
 							</button>
 						</ButtonStyled>
-						<ButtonStyled type="transparent" size="small">
+						<ButtonStyled
+							v-if="job.items.length > 0 || job.error || job.rollback_error"
+							type="transparent"
+							size="small"
+						>
 							<button @click="toggleExpanded(job.job_id)">
 								<ChevronDownIcon :class="expanded.has(job.job_id) ? 'rotate-180' : ''" />
 								{{
@@ -875,12 +879,18 @@ function jobPercent(job: InstallJobSnapshot) {
 		return Math.min(99, (completedRequiredFiles(job) / total) * 100)
 	}
 	const progress = effectiveInstallProgress(job)
-	if (!hasDeterminateInstallProgress(progress)) return 0
-	return Math.min(99, Math.max(0, (progress.current / progress.total) * 100))
+	if (hasDeterminateInstallProgress(progress)) {
+		return Math.min(99, Math.max(0, (progress.current / progress.total) * 100))
+	}
+	if (job.summary.bytes_total && job.summary.bytes_total > 0) {
+		return Math.min(99, Math.max(0, (job.summary.bytes_downloaded / job.summary.bytes_total) * 100))
+	}
+	return 0
 }
 
 function hasDeterminateProgress(job: InstallJobSnapshot) {
-	return hasDeterminateInstallProgress(effectiveInstallProgress(job))
+	if (hasDeterminateInstallProgress(effectiveInstallProgress(job))) return true
+	return !!(job.summary.bytes_total && job.summary.bytes_total > 0)
 }
 
 function parallelPercent(job: InstallJobSnapshot) {

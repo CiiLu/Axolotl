@@ -7,6 +7,7 @@ import type EulaModal from '@/components/multiplayer/servers/EulaModal.vue'
 import { resumeModpackInstall } from '@/composables/useServerInstalls'
 import { type ServerView, setServerExitReasonHandler, useServers } from '@/composables/useServers'
 import { serverEventListener,servers as serversApi } from '@/helpers/servers'
+import { injectDownloadManager } from '@/providers/download-manager'
 
 /**
  * Shared "start with EULA gate" flow used by the servers overview and the
@@ -16,6 +17,16 @@ import { serverEventListener,servers as serversApi } from '@/helpers/servers'
 export function useServerLifecycle() {
 	const { startServer } = useServers()
 	const { handleError } = injectNotificationManager()
+
+	// [SERVER-DOWNLOAD-BRIDGE] Capture the download manager once during Vue
+	// setup context.  See the note in `startModpackServerInstall` for why
+	// this must be done here and not later.
+	let downloadManager: ReturnType<typeof injectDownloadManager> | null = null
+	try {
+		downloadManager = injectDownloadManager()
+	} catch {
+		// Not inside a provider tree — server downloads will not appear in sidebar.
+	}
 
 	const eulaModal = useTemplateRef<ComponentExposed<typeof EulaModal>>('eulaModal')
 	const eulaText = ref('')
@@ -119,7 +130,9 @@ export function useServerLifecycle() {
 	/** Resumes or retries an interrupted/failed modpack download for this server. */
 	async function resumeInstall(server: ServerView) {
 		try {
-			await resumeModpackInstall(server)
+			// [SERVER-DOWNLOAD-BRIDGE] Pass the download manager captured
+			// during setup so the synthetic job appears in sidebar.
+			await resumeModpackInstall(server, downloadManager)
 		} catch (error) {
 			handleError(error)
 		}
