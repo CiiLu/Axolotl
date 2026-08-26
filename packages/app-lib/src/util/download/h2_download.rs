@@ -592,8 +592,9 @@ pub(crate) async fn download_asset_batch_via_h2<F>(
     on_completed: F,
 ) -> Vec<H2BatchAsset>
 where
-    F: FnMut(H2BatchAsset) -> Pin<Box<dyn Future<Output = ()> + Send>>
+    F: Fn(H2BatchAsset) -> Pin<Box<dyn Future<Output = ()> + Send>>
         + Send
+        + Sync
         + 'static,
 {
     if apply_native_policy
@@ -644,7 +645,7 @@ where
         );
     }
 
-    let callback = Arc::new(tokio::sync::Mutex::new(on_completed));
+    let callback = Arc::new(on_completed);
     for pass in 0..ASSET_BATCH_RETRY_PASSES {
         if items.is_empty() {
             break;
@@ -670,7 +671,6 @@ where
                     )
                     .await;
                     if result.is_ok() {
-                        let mut callback = callback.lock().await;
                         callback(item.clone()).await;
                     }
                     (item, result)
@@ -783,10 +783,15 @@ async fn download_asset_item(
         fetch::finalize_download(&part_path, &item.destination).await?;
 
         if let Some(legacy) = &item.legacy_destination {
-            if let Some(parent) = legacy.parent() {
-                crate::util::io::create_dir_all(parent).await?;
+            if let Some(state) = crate::State::get_if_initialized() {
+                fetch::copy(&item.destination, legacy, &state.io_semaphore)
+                    .await?;
+            } else {
+                if let Some(parent) = legacy.parent() {
+                    crate::util::io::create_dir_all(parent).await?;
+                }
+                tokio::fs::copy(&item.destination, legacy).await?;
             }
-            tokio::fs::copy(&item.destination, legacy).await?;
         }
         Ok(())
     }
