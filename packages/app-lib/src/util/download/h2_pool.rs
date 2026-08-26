@@ -242,24 +242,26 @@ async fn establish(
         )
     })?;
 
-    let (sender, mut connection) = h2::client::handshake(Box::pin(tls))
-        .await
-        .map_err(|error| {
-        H2ConnectError::new(
-            H2ConnectFailureKind::Protocol,
-            format!("HTTP/2 handshake with {authority} failed: {error}"),
-        )
-    })?;
+    let mut builder = h2::client::Builder::new();
+    builder
+        .initial_window_size(1024 * 1024)
+        .initial_connection_window_size(64 * 1024 * 1024);
+    let (sender, mut connection) =
+        builder.handshake(Box::pin(tls)).await.map_err(|error| {
+            H2ConnectError::new(
+                H2ConnectFailureKind::Protocol,
+                format!("HTTP/2 handshake with {authority} failed: {error}"),
+            )
+        })?;
 
     // Tune flow-control windows for high-stream multiplexing (e.g. hundreds
     // of concurrent asset downloads over one connection). With the default
     // 64 KiB connection window, concurrent streams would stall waiting for
     // connection-level window updates; a larger per-stream window also lets
     // the peer send a whole small file without round trips.
-    // `set_target_window_size` returns `()`, while `set_initial_window_size`
-    // returns a `Result`, so only the latter needs its error captured.
+    // Keep the adaptive connection target aligned with the initial connection
+    // window configured before the handshake.
     connection.set_target_window_size(64 * 1024 * 1024);
-    let _ = connection.set_initial_window_size(1024 * 1024);
 
     let shared = Arc::new(SharedH2Connection::new(sender));
 

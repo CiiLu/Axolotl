@@ -10,6 +10,7 @@ use std::sync::atomic::{AtomicU8, Ordering};
 
 pub mod h2_download;
 pub mod h2_pool;
+pub(crate) mod h2_receive;
 pub mod legacy;
 pub mod log;
 pub(crate) mod native;

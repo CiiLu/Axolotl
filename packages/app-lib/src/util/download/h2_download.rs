@@ -18,11 +18,8 @@ use std::path::Path;
 use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 use url::Url;
-
-const STREAM_RECV_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Client-side concurrency target for the batch asset downloader. All
 /// concurrent streams are multiplexed over one shared HTTP/2 connection per
@@ -118,7 +115,7 @@ pub(crate) async fn try_download_via_h2(
     let integrity = request.integrity.clone();
     let expected_size = integrity.size;
 
-    fetch::record_install_download_started(request, route, 0, 1).await;
+    fetch::record_install_download_started(request, route, 1, 1).await;
 
     // When the size is known (Modrinth metadata provides it) skip the probe
     // entirely: small files fetch the body directly, large files split into
@@ -342,9 +339,16 @@ async fn open_stream(
 }
 
 async fn drain_body(stream: &mut h2::RecvStream) {
-    while let Ok(Some(Ok(_))) =
-        tokio::time::timeout(STREAM_RECV_TIMEOUT, stream.data()).await
-    {}
+    loop {
+        let chunk =
+            match super::h2_receive::receive_chunk(stream, "probe").await {
+                Ok(Some(chunk)) => chunk,
+                Ok(None) | Err(_) => break,
+            };
+        if super::h2_receive::release_capacity(stream, chunk.len()).is_err() {
+            break;
+        }
+    }
 }
 
 /// Downloads a single-stream body to `part_path`, hashing as it streams,
@@ -376,29 +380,24 @@ async fn single_stream(
     let mut hashers = fetch::IntegrityHashers::new_integrity_hashers(integrity);
     let mut file = tokio::fs::File::create(part_path).await?;
     let mut downloaded = 0_u64;
+    let activity = super::h2_receive::H2TransferActivity::begin();
+    let mut progress_gate = super::h2_receive::H2ProgressGate::new(total_size);
     let mut slow_policy =
         super::native_slow::NativeSlowPolicy::new(0, policy.expected_speed);
     loop {
-        let chunk = tokio::time::timeout(STREAM_RECV_TIMEOUT, stream.data())
-            .await
-            .map_err(|_| {
-                crate::ErrorKind::NetworkError(
-                    "HTTP/2 stream receive timed out".into(),
-                )
-            })?
-            .transpose()
-            .map_err(|error| {
-                crate::ErrorKind::NetworkError(format!(
-                    "HTTP/2 stream error: {error}"
-                ))
-            })?;
+        let chunk =
+            super::h2_receive::receive_chunk(&mut stream, "file").await?;
         let Some(chunk) = chunk else {
             break;
         };
         file.write_all(&chunk).await?;
         hashers.update(&chunk);
         downloaded += chunk.len() as u64;
-        record_install_progress(request, downloaded, total_size).await;
+        activity.record_bytes(chunk.len());
+        super::h2_receive::release_capacity(&mut stream, chunk.len())?;
+        if progress_gate.should_report(downloaded, total_size) {
+            record_install_progress(request, downloaded, total_size).await;
+        }
         if policy.abort_if_slow
             && matches!(
 				slow_policy.observe(
@@ -433,7 +432,7 @@ async fn single_stream(
         url: uri.to_string(),
         source: route.source,
         size: downloaded,
-        attempts: 0,
+        attempts: 1,
         fallback_count: 0,
     })
 }
@@ -696,27 +695,18 @@ async fn download_asset_item(
     let result: crate::Result<()> = async {
         let mut file = tokio::fs::File::create(&part_path).await?;
         let mut downloaded = 0_u64;
+        let activity = super::h2_receive::H2TransferActivity::begin();
         loop {
             let chunk =
-                tokio::time::timeout(STREAM_RECV_TIMEOUT, stream.data())
-                    .await
-                    .map_err(|_| {
-                        crate::ErrorKind::NetworkError(
-                            "HTTP/2 asset stream receive timed out".into(),
-                        )
-                    })?
-                    .transpose()
-                    .map_err(|error| {
-                        crate::ErrorKind::NetworkError(format!(
-                            "HTTP/2 asset stream error: {error}"
-                        ))
-                    })?;
+                super::h2_receive::receive_chunk(&mut stream, "asset").await?;
             let Some(chunk) = chunk else {
                 break;
             };
             file.write_all(&chunk).await?;
             hashers.update(&chunk);
             downloaded += chunk.len() as u64;
+            activity.record_bytes(chunk.len());
+            super::h2_receive::release_capacity(&mut stream, chunk.len())?;
         }
         file.flush().await?;
         drop(file);
