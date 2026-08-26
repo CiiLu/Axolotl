@@ -1167,7 +1167,7 @@
     "defaultMessage": "Choose folder"
   },
   "creation-flow.modal.custom-setup.game-dir.isolated": {
-    "defaultMessage": "Custom · Version isolated (.minecraft/versions/<instance name>/)"
+    "defaultMessage": "Custom · Version isolated (.minecraft/versions/instance name/)"
   },
   "creation-flow.modal.custom-setup.game-dir.label": {
     "defaultMessage": "Game directory"
