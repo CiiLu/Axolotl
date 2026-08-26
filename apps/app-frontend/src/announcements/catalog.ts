@@ -57,6 +57,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Added support for custom instance icons — when an icon file (icon.png/jpg/jpeg/webp) exists in the instance folder, it is now applied as the instance icon.',
 					'zh-CN': '当实例文件夹下有icon.png/jpg/jpeg/webp时 优先应用此图标。',
 				},
+				{
+					'en-US':
+						'When a search finds matches by automatically correcting the query, a hint now appears above the results — click the suggested search term to search with it directly.',
+					'zh-CN':
+						'当搜索未命中时，启动器会自动改写查询词重新搜索，并在结果上方显示提示；点击提示中的建议词可直接用它重新搜索。',
+				},
 			],
 			changed: [
 				{
@@ -68,6 +74,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN': '自定义背景下实例内容页面悬停折叠项的ui透明度现在被调高。',
 					'en-US':
 						'Custom background now has higher opacity for hoverable folded items on instance content page.',
+				},
+				{
+					'en-US':
+						'Improved fuzzy search matching for mods and other content: queries typed without spaces or with hyphens (e.g. sodiumextra, example-mod) now find the right results on both Modrinth and CurseForge.',
+					'zh-CN':
+						'改进内容发现页的模糊搜索：无空格或带连字符的搜索词（如 sodiumextra、example-mod）现在能在 Modrinth 和 CurseForge 上找到正确结果。',
 				},
 			],
 			fixed: [

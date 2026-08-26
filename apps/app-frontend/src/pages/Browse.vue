@@ -15,6 +15,7 @@ import {
 	ListIcon,
 	ModrinthIcon,
 	PlusIcon,
+	SparklesIcon,
 	SpinnerIcon,
 } from '@modrinth/assets'
 import type {
@@ -70,6 +71,11 @@ import {
 import { mergeProviderResults } from '@/helpers/browse-merge'
 import { createBrowseProjectTabs, getBrowseProjectTabOptions } from '@/helpers/browse-project-tabs'
 import {
+	curseForgeQueryVariants,
+	expandSearchQuery,
+	normalizeSearchText,
+} from '@/helpers/search-query'
+import {
 	completeBrowseReturnNavigation,
 	consumeBrowseReturnSnapshot,
 	isBrowseReturnSourcePath,
@@ -89,6 +95,7 @@ import {
 	type ChineseSearchResolution,
 	type ChineseSearchTranslation,
 	containsChineseSearchText,
+	expandContentSearchQuery,
 	resolveChineseContentSearch,
 	translateSearchHitTitles,
 } from '@/helpers/content-search'
@@ -786,6 +793,14 @@ const messages = defineMessages({
 	mapsNoInstallableFile: {
 		id: 'app.browse.maps-no-installable-file',
 		defaultMessage: 'The selected CurseForge map does not have an installable file.',
+	},
+	fuzzySearchPrefix: {
+		id: 'app.browse.fuzzy-search.prefix',
+		defaultMessage: 'No results found for “{original}”. Showing results for',
+	},
+	fuzzySearchSuffix: {
+		id: 'app.browse.fuzzy-search.suffix',
+		defaultMessage: 'instead',
 	},
 	environmentProvidedByServer: {
 		id: 'search.filter.locked.server-environment.title',
@@ -1922,6 +1937,28 @@ function replaceSearchQuery(requestParams: string, query: string) {
 	return result ? `?${result}` : ''
 }
 
+/**
+ * Upper bound on sequential fallback search attempts when the primary query
+ * yields no hits. Each attempt queries the providers in parallel.
+ */
+const MAX_SEARCH_VARIANT_ATTEMPTS = 3
+
+/**
+ * A dictionary-split replacement result must be clearly better than the
+ * primary compact-query match before it may replace the primary hits.
+ */
+const MIN_VARIANT_REPLACEMENT_HITS = 5
+
+interface FuzzySearchNotice {
+	/** The query exactly as the user typed it. */
+	original: string
+	/** The rewritten query that actually produced the shown results. */
+	used: string
+}
+
+let pendingFuzzyNotice: FuzzySearchNotice | null = null
+const searchNotice = ref<FuzzySearchNotice | null>(null)
+
 function findChineseTranslation(
 	resolution: ChineseSearchResolution | null,
 	provider: 'modrinth' | 'curseforge',
@@ -2046,6 +2083,7 @@ function rankChineseProviderHits(hits: ChineseSearchHit[], sort: string | null) 
 
 async function search(requestParams: string, signal: AbortSignal) {
 	debugLog('searching v3', requestParams)
+	pendingFuzzyNotice = null
 	const isServer = projectType.value === 'server'
 	if (isWorldMapBrowse.value && !curseForgeCapability.value.configured) {
 		return {
@@ -2073,7 +2111,7 @@ async function search(requestParams: string, signal: AbortSignal) {
 				per_page: limit,
 			}
 		}
-		const projects = await searchMcArchiveMods(rawQuery, gameVersion).catch((error) => {
+		const projects = await searchMcArchiveMods(normalizeSearchText(rawQuery), gameVersion).catch((error) => {
 			debugLog('mcarchive search failed', error)
 			throw error
 		})
@@ -2095,7 +2133,10 @@ async function search(requestParams: string, signal: AbortSignal) {
 		if (projectType.value !== 'mod' || !planetMinecraftAvailable.value) {
 			return { projectHits: [], serverHits: [], total_hits: 0, per_page: limit }
 		}
-		const projects = await searchPlanetMinecraftProjects(rawQuery, gameVersion).catch((error) => {
+		const projects = await searchPlanetMinecraftProjects(
+			normalizeSearchText(rawQuery),
+			gameVersion,
+		).catch((error) => {
 			debugLog('planet minecraft search failed', error)
 			throw error
 		})
@@ -2191,90 +2232,237 @@ async function search(requestParams: string, signal: AbortSignal) {
 	}
 	signal.addEventListener('abort', cancelProviderRequests, { once: true })
 
-	const modrinthRequest = includeModrinth
-		? queryClient.fetchQuery({
-				queryKey: ['search', 'v3', modrinthRequestParams],
-				queryFn: () =>
-					trackProviderRequest(
-						modrinthRequestId,
-						get_search_results_v3(
-							modrinthRequestParams,
-							'must_revalidate',
-							modrinthRequestId,
-						) as Promise<{
-							result: Labrinth.Search.v3.SearchResults & {
-								hits: (Labrinth.Search.v3.ResultSearchProject & {
-									installed?: boolean
-								})[]
-							}
-						} | null>,
-					),
-				staleTime: 30_000,
-			})
-		: Promise.resolve(null)
-	if (includeCurseForge) {
-		debugLog('curseforge filters', {
-			filters,
-			categoryValues,
-			categoryIds: curseForgeCategoryIds,
-			gameVersion,
-			loader,
-		})
+	interface ProviderAttemptStep {
+		modrinthQuery: string | null
+		curseforgeFilter: string | null
 	}
-	const curseForgeRequest = includeCurseForge
-		? trackProviderRequest(
-				curseForgeRequestId,
-				searchCurseForgeProjects(
-					{
-						classId: curseForgeClassIds[projectType.value]!,
-						categoryIds: curseForgeCategoryIds,
-						searchFilter: (chineseResolution?.curseforgeQuery ?? rawQuery) || undefined,
-						gameVersion: gameVersion || undefined,
-						modLoaderType: loader ? curseForgeLoaderTypes[loader] : undefined,
-						sortField: getCurseForgeSortField(params.get('index')),
-						sortOrder: 'desc',
-						index: offset,
-						pageSize: limit,
-					},
-					curseForgeRequestId,
-				),
-			)
-		: Promise.resolve(null)
-	const directModrinthRequest =
-		includeModrinth &&
-		!isServer &&
-		offset === 0 &&
-		(chineseResolution?.modrinthSlugs.length ?? 0) > 0
-			? get_project_v3_many(chineseResolution!.modrinthSlugs, 'must_revalidate')
-			: Promise.resolve([])
-	const [modrinthResult, curseForgeResult, directModrinthResult] = await Promise.race([
-		Promise.allSettled([modrinthRequest, curseForgeRequest, directModrinthRequest]),
-		providerSearchCancelled,
-	]).finally(() => signal.removeEventListener('abort', cancelProviderRequests))
-	const rawResults = modrinthResult.status === 'fulfilled' ? modrinthResult.value : null
-	const rawCurseForge = curseForgeResult.status === 'fulfilled' ? curseForgeResult.value : null
-	const rawDirectModrinth =
-		directModrinthResult.status === 'fulfilled'
-			? (directModrinthResult.value as DirectModrinthProject[])
-			: []
 
-	if (modrinthResult.status === 'rejected') {
-		debugLog('modrinth search failed', modrinthResult.reason)
+	const queryExpansion = expandSearchQuery(rawQuery)
+	const isChineseQuery = chineseResolution?.isChinese ?? false
+	const curseForgeQueryBase = chineseResolution?.curseforgeQuery ?? rawQuery
+	const curseForgeQueryVariantsList = queryExpansion
+		? curseForgeQueryVariants(curseForgeQueryBase)
+		: []
+	const primaryCurseForgeFilter =
+		queryExpansion ? (curseForgeQueryVariantsList[0] ?? null) : null
+
+	const runProviderAttempt = async (
+		attemptParams: {
+			modrinthParams: string | null
+			curseforgeFilter: string | null
+		},
+		includeDirectModrinth: boolean,
+	) => {
+		const modrinthRequest =
+			includeModrinth && attemptParams.modrinthParams !== null
+				? queryClient.fetchQuery({
+						queryKey: ['search', 'v3', attemptParams.modrinthParams],
+						queryFn: () =>
+							trackProviderRequest(
+								modrinthRequestId,
+								get_search_results_v3(
+									attemptParams.modrinthParams,
+									'must_revalidate',
+									modrinthRequestId,
+								) as Promise<{
+									result: Labrinth.Search.v3.SearchResults & {
+										hits: (Labrinth.Search.v3.ResultSearchProject & {
+											installed?: boolean
+										})[]
+									}
+								} | null>,
+							),
+						staleTime: 30_000,
+					})
+				: Promise.resolve(null)
+		const curseForgeRequest =
+			includeCurseForge && attemptParams.curseforgeFilter !== null
+				? trackProviderRequest(
+						curseForgeRequestId,
+						searchCurseForgeProjects(
+							{
+								classId: curseForgeClassIds[projectType.value]!,
+								categoryIds: curseForgeCategoryIds,
+								searchFilter: attemptParams.curseforgeFilter || undefined,
+								gameVersion: gameVersion || undefined,
+								modLoaderType: loader ? curseForgeLoaderTypes[loader] : undefined,
+								sortField: getCurseForgeSortField(params.get('index')),
+								sortOrder: 'desc',
+								index: offset,
+								pageSize: limit,
+							},
+							curseForgeRequestId,
+						),
+					)
+				: Promise.resolve(null)
+		const directModrinthRequest =
+			includeModrinth &&
+			includeDirectModrinth &&
+			!isServer &&
+			offset === 0 &&
+			(chineseResolution?.modrinthSlugs.length ?? 0) > 0
+				? get_project_v3_many(chineseResolution!.modrinthSlugs, 'must_revalidate')
+				: Promise.resolve([])
+		const [modrinthResult, curseForgeResult, directModrinthResult] = await Promise.allSettled([
+			modrinthRequest,
+			curseForgeRequest,
+			directModrinthRequest,
+		])
+		return {
+			rawResults: modrinthResult.status === 'fulfilled' ? modrinthResult.value : null,
+			rawCurseForge: curseForgeResult.status === 'fulfilled' ? curseForgeResult.value : null,
+			rawDirectModrinth:
+				directModrinthResult.status === 'fulfilled'
+					? (directModrinthResult.value as DirectModrinthProject[])
+					: [],
+			modrinthError: modrinthResult.status === 'rejected' ? modrinthResult.reason : null,
+			curseForgeError: curseForgeResult.status === 'rejected' ? curseForgeResult.reason : null,
+			directModrinthError:
+				directModrinthResult.status === 'rejected'
+					? directModrinthResult.reason
+					: null,
+		}
 	}
-	if (curseForgeResult.status === 'rejected') {
-		debugLog('curseforge search failed', curseForgeResult.reason)
+	type ProviderAttemptResults = Awaited<ReturnType<typeof runProviderAttempt>>
+
+	const attemptHasHits = (results: ProviderAttemptResults) =>
+		(results.rawResults?.result.total_hits ?? 0) > 0 ||
+		(results.rawCurseForge?.total_hits ?? 0) > 0 ||
+		results.rawDirectModrinth.length > 0
+
+	let cachedCompactSplit: string | null | undefined
+	const resolveCompactSplit = async () => {
+		if (cachedCompactSplit === undefined) {
+			cachedCompactSplit = await expandContentSearchQuery(rawQuery)
+				.then((expansion) => expansion.suggestedSplit ?? null)
+				.catch((error) => {
+					debugLog('search query expansion failed', error)
+					return null
+				})
+		}
+		return cachedCompactSplit
 	}
-	if (directModrinthResult.status === 'rejected') {
-		debugLog('direct modrinth chinese candidates failed', directModrinthResult.reason)
+
+	const buildFallbackSteps = async (): Promise<ProviderAttemptStep[]> => {
+		const steps: ProviderAttemptStep[] = []
+		if (!queryExpansion) return steps
+		const mrVariants = isChineseQuery ? [] : queryExpansion.modrinthVariants.slice(1)
+		const cfVariants = queryExpansion.curseforgeVariants.slice(1)
+		if (queryExpansion.compact && !isChineseQuery && includeModrinth) {
+			const dictSplit = await resolveCompactSplit()
+			if (dictSplit && !queryExpansion.modrinthVariants.includes(dictSplit)) {
+				steps.push({
+					modrinthQuery: dictSplit,
+					curseforgeFilter: curseForgeQueryVariants(dictSplit)[0] ?? null,
+				})
+			}
+		}
+		const maxVariants = Math.max(mrVariants.length, cfVariants.length)
+		for (let index = 0; index < maxVariants && steps.length < MAX_SEARCH_VARIANT_ATTEMPTS; index += 1) {
+			const modrinthQuery = mrVariants[index] ?? null
+			const curseforgeFilter = cfVariants[index] ?? null
+			if (modrinthQuery !== null || curseforgeFilter !== null) {
+				steps.push({ modrinthQuery, curseforgeFilter })
+			}
+		}
+		return steps
+	}
+
+	const shouldImproveCompactMatch = (results: ProviderAttemptResults) => {
+		if (!queryExpansion || !queryExpansion.compact || isChineseQuery) return false
+		if (!includeModrinth || (results.rawResults?.result.hits.length ?? 0) === 0) return false
+		const total = results.rawResults?.result.total_hits ?? 0
+		return total >= 1 && total <= 2
+	}
+
+	const performSearch = async (): Promise<ProviderAttemptResults> => {
+		if (includeCurseForge) {
+			debugLog('curseforge filters', {
+				filters,
+				categoryValues,
+				categoryIds: curseForgeCategoryIds,
+				gameVersion,
+				loader,
+				searchFilter: primaryCurseForgeFilter,
+			})
+		}
+		const attemptParams = (step: ProviderAttemptStep) => ({
+			modrinthParams:
+				step.modrinthQuery === null
+					? null
+					: replaceSearchQuery(modrinthRequestParams, step.modrinthQuery),
+			curseforgeFilter: step.curseforgeFilter,
+		})
+		const primaryResults = await runProviderAttempt(
+			{
+				modrinthParams: includeModrinth ? modrinthRequestParams : null,
+				curseforgeFilter: primaryCurseForgeFilter,
+			},
+			true,
+		)
+		let results = primaryResults
+		if (!attemptHasHits(primaryResults)) {
+			const fallbackAttempts = await buildFallbackSteps()
+			for (const step of fallbackAttempts) {
+				signal.throwIfAborted()
+				results = await runProviderAttempt(attemptParams(step), false)
+				if (attemptHasHits(results)) {
+					debugLog('search fallback matched query variant', step)
+					pendingFuzzyNotice = {
+						original: rawQuery,
+						used:
+							step.modrinthQuery ??
+							(step.curseforgeFilter ? step.curseforgeFilter.replaceAll('-', ' ') : ''),
+					}
+					break
+				}
+			}
+		} else if (shouldImproveCompactMatch(primaryResults)) {
+			// Server fuzzy matching can return a single poor hit for compact
+			// queries (e.g. `irisshaders`); when the dictionary splits the query
+			// into a clearly better result set, prefer the split form.
+			const swapQuery = await resolveCompactSplit()
+			if (swapQuery && !queryExpansion!.modrinthVariants.includes(swapQuery)) {
+				const swapped = await runProviderAttempt(
+					attemptParams({ modrinthQuery: swapQuery, curseforgeFilter: null }),
+					false,
+				)
+				if ((swapped.rawResults?.result.total_hits ?? 0) >= MIN_VARIANT_REPLACEMENT_HITS) {
+					debugLog('search compact query replaced with split form', swapQuery)
+					pendingFuzzyNotice = { original: rawQuery, used: swapQuery }
+					results = {
+						...swapped,
+						rawCurseForge: primaryResults.rawCurseForge,
+						rawDirectModrinth: primaryResults.rawDirectModrinth,
+					}
+				}
+			}
+		}
+		return results
+	}
+
+	const searched = await Promise.race([performSearch(), providerSearchCancelled]).finally(() =>
+		signal.removeEventListener('abort', cancelProviderRequests),
+	)
+	const rawResults = searched.rawResults
+	const rawCurseForge = searched.rawCurseForge
+	const rawDirectModrinth = searched.rawDirectModrinth
+
+	if (searched.modrinthError) {
+		debugLog('modrinth search failed', searched.modrinthError)
+	}
+	if (searched.curseForgeError) {
+		debugLog('curseforge search failed', searched.curseForgeError)
+	}
+	if (searched.directModrinthError) {
+		debugLog('direct modrinth chinese candidates failed', searched.directModrinthError)
 	}
 
 	if (!rawResults && !rawCurseForge && rawDirectModrinth.length === 0) {
 		const error =
-			modrinthResult.status === 'rejected'
-				? modrinthResult.reason
-				: curseForgeResult.status === 'rejected'
-					? curseForgeResult.reason
-					: new Error('No content providers are available')
+			searched.modrinthError ??
+			searched.curseForgeError ??
+			new Error('No content providers are available')
 		throw error
 	}
 
@@ -2416,7 +2604,11 @@ const searchState = useBrowseSearch({
 	tags,
 	providedFilters: combinedProvidedFilters,
 	installContextLoader: computed(() => installContext.value?.loader),
-	search,
+	search: async (requestParams: string, signal: AbortSignal) => {
+		const response = await search(requestParams, signal)
+		searchNotice.value = pendingFuzzyNotice
+		return response
+	},
 	persistentQueryParams: ['i', 'ai', 'shi', 'sid', 'wid', 'from', 'source'],
 	getExtraQueryParams: () => ({
 		sid: serverIdQuery.value || undefined,
@@ -2948,6 +3140,26 @@ provideBrowseManager({
 						<ClipboardCopyIcon /> {{ formatMessage(commonMessages.copyLinkButton) }}
 					</template>
 				</ContextMenu>
+			</template>
+			<template #above-results>
+				<div
+					v-if="searchNotice"
+					class="flex items-center gap-2 px-1 pb-1 text-sm"
+					aria-live="polite"
+				>
+					<SparklesIcon class="size-3.5 shrink-0 text-brand" />
+					<p class="m-0 text-secondary">
+						{{ formatMessage(messages.fuzzySearchPrefix, searchNotice) }}
+						<button
+							type="button"
+							class="font-medium text-contrast underline-offset-2 hover:text-brand hover:underline"
+							@click="searchState.query.value = searchNotice.used"
+						>
+							{{ searchNotice.used }}
+						</button>
+						{{ formatMessage(messages.fuzzySearchSuffix) }}
+					</p>
+				</div>
 			</template>
 		</BrowsePageLayout>
 		<EmptyState

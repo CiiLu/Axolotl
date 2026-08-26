@@ -241,6 +241,8 @@ const selectedDisplayMode = computed(() =>
 		:provided-message="lockedMessages?.providedBy"
 	/>
 
+	<slot name="above-results" />
+
 	<div class="search">
 		<section v-if="ctx.loading.value" class="offline">
 			<component :is="ctx.loadingComponent ?? LoadingIndicator" />

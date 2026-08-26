@@ -98,6 +98,7 @@ fn main() {
                 InlinedPlugin::new()
                     .commands(&[
                         "resolve_chinese_content_search",
+                        "expand_content_search_query",
                         "lookup_chinese_content_names",
                         "lookup_content_wiki_ids",
                         "lookup_content_identities",

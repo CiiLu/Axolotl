@@ -662,6 +662,12 @@
 	"app.browse.maps-unavailable-description": {
 		"message": "请配置 CurseForge API Key 以浏览和安装地图。"
 	},
+	"app.browse.fuzzy-search.prefix": {
+		"message": "未找到「{original}」的结果，已为您显示"
+	},
+	"app.browse.fuzzy-search.suffix": {
+		"message": "的相关结果"
+	},
 	"app.browse.no-compatible-version": {
 		"message": "未找到与所选实例兼容的版本。"
 	},
