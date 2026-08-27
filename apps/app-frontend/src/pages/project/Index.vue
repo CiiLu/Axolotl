@@ -647,13 +647,15 @@ const modpackServerModal = ref()
 
 async function openModpackServerFlow(targetVersion) {
 	if (!data.value) return
+	// The version handed in by the UI can be an incomplete object that is missing
+	// `id`/`loaders`/`game_versions`/`files`. Re-fetch a complete version from the
+	// API so the modpack server flow has the data it needs (otherwise it misdetects
+	// the loader as Vanilla and fails with "No server launcher available").
 	let version = targetVersion
-	if (!version) {
-		version = versions.value[0]
-		if (!version) {
-			const versionId = data.value.versions[0]
-			version = versionId ? await get_version(versionId, 'bypass').catch(() => null) : null
-		}
+	const isComplete = (v) => !!v && Array.isArray(v.game_versions) && Array.isArray(v.files)
+	if (!isComplete(version)) {
+		const versionId = version?.id ?? data.value.versions?.[0]
+		version = versionId ? await get_version(versionId, 'bypass').catch(() => null) : null
 	}
 	if (!version) return
 	modpackServerModal.value?.show(data.value, version)
