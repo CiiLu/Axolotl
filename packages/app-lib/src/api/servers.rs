@@ -3,6 +3,7 @@
 //! and is described by an `axolotl-server.json` manifest.
 
 mod files;
+mod forge;
 mod lifecycle;
 mod logs;
 mod manage;
@@ -11,6 +12,7 @@ mod modpack;
 mod ports;
 
 pub use self::files::{download_file, read_file, write_file};
+pub use self::forge::install_forge;
 pub use self::lifecycle::{kill, send_command, start, stop};
 pub use self::logs::{clear_log, get_log_buffer};
 pub use self::manage::{create, delete, get, list, set_icon, update_settings};

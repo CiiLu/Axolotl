@@ -21,8 +21,8 @@ import QqIcon from '@/assets/external/qq.svg?component'
 import { AxolotlBrandConfig } from '@/config'
 import { contributors, teamMembers } from '@/data/about'
 
-import QqChannelIcon from './QqChannelIcon.vue'
 import AboutScene from '../AboutScene.vue'
+import QqChannelIcon from './QqChannelIcon.vue'
 
 const { formatMessage } = useVIntl()
 const version = await getVersion()

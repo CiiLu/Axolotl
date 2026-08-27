@@ -299,8 +299,13 @@ pub async fn install_job_dismiss(job_id: Uuid) -> Result<()> {
 }
 
 #[tauri::command]
-pub async fn install_job_support_details(job_id: Uuid) -> Result<String> {
-    Ok(theseus::install::job_support_details(job_id).await?)
+pub async fn install_job_support_details(job_id: String) -> Result<String> {
+    let Ok(uuid) = Uuid::parse_str(&job_id) else {
+        // Synthetic, frontend-tracked jobs (e.g. server downloads) use non-UUID
+        // identifiers and do not expose backend diagnostic details.
+        return Ok(String::new());
+    };
+    Ok(theseus::install::job_support_details(uuid).await?)
 }
 
 #[derive(Deserialize, Default)]
@@ -395,6 +400,6 @@ pub async fn download_history_clear() -> Result<u64> {
 }
 
 #[tauri::command]
-pub async fn download_job_support_details(job_id: Uuid) -> Result<String> {
+pub async fn download_job_support_details(job_id: String) -> Result<String> {
     install_job_support_details(job_id).await
 }

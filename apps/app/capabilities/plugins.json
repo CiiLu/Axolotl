@@ -50,6 +50,12 @@
 					"url": "https://meta.fabricmc.net/*"
 				},
 				{
+					"url": "https://files.minecraftforge.net/*"
+				},
+				{
+					"url": "https://maven.minecraftforge.net/*"
+				},
+				{
 					"url": "https://api.purpurmc.org/*"
 				},
 				{

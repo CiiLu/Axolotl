@@ -5870,9 +5870,6 @@
   "app.servers.empty.heading": {
     "message": "還沒有伺服器"
   },
-  "app.servers.eula.accept": {
-    "message": "同意並繼續"
-  },
   "app.servers.eula.continue": {
     "message": "繼續"
   },
@@ -6337,6 +6334,18 @@
   },
   "app.servers.wizard.type-title": {
     "message": "伺服器端類型"
+  },
+  "app.servers.type.vanilla": {
+    "message": "原版"
+  },
+  "app.servers.type.fabric": {
+    "message": "Fabric"
+  },
+  "app.servers.type.paper": {
+    "message": "Paper"
+  },
+  "app.servers.type.forge": {
+    "message": "Forge"
   },
   "app.servers.modpack.downloading": {
     "message": "正在下載整合包檔案..."
