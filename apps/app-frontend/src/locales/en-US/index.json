@@ -5915,6 +5915,9 @@
   "app.project.versions.already-installed": {
     "message": "Already installed"
   },
+  "app.project.versions.start-server": {
+    "message": "Create server"
+  },
   "app.restarting": {
     "message": "Restarting..."
   },

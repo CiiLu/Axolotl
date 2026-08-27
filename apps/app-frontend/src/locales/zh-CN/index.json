@@ -5969,6 +5969,9 @@
   "app.project.versions.already-installed": {
     "message": "已安装"
   },
+  "app.project.versions.start-server": {
+    "message": "开服"
+  },
   "app.restarting": {
     "message": "正在重启……"
   },
