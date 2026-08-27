@@ -5647,6 +5647,26 @@ async fn download_to_path_inner(
 
     prepare_native_download_routes(&request, &mut routes, semaphore).await;
 
+    if let Some(index) = routes.iter().position(|route| {
+        crate::util::download::modrinth_redirect::tianpao_redirect_target_for_route(&route.url)
+            .is_some()
+    }) {
+        let mut route = routes[index].clone();
+        route.url = crate::util::download::modrinth_redirect::tianpao_redirect_target_for_route(
+            &route.url,
+        )
+        .expect("redirect capability was just checked");
+        route.source = DownloadRouteSource::Official;
+        route.is_mirror = false;
+        route.allow_sensitive_headers = true;
+        routes.remove(index);
+        routes.insert(0, route);
+        tracing::debug!(
+            url = %sanitize_url_for_log(&routes[0].url),
+            "Skipping known Tianpao redirect route for shared HTTP/2"
+        );
+    }
+
     // Prefer one stream on a healthy shared HTTP/2 connection when the file
     // size and transport reputation justify it. Larger or slow H2 transfers
     // fall through to independent HTTP/1.1 range connections.
@@ -5732,6 +5752,15 @@ async fn download_to_path_inner(
                 failure,
                 preserve_partial,
             } => {
+                if failure == crate::util::download::h2_download::H2DownloadFailure::TianpaoRedirect {
+                    crate::util::download::modrinth_redirect::remember_tianpao_redirect(
+                        &h2_route.url,
+                    );
+                    tracing::debug!(
+                        url = %sanitize_url_for_log(&h2_route.url),
+                        "Recorded session-only Tianpao Modrinth redirect capability"
+                    );
+                }
                 if failure.integrity_failure() {
                     if !is_official_route(&h2_route) {
                         h2_failed_nonofficial = Some(h2_route.url.clone());

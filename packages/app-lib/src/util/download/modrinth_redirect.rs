@@ -1,5 +1,8 @@
 //! Modrinth CDN redirect normalization for native download requests.
 
+use parking_lot::Mutex;
+use std::collections::HashSet;
+use std::sync::LazyLock;
 use url::Url;
 
 use crate::util::fetch::{
@@ -81,4 +84,70 @@ pub(crate) fn tianpao_redirect_target(
     let mut target = redirect.clone();
     target.set_host(Some(MODRINTH_CDN_LEGACY_HOST)).ok()?;
     Some(target)
+}
+
+static TIANPAO_REDIRECT_ROUTES: LazyLock<Mutex<HashSet<String>>> =
+    LazyLock::new(|| Mutex::new(HashSet::new()));
+
+/// Records a process-local redirect capability. It is intentionally not
+/// persisted, so restarting the application retries Tianpao normally.
+pub(crate) fn remember_tianpao_redirect(route: &str) {
+    TIANPAO_REDIRECT_ROUTES.lock().insert(route.to_string());
+}
+
+pub(crate) fn tianpao_redirect_target_for_route(route: &str) -> Option<String> {
+    if !TIANPAO_REDIRECT_ROUTES.lock().contains(route) {
+        return None;
+    }
+    let mut target = Url::parse(route).ok()?;
+    if target.host_str() != Some(TIANPAO_HOST)
+        || !target.path().starts_with("/data/")
+    {
+        return None;
+    }
+    target.set_host(Some(MODRINTH_CDN_LEGACY_HOST)).ok()?;
+    Some(target.into())
+}
+
+pub(crate) fn is_tianpao_official_redirect(
+    current: &Url,
+    location: Option<&str>,
+) -> bool {
+    let Some(location) = location else {
+        return false;
+    };
+    current
+        .join(location)
+        .ok()
+        .and_then(|redirect| tianpao_redirect_target(current, &redirect))
+        .is_some()
+}
+
+#[cfg(test)]
+pub(crate) fn clear_tianpao_redirect_routes() {
+    TIANPAO_REDIRECT_ROUTES.lock().clear();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tianpao_redirect_capability_is_session_only() {
+        let route =
+            "https://mod.tianpao.top/data/project/version/file.jar?download=1";
+        clear_tianpao_redirect_routes();
+        assert!(tianpao_redirect_target_for_route(route).is_none());
+
+        remember_tianpao_redirect(route);
+        assert_eq!(
+            tianpao_redirect_target_for_route(route).as_deref(),
+            Some(
+                "https://cdn.modrinth.com/data/project/version/file.jar?download=1"
+            ),
+        );
+
+        clear_tianpao_redirect_routes();
+        assert!(tianpao_redirect_target_for_route(route).is_none());
+    }
 }

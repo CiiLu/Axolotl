@@ -50,6 +50,7 @@ pub(crate) enum H2DownloadFailure {
     Tls,
     Protocol,
     Http,
+    TianpaoRedirect,
     Integrity,
     Content,
     Io,
@@ -64,6 +65,9 @@ impl H2DownloadFailure {
             Self::Tls => "HTTP/2 TLS connection failed",
             Self::Protocol => "HTTP/2 protocol failed",
             Self::Http => "HTTP/2 response was unsuccessful",
+            Self::TianpaoRedirect => {
+                "Tianpao redirected Modrinth content to the official CDN"
+            }
             Self::Integrity => "HTTP/2 integrity validation failed",
             Self::Content => "HTTP/2 content validation failed",
             Self::Io => "HTTP/2 local I/O failed",
@@ -292,6 +296,11 @@ fn classify_download_error(error: &crate::Error) -> H2DownloadFailure {
             H2DownloadFailure::Io
         }
         crate::ErrorKind::JSONError(_) => H2DownloadFailure::Content,
+        crate::ErrorKind::OtherError(message)
+            if message.contains("Tianpao redirected Modrinth content") =>
+        {
+            H2DownloadFailure::TianpaoRedirect
+        }
         crate::ErrorKind::NetworkError(message)
             if message.contains("below expectation") =>
         {
@@ -425,6 +434,23 @@ async fn single_stream(
 
     let (response, mut stream) = open_stream(connection, uri, headers).await?;
     if !response.status().is_success() {
+        let current_url = Url::parse(uri.to_string().as_str()).ok();
+        if response.status().is_redirection()
+            && current_url.as_ref().is_some_and(|current_url| {
+                crate::util::download::modrinth_redirect::is_tianpao_official_redirect(
+                    current_url,
+                    response
+                        .headers()
+                        .get(http::header::LOCATION)
+                        .and_then(|location| location.to_str().ok()),
+                )
+            })
+        {
+            return Err(crate::ErrorKind::OtherError(
+                "Tianpao redirected Modrinth content to the official CDN".to_string(),
+            )
+            .into());
+        }
         return Err(crate::ErrorKind::HttpError {
             status: response.status().as_u16(),
             method: "GET".to_string(),
