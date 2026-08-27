@@ -7072,6 +7072,8 @@ mod tests {
         LazyLock::new(|| AsyncMutex::new(()));
     static AUTO_SOURCE_TEST_LOCK: LazyLock<std::sync::Mutex<()>> =
         LazyLock::new(|| std::sync::Mutex::new(()));
+    static H2_FALLBACK_TEST_LOCK: LazyLock<std::sync::Mutex<()>> =
+        LazyLock::new(|| std::sync::Mutex::new(()));
 
     async fn spawn_range_server(
         data: Arc<Vec<u8>>,
@@ -8104,6 +8106,7 @@ mod tests {
 
     #[test]
     fn h2_fallback_is_limited_to_one_second() {
+        let _guard = H2_FALLBACK_TEST_LOCK.lock();
         let authority = "h2-cooldown.example:443";
         record_authority_h2_failure(authority);
         assert!(authority_uses_http1_fallback(authority));
@@ -9460,6 +9463,7 @@ mod tests {
 
     #[test]
     fn h2_fallback_authority_marking() {
+        let _guard = H2_FALLBACK_TEST_LOCK.lock();
         record_authority_h2_failure("example.com:443");
         assert!(authority_uses_http1_fallback("example.com:443"));
         assert!(!authority_uses_http1_fallback("other.com:443"));

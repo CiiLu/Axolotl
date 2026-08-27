@@ -4,13 +4,34 @@ use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, LazyLock};
 
-#[derive(Clone, Default)]
+const DEFAULT_HOST_OVERRIDES: [(&str, &str); 1] =
+    [("mod.tianpao.top", "www.shopify.com")];
+
+#[derive(Clone)]
 pub struct DownloadDnsResolver {
     reliability: Arc<Mutex<HashMap<IpAddr, f64>>>,
     last_resolved: Arc<Mutex<HashMap<String, Vec<IpAddr>>>>,
     host_overrides: Arc<Mutex<HashMap<String, String>>>,
     #[cfg(test)]
     test_addresses: Arc<Mutex<HashMap<String, Vec<SocketAddr>>>>,
+}
+
+impl Default for DownloadDnsResolver {
+    fn default() -> Self {
+        let host_overrides = DEFAULT_HOST_OVERRIDES
+            .into_iter()
+            .map(|(host, resolver_host)| {
+                (host.to_string(), resolver_host.to_string())
+            })
+            .collect();
+        Self {
+            reliability: Arc::default(),
+            last_resolved: Arc::default(),
+            host_overrides: Arc::new(Mutex::new(host_overrides)),
+            #[cfg(test)]
+            test_addresses: Arc::default(),
+        }
+    }
 }
 
 static PRE_RESOLVE_LOCK: LazyLock<tokio::sync::Mutex<()>> =
@@ -381,5 +402,15 @@ mod tests {
         assert!(resolver.resolved_addresses("request-host.test").is_empty());
         assert!(normalize_host("https://resolver-target.test").is_err());
         assert!(normalize_host("resolver-target.test:443").is_err());
+    }
+
+    #[test]
+    fn tianpao_default_uses_the_shopify_resolver_host() {
+        assert_eq!(
+            DownloadDnsResolver::default()
+                .host_override("mod.tianpao.top")
+                .as_deref(),
+            Some("www.shopify.com"),
+        );
     }
 }

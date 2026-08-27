@@ -54,6 +54,7 @@ impl H2ConnectError {
 
 /// A live shared HTTP/2 connection to one authority.
 pub struct SharedH2Connection {
+    authority: String,
     sender: Mutex<SendRequest<Bytes>>,
     // One permit represents the shared TCP/TLS connection, not every H2
     // stream opened through it.
@@ -64,10 +65,12 @@ pub struct SharedH2Connection {
 
 impl SharedH2Connection {
     fn new(
+        authority: String,
         sender: SendRequest<Bytes>,
         physical_budget: Option<super::native_budget::NativeBudgetPermit>,
     ) -> Self {
         Self {
+            authority,
             sender: Mutex::new(sender),
             physical_budget: Mutex::new(physical_budget),
             dead: Arc::new(std::sync::atomic::AtomicBool::new(false)),
@@ -76,7 +79,7 @@ impl SharedH2Connection {
 
     #[cfg(test)]
     pub(crate) fn for_test(sender: SendRequest<Bytes>) -> Self {
-        Self::new(sender, None)
+        Self::new("test.invalid:443".to_string(), sender, None)
     }
 
     pub fn is_dead(&self) -> bool {
@@ -104,12 +107,21 @@ impl SharedH2Connection {
         &self,
         request: http::Request<()>,
     ) -> Result<http::Response<h2::RecvStream>, h2::Error> {
+        let ready_started = std::time::Instant::now();
         let sender = self
             .sender
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .clone();
         let mut sender = sender.ready().await?;
+        let ready_wait = ready_started.elapsed();
+        if ready_wait >= Duration::from_millis(25) {
+            tracing::debug!(
+                authority = %self.authority,
+                ready_wait_ms = ready_wait.as_millis(),
+                "HTTP/2 stream admission waited for peer or connection capacity"
+            );
+        }
         let (response, _) = sender.send_request(request, true)?;
         response.await
     }
@@ -309,7 +321,11 @@ async fn establish(
     // window configured before the handshake.
     connection.set_target_window_size(64 * 1024 * 1024);
 
-    let shared = Arc::new(SharedH2Connection::new(sender, physical_budget));
+    let shared = Arc::new(SharedH2Connection::new(
+        authority.clone(),
+        sender,
+        physical_budget,
+    ));
 
     let dead = Arc::clone(&shared.dead);
     let connection_budget = Arc::clone(&shared);
