@@ -63,7 +63,7 @@ const MODPACK_SERVER_TYPES: Record<string, { type: ServerTypeId; label: string }
 }
 
 /** Loaders whose server launcher the app can download and boot directly. */
-const SUPPORTED_MODPACK_LOADERS: ServerTypeId[] = ['vanilla', 'fabric', 'quilt']
+const SUPPORTED_MODPACK_LOADERS: ServerTypeId[] = ['vanilla', 'fabric', 'quilt', 'forge']
 
 export function resolveModpackLoader(loaders: string[]): { type: ServerTypeId; label: string } {
 	for (const loader of loaders) {
@@ -158,8 +158,15 @@ export function createModpackServerFlowContext(
 		modpackVersionNumber.value = packVersion.version_number ?? ''
 		modpackIconUrl.value = packProject.icon_url ?? undefined
 
-		const gameVersion = packVersion.game_versions?.[0] ?? ''
-		const loader = resolveModpackLoader(packVersion.loaders ?? [])
+		const gameVersion =
+			packVersion.game_versions?.[0] ?? packProject.game_versions?.[0] ?? ''
+		// Merge both the project-level and version-level loader declarations.
+		// Modpack versions frequently leave `version.loaders` empty (the project
+		// field is the reliable source); the authoritative source is the mrpack's
+		// `modrinth.index.json` dependencies, but that is only available after
+		// download. See resolveModpackLoader's fallback note.
+		const loaderCandidates = [...(packProject.loaders ?? []), ...(packVersion.loaders ?? [])]
+		const loader = resolveModpackLoader(loaderCandidates)
 		serverType.value = loader.type
 		loaderLabel.value = loader.label
 		gameVersionLabel.value = gameVersion
