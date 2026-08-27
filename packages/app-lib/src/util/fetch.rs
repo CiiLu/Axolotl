@@ -96,7 +96,8 @@ const REASSIGNABLE_FIRST_BYTE_TIMEOUT: time::Duration =
     time::Duration::from_millis(500);
 const MAX_DOWNLOAD_ATTEMPT_HISTORY: usize = 12;
 const MAX_DOWNLOAD_DIAGNOSTIC_BYTES: usize = 8 * 1024;
-const H2_FALLBACK_TTL: time::Duration = time::Duration::from_secs(600);
+const MAX_FAILURE_COOLDOWN: time::Duration = time::Duration::from_secs(1);
+const H2_FALLBACK_TTL: time::Duration = MAX_FAILURE_COOLDOWN;
 const TASK_PROBE_MAX_ROUTES: usize = 3;
 const MAX_TASK_PROBE_STATES: usize = 64;
 #[cfg(not(test))]
@@ -1564,9 +1565,9 @@ static DIRECT_FETCH_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
 });
 
 const FETCH_RETRY_DELAYS: [time::Duration; 3] = [
-    time::Duration::from_millis(250),
+    time::Duration::from_millis(100),
+    time::Duration::from_millis(300),
     time::Duration::from_millis(750),
-    time::Duration::from_secs(2),
 ];
 
 fn fetch_retry_delay(attempt: usize) -> time::Duration {
@@ -1581,14 +1582,22 @@ fn fetch_retry_delay(attempt: usize) -> time::Duration {
 fn retry_after(response: &reqwest::Response) -> Option<time::Duration> {
     let value = response.headers().get(header::RETRY_AFTER)?.to_str().ok()?;
     if let Ok(seconds) = value.parse::<u64>() {
-        return Some(time::Duration::from_secs(seconds.min(60)));
+        return Some(clamp_failure_cooldown(time::Duration::from_secs(
+            seconds,
+        )));
     }
 
     let retry_at = DateTime::parse_from_rfc2822(value)
         .ok()?
         .with_timezone(&Utc);
     let seconds = retry_at.signed_duration_since(Utc::now()).num_seconds();
-    Some(time::Duration::from_secs(seconds.clamp(0, 60) as u64))
+    Some(clamp_failure_cooldown(time::Duration::from_secs(
+        seconds.max(0) as u64,
+    )))
+}
+
+fn clamp_failure_cooldown(cooldown: time::Duration) -> time::Duration {
+    cooldown.min(MAX_FAILURE_COOLDOWN)
 }
 
 pub(crate) fn is_sensitive_header(name: &str) -> bool {
@@ -1744,7 +1753,8 @@ pub(crate) fn record_route_health_failure(
         entry.consecutive_failures =
             entry.consecutive_failures.saturating_add(1);
         if let Some(cooldown) = cooldown {
-            entry.cooldown_until = Some(Instant::now() + cooldown);
+            entry.cooldown_until =
+                Some(Instant::now() + cooldown.min(MAX_FAILURE_COOLDOWN));
         }
     }
 }
@@ -8053,16 +8063,38 @@ mod tests {
     #[test]
     fn fetch_retries_use_short_jittered_backoff() {
         let cases = [
-            (1, Duration::from_millis(212), Duration::from_millis(288)),
-            (2, Duration::from_millis(637), Duration::from_millis(863)),
-            (3, Duration::from_millis(1700), Duration::from_millis(2300)),
-            (4, Duration::from_millis(1700), Duration::from_millis(2300)),
+            (1, Duration::from_millis(85), Duration::from_millis(115)),
+            (2, Duration::from_millis(255), Duration::from_millis(345)),
+            (3, Duration::from_millis(637), Duration::from_millis(863)),
+            (4, Duration::from_millis(637), Duration::from_millis(863)),
         ];
         for (attempt, minimum, maximum) in cases {
             let delay = fetch_retry_delay(attempt);
             assert!(delay >= minimum, "attempt {attempt}: {delay:?}");
             assert!(delay <= maximum, "attempt {attempt}: {delay:?}");
         }
+    }
+
+    #[test]
+    fn retry_after_is_limited_to_one_second() {
+        assert_eq!(
+            clamp_failure_cooldown(Duration::from_secs(60)),
+            MAX_FAILURE_COOLDOWN,
+        );
+    }
+
+    #[test]
+    fn h2_fallback_is_limited_to_one_second() {
+        let authority = "h2-cooldown.example:443";
+        record_authority_h2_failure(authority);
+        assert!(authority_uses_http1_fallback(authority));
+        let remaining = H2_FALLBACK_AUTHORITIES
+            .lock()
+            .get(authority)
+            .map(|until| until.saturating_duration_since(Instant::now()))
+            .unwrap();
+        assert!(remaining <= MAX_FAILURE_COOLDOWN);
+        H2_FALLBACK_AUTHORITIES.lock().remove(authority);
     }
 
     #[test]
