@@ -25,7 +25,7 @@ use crate::util::fetch::{
 };
 use crate::{ErrorKind, State};
 use dashmap::DashMap;
-use futures::stream;
+use futures::{StreamExt, stream};
 use reqwest::{Method, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -41,6 +41,7 @@ const API_BASE_URL: &str = "https://api.curseforge.com";
 const MINECRAFT_GAME_ID: u32 = 432;
 const MAX_PAGE_SIZE: u32 = 50;
 const MODPACK_FILE_INSTALL_ATTEMPTS: usize = 3;
+const MODPACK_METADATA_CONCURRENCY: usize = 4;
 const DEPENDENCY_RELATION_EMBEDDED: u32 = 1;
 const DEPENDENCY_RELATION_OPTIONAL: u32 = 2;
 pub(crate) const DEPENDENCY_RELATION_REQUIRED: u32 = 3;
@@ -61,6 +62,64 @@ static MANUAL_IMPORT_SCAN_LOCK: LazyLock<tokio::sync::Mutex<()>> =
 static DEPENDENCY_RESOLUTION_PLANS: LazyLock<
     DashMap<String, CachedDependencyResolutionPlan>,
 > = LazyLock::new(DashMap::new);
+
+fn unique_metadata_chunks(mut ids: Vec<u32>) -> Vec<Vec<u32>> {
+    ids.sort_unstable();
+    ids.dedup();
+    ids.chunks(MAX_PAGE_SIZE as usize)
+        .map(<[u32]>::to_vec)
+        .collect()
+}
+
+async fn get_modpack_projects(
+    project_ids: Vec<u32>,
+) -> crate::Result<HashMap<u32, CurseForgeProject>> {
+    let chunks = unique_metadata_chunks(project_ids);
+    let project_ids = chunks.iter().flatten().copied().collect::<Vec<_>>();
+    let batches = stream::iter(chunks)
+        .map(|chunk| async move { get_projects(chunk).await })
+        .buffer_unordered(MODPACK_METADATA_CONCURRENCY)
+        .collect::<Vec<_>>()
+        .await;
+    let mut projects = HashMap::new();
+    for batch in batches {
+        for project in batch? {
+            projects.insert(project.id, project);
+        }
+    }
+    let missing = project_ids
+        .into_iter()
+        .filter(|project_id| !projects.contains_key(project_id))
+        .collect::<Vec<_>>();
+    let fallbacks = stream::iter(missing)
+        .map(|project_id| async move { get_project(project_id).await })
+        .buffer_unordered(MODPACK_METADATA_CONCURRENCY)
+        .collect::<Vec<_>>()
+        .await;
+    for project in fallbacks {
+        let project = project?;
+        projects.insert(project.id, project);
+    }
+    Ok(projects)
+}
+
+async fn get_modpack_files(
+    file_ids: Vec<u32>,
+) -> crate::Result<HashMap<u32, CurseForgeFile>> {
+    let chunks = unique_metadata_chunks(file_ids);
+    let batches = stream::iter(chunks)
+        .map(|chunk| async move { get_files_many(chunk).await })
+        .buffer_unordered(MODPACK_METADATA_CONCURRENCY)
+        .collect::<Vec<_>>()
+        .await;
+    let mut files = HashMap::new();
+    for batch in batches {
+        for file in batch? {
+            files.insert(file.id, file);
+        }
+    }
+    Ok(files)
+}
 
 #[derive(Clone)]
 struct CachedDependencyResolutionPlan {
@@ -528,6 +587,8 @@ pub(crate) async fn stage_curseforge_upgrade_file(
         curseforge_content_validation(&file.file_name),
         None,
         reporter.map(|reporter| (reporter, tracking.as_str())),
+        None,
+        true,
     )
     .await?;
     verify_installed_curseforge_file(&path, &file).await?;
@@ -1495,6 +1556,8 @@ pub async fn install_world_with_reporter(
         curseforge_content_validation(&file.file_name),
         None,
         Some((&reporter, &tracking_path)),
+        None,
+        true,
     )
     .await?;
     let world_name = crate::state::instances::commands::import_world_save(
@@ -3527,36 +3590,18 @@ pub async fn install_modpack_with_reporter(
         .iter()
         .map(|file| file.project_id)
         .collect::<Vec<_>>();
-    let mut projects = HashMap::new();
-    for project_ids in project_ids.chunks(50) {
-        for project in get_projects(project_ids.to_vec()).await? {
-            projects.insert(project.id, project);
-        }
-    }
-    for project_id in &project_ids {
-        if !projects.contains_key(project_id) {
-            let project = get_project(*project_id).await?;
-            projects.insert(project.id, project);
-        }
-    }
+    let projects = get_modpack_projects(project_ids).await?;
 
     let instance_name = crate::api::instance::get(&request.instance_id)
         .await?
         .map(|metadata| metadata.instance.name)
         .unwrap_or_else(|| project.name.clone());
     let total_files = selected_files.len().max(1);
-    let mut file_ids = selected_files
+    let file_ids = selected_files
         .iter()
         .map(|file| file.file_id)
         .collect::<Vec<_>>();
-    file_ids.sort_unstable();
-    file_ids.dedup();
-    let mut file_meta = HashMap::<u32, CurseForgeFile>::new();
-    for chunk in file_ids.chunks(50) {
-        for file in get_files_many(chunk.to_vec()).await? {
-            file_meta.insert(file.id, file);
-        }
-    }
+    let file_meta = get_modpack_files(file_ids).await?;
     let content_total_bytes = selected_files
         .iter()
         .map(|file| {
@@ -4172,32 +4217,14 @@ pub(crate) async fn install_local_manifest_files(
         .iter()
         .map(|file| file.project_id)
         .collect::<Vec<_>>();
-    let mut projects = HashMap::new();
-    for project_ids in project_ids.chunks(50) {
-        for project in get_projects(project_ids.to_vec()).await? {
-            projects.insert(project.id, project);
-        }
-    }
-    for project_id in &project_ids {
-        if !projects.contains_key(project_id) {
-            let project = get_project(*project_id).await?;
-            projects.insert(project.id, project);
-        }
-    }
+    let projects = get_modpack_projects(project_ids).await?;
 
     let total_files = selected_files.len().max(1);
-    let mut file_ids = selected_files
+    let file_ids = selected_files
         .iter()
         .map(|file| file.file_id)
         .collect::<Vec<_>>();
-    file_ids.sort_unstable();
-    file_ids.dedup();
-    let mut file_meta = HashMap::<u32, CurseForgeFile>::new();
-    for chunk in file_ids.chunks(50) {
-        for file in get_files_many(chunk.to_vec()).await? {
-            file_meta.insert(file.id, file);
-        }
-    }
+    let file_meta = get_modpack_files(file_ids).await?;
     let content_total_bytes = selected_files
         .iter()
         .map(|file| {
@@ -7756,6 +7783,10 @@ fn curseforge_integrity(
     }
 }
 
+const fn curseforge_modpack_h2_range_concurrency() -> Option<usize> {
+    Some(16)
+}
+
 fn curseforge_candidate_urls(url: &str) -> crate::Result<Vec<String>> {
     let parsed = reqwest::Url::parse(url).map_err(|_| {
         ErrorKind::InputError(
@@ -7795,11 +7826,17 @@ async fn download_curseforge_path(
     validation: ContentValidation,
     progress: Option<&mut FetchProgressFn<'_>>,
     tracking: Option<(&InstallProgressReporter, &str)>,
+    h2_range_concurrency: Option<usize>,
+    allow_http1_segmented_download: bool,
 ) -> crate::Result<crate::util::fetch::DownloadResult> {
     let state = State::get().await?;
     let mut request = DownloadRequest::new(url, ResourceClass::CurseForge)
         .with_candidate_urls(curseforge_candidate_urls(url)?)
-        .with_integrity(curseforge_integrity(file, validation));
+        .with_integrity(curseforge_integrity(file, validation))
+        .with_http1_segmented_download(allow_http1_segmented_download);
+    if let Some(concurrency) = h2_range_concurrency {
+        request = request.with_h2_range_concurrency(concurrency);
+    }
     let parsed = reqwest::Url::parse(url)?;
     if is_forge_cdn_url(&parsed)
         && let Some(key) = api_key()
@@ -7849,6 +7886,8 @@ async fn download_curseforge_archive(
         ContentValidation::Jar,
         progress,
         reporter.map(|reporter| (reporter, tracking_item_id.as_str())),
+        curseforge_modpack_h2_range_concurrency(),
+        true,
     )
     .await
 }
@@ -7906,6 +7945,8 @@ async fn download_installed_file(
         download_metrics
             .and_then(|metrics| metrics.reporter.as_ref())
             .map(|reporter| (reporter, relative_path.as_str())),
+        None,
+        false,
     )
     .await?;
     if let Some(download_metrics) = download_metrics {
@@ -8515,6 +8556,32 @@ fn murmur2(data: &[u8], seed: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn modpack_metadata_ids_are_deduplicated_before_batching() {
+        let mut ids = (1..=120).collect::<Vec<_>>();
+        ids.extend([1, 50, 120]);
+        let chunks = unique_metadata_chunks(ids);
+
+        assert_eq!(
+            chunks.iter().map(Vec::len).collect::<Vec<_>>(),
+            vec![50, 50, 20]
+        );
+        assert_eq!(
+            chunks
+                .iter()
+                .flatten()
+                .copied()
+                .collect::<HashSet<_>>()
+                .len(),
+            120
+        );
+    }
+
+    #[test]
+    fn modpack_archives_use_sixteen_h2_range_streams() {
+        assert_eq!(curseforge_modpack_h2_range_concurrency(), Some(16));
+    }
 
     #[test]
     fn dependency_fallback_requires_the_target_game_and_loader() {

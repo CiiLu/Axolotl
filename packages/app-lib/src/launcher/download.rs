@@ -89,7 +89,13 @@ pub async fn classify_local_artifact(
     expected_size: Option<u64>,
 ) -> crate::Result<ArtifactAvailability> {
     if destination.exists() {
-        return Ok(ArtifactAvailability::Cached);
+        let cached = std::fs::metadata(destination).is_ok_and(|metadata| {
+            metadata.is_file()
+                && expected_size.is_none_or(|size| metadata.len() == size)
+        });
+        if cached {
+            return Ok(ArtifactAvailability::Cached);
+        }
     }
 
     let Some(local) = local else {
@@ -769,6 +775,12 @@ fn missing_assets_index_bytes(
     }
 }
 
+fn asset_file_is_usable(path: &Path, expected_size: u64) -> bool {
+    std::fs::metadata(path).is_ok_and(|metadata| {
+        metadata.is_file() && metadata.len() == expected_size
+    })
+}
+
 fn missing_log_config_bytes(
     st: &State,
     version: &GameVersionInfo,
@@ -809,9 +821,10 @@ fn missing_asset_bytes(
                 name.replace('/', &String::from(std::path::MAIN_SEPARATOR)),
             );
             let should_fetch_object =
-                should_download(object_path.exists(), force);
-            let should_fetch_legacy =
-                (with_legacy && !legacy_path.exists()) || force;
+                force || !asset_file_is_usable(&object_path, asset.size as u64);
+            let should_fetch_legacy = (with_legacy
+                && !asset_file_is_usable(&legacy_path, asset.size as u64))
+                || force;
 
             (should_fetch_object || should_fetch_legacy)
                 .then_some(asset.size as u64)
@@ -1460,11 +1473,28 @@ pub async fn download_assets_index(
         .assets_index_dir()
         .join(format!("{}.json", &version.asset_index.id));
 
-    let res = if path.exists() && !force {
-        io::read(path)
+    let cached = if path.exists() && !force {
+        match io::read(&path)
             .err_into::<crate::Error>()
             .await
-            .and_then(|ref it| Ok(serde_json::from_slice(it)?))
+            .and_then(|ref bytes| Ok(serde_json::from_slice(bytes)?))
+        {
+            Ok(index) => Some(index),
+            Err(error) => {
+                tracing::warn!(
+                    path = %path.display(),
+                    error = %error,
+                    "Cached assets index is invalid; downloading a replacement"
+                );
+                io::remove_file(&path).await?;
+                None
+            }
+        }
+    } else {
+        None
+    };
+    let res = if let Some(index) = cached {
+        index
     } else {
         let context =
             InstallErrorContext::new("download Minecraft assets index")
@@ -1503,9 +1533,8 @@ pub async fn download_assets_index(
         } else {
             tracing::info!("Fetched assets index");
         }
-        let index = serde_json::from_slice(&io::read(&path).await?)?;
-        Ok(index)
-    }?;
+        serde_json::from_slice(&io::read(&path).await?)?
+    };
 
     if let Some(loading_bar) = loading_bar {
         emit_loading(loading_bar, 5.0, None)?;
@@ -1583,9 +1612,11 @@ pub async fn download_assets(
             .directories
             .legacy_assets_dir()
             .join(name.replace('/', &String::from(std::path::MAIN_SEPARATOR)));
-        let should_fetch_object = !resource_path.exists() || force;
-        let should_fetch_legacy =
-            (with_legacy && !legacy_resource_path.exists()) || force;
+        let should_fetch_object =
+            force || !asset_file_is_usable(&resource_path, asset.size as u64);
+        let should_fetch_legacy = (with_legacy
+            && !asset_file_is_usable(&legacy_resource_path, asset.size as u64))
+            || force;
 
         if should_fetch_object {
             if local_source.is_some() {
@@ -1736,26 +1767,36 @@ pub async fn download_assets(
     }
 
     // Legacy copies for assets whose object is already on disk.
-    for (name, asset) in legacy_copies {
-        let hash = &asset.hash;
-        let resource_path = st.directories.object_dir(hash);
-        let legacy_resource_path = st
-            .directories
-            .legacy_assets_dir()
-            .join(name.replace('/', &String::from(std::path::MAIN_SEPARATOR)));
-        crate::util::fetch::copy(
-            &resource_path,
-            &legacy_resource_path,
-            &st.io_semaphore,
+    futures::stream::iter(legacy_copies)
+        .map(Ok::<_, crate::Error>)
+        .try_for_each_concurrent(
+            crate::util::download::task_concurrency_limit(st),
+            |(name, asset)| {
+                let progress = progress.clone();
+                async move {
+                    let resource_path = st.directories.object_dir(&asset.hash);
+                    let legacy_resource_path =
+                        st.directories.legacy_assets_dir().join(name.replace(
+                            '/',
+                            &String::from(std::path::MAIN_SEPARATOR),
+                        ));
+                    crate::util::fetch::copy(
+                        &resource_path,
+                        &legacy_resource_path,
+                        &st.io_semaphore,
+                    )
+                    .await?;
+                    if let Some(progress) = &progress {
+                        progress.add_bytes(asset.size as u64).await?;
+                    }
+                    if let Some(loading_bar) = loading_bar {
+                        emit_loading(loading_bar, per_file_fraction, None)?;
+                    }
+                    Ok::<_, crate::Error>(())
+                }
+            },
         )
         .await?;
-        if let Some(progress) = &progress {
-            progress.add_bytes(asset.size as u64).await?;
-        }
-        if let Some(loading_bar) = loading_bar {
-            emit_loading(loading_bar, per_file_fraction, None)?;
-        }
-    }
 
     // Per-file fallback path: local runtime reuse, no batch route, or batch
     // failures. Runs concurrently (same budget as the original scheduler) so
@@ -1773,86 +1814,73 @@ pub async fn download_assets(
                     let legacy_resource_path = &item.legacy_resource_path;
                     let hash = &item.hash;
                     let name = &item.name;
-                    let should_fetch_object = !resource_path.exists() || force;
-                    let should_fetch_legacy =
-                        (with_legacy && !legacy_resource_path.exists()) || force;
-                    let fetch_progress = if should_fetch_object || should_fetch_legacy {
-                        progress.clone()
-                    } else {
-                        None
-                    };
-                    let object_progress = fetch_progress.clone();
-                    let legacy_progress = if should_fetch_object {
-                        None
-                    } else {
-                        fetch_progress
-                    };
-
-                    tokio::try_join! {
-                        async {
-                            if should_fetch_object {
-                                let context =
-                                    InstallErrorContext::new("download Minecraft asset")
-                                        .file_path(name.clone())
-                                        .target_path(resource_path.display().to_string())
-                                        .build();
-                                let reused = download_or_reuse_local(
-                                    st,
-                                    local_source,
-                                    &local_asset_object_path(hash),
-                                    resource_path,
-                                    Some(hash),
-                                    Some(item.size),
-                                    object_progress.as_ref(),
-                                    context.clone(),
-                                    force,
-                                    || {
-                                        download_minecraft_file(
-                                            st,
-                                            &item.url,
-                                            Some(hash),
-                                            Some(item.size),
-                                            resource_path,
-                                            ResourceClass::MinecraftAsset,
-                                            ContentValidation::None,
-                                            force,
-                                            object_progress.clone(),
-                                            context,
-                                        )
-                                    },
-                                )
-                                .await?;
-                                if reused {
-                                    tracing::trace!("Reused asset with hash {hash}");
-                                } else {
-                                    tracing::trace!("Fetched asset with hash {hash}");
-                                }
-                            }
-                            Ok::<_, crate::Error>(())
-                        },
-                        async {
-                            if should_fetch_legacy {
+                    let should_fetch_object = force
+                        || !asset_file_is_usable(resource_path, item.size);
+                    let should_fetch_legacy = (with_legacy
+                        && !asset_file_is_usable(
+                            legacy_resource_path,
+                            item.size,
+                        ))
+                        || force;
+                    let fetch_progress =
+                        if should_fetch_object || should_fetch_legacy {
+                            progress.clone()
+                        } else {
+                            None
+                        };
+                    if should_fetch_object {
+                        let context = InstallErrorContext::new(
+                            "download Minecraft asset",
+                        )
+                        .file_path(name.clone())
+                        .target_path(resource_path.display().to_string())
+                        .build();
+                        let reused = download_or_reuse_local(
+                            st,
+                            local_source,
+                            &local_asset_object_path(hash),
+                            resource_path,
+                            Some(hash),
+                            Some(item.size),
+                            fetch_progress.as_ref(),
+                            context.clone(),
+                            force,
+                            || {
                                 download_minecraft_file(
                                     st,
                                     &item.url,
                                     Some(hash),
                                     Some(item.size),
-                                    legacy_resource_path,
+                                    resource_path,
                                     ResourceClass::MinecraftAsset,
                                     ContentValidation::None,
                                     force,
-                                    legacy_progress,
-                                    InstallErrorContext::new("download Minecraft asset")
-                                        .file_path(name.clone())
-                                        .target_path(legacy_resource_path.display().to_string())
-                                        .build(),
+                                    fetch_progress.clone(),
+                                    context,
                                 )
-                                .await?;
-                                tracing::trace!("Fetched legacy asset with hash {hash}");
-                            }
-                            Ok::<_, crate::Error>(())
-                        },
-                    }?;
+                            },
+                        )
+                        .await?;
+                        if reused {
+                            tracing::trace!("Reused asset with hash {hash}");
+                        } else {
+                            tracing::trace!("Fetched asset with hash {hash}");
+                        }
+                    }
+                    if should_fetch_legacy {
+                        crate::util::fetch::copy(
+                            resource_path,
+                            legacy_resource_path,
+                            &st.io_semaphore,
+                        )
+                        .await?;
+                        if !should_fetch_object
+                            && let Some(progress) = &fetch_progress
+                        {
+                            progress.add_bytes(item.size).await?;
+                        }
+                        tracing::trace!("Copied legacy asset with hash {hash}");
+                    }
 
                     if let Some(loading_bar) = loading_bar {
                         emit_loading(loading_bar, per_file_fraction, None)?;
@@ -2610,6 +2638,43 @@ mod tests {
 
     fn urls(values: &[&str]) -> Option<Vec<String>> {
         Some(values.iter().map(|value| (*value).to_string()).collect())
+    }
+
+    #[test]
+    fn asset_fast_path_requires_a_regular_file_with_expected_size() {
+        let directory = tempfile::tempdir().unwrap();
+        let valid = directory.path().join("valid");
+        let truncated = directory.path().join("truncated");
+        let folder = directory.path().join("folder");
+        std::fs::write(&valid, b"asset").unwrap();
+        std::fs::write(&truncated, b"as").unwrap();
+        std::fs::create_dir(&folder).unwrap();
+
+        assert!(asset_file_is_usable(&valid, 5));
+        assert!(!asset_file_is_usable(&valid, 4));
+        assert!(!asset_file_is_usable(&truncated, 5));
+        assert!(!asset_file_is_usable(&folder, 0));
+        assert!(!asset_file_is_usable(&directory.path().join("missing"), 5));
+    }
+
+    #[tokio::test]
+    async fn cached_artifact_with_wrong_size_is_not_reused() {
+        let directory = tempfile::tempdir().unwrap();
+        let destination = directory.path().join("asset");
+        std::fs::write(&destination, b"bad").unwrap();
+
+        assert_eq!(
+            classify_local_artifact(
+                None,
+                &destination,
+                Path::new("assets/objects/00/hash"),
+                Some("unused"),
+                Some(5),
+            )
+            .await
+            .unwrap(),
+            ArtifactAvailability::NetworkRequired,
+        );
     }
 
     #[test]
