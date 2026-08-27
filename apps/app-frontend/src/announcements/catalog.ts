@@ -48,6 +48,24 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'zh-CN':
 						'修复发现内容页不输入搜索词时 CurseForge 空白无内容的问题，现在打开 CurseForge 来源即可正常浏览内容。',
 				},
+				{
+					'en-US':
+						'Fixed legacy Forge instances (such as Minecraft 1.6.4) failing to launch with a missing-library-path error, because the main artifacts of their native libraries are not published.',
+					'zh-CN':
+						'修复旧版 Forge 实例（如 Minecraft 1.6.4）因原生库主构件不存在而报“库文件缺失”无法启动的问题。',
+				},
+				{
+					'en-US':
+						'Fixed legacy Forge instances failing to launch because game arguments were passed twice (for example --gameDir), which legacy launch wrappers reject.',
+					'zh-CN':
+						'修复旧版 Forge 实例因启动参数重复传递（如 --gameDir 出现两次）而被旧版启动器拒绝启动的问题。',
+				},
+				{
+					'en-US':
+						'Native libraries are now verified and automatically restored before launch, fixing instances that failed to start with "lwjgl.dll not found" after their native libraries were missing or corrupted.',
+					'zh-CN':
+						'启动前现在会自动校验并恢复原生库，修复原生库缺失或损坏时实例报“找不到 lwjgl.dll”无法启动的问题。',
+				},
 			],
 		},
 	},
