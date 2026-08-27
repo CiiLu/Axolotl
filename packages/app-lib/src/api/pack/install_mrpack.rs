@@ -84,6 +84,8 @@ struct ParallelMinecraftInstall {
 struct OverrideExtractionSpec {
     index: usize,
     entry_name: String,
+    crc32: u32,
+    uncompressed_size: u64,
     relative_path: String,
     target_path: PathBuf,
 }
@@ -582,6 +584,38 @@ impl MrpackZipReader {
                 .await
             }
         }
+    }
+
+    async fn extract_override_entry(
+        &mut self,
+        spec: &OverrideExtractionSpec,
+        semaphore: &crate::util::fetch::IoSemaphore,
+        progress: Option<&mut ExtractProgressFn<'_>>,
+    ) -> crate::Result<(u64, String)> {
+        let entry = self.file().entries().get(spec.index).ok_or_else(|| {
+            crate::ErrorKind::InputError(format!(
+                "Override entry {} is missing from reopened modpack archive",
+                spec.entry_name
+            ))
+        })?;
+        let entry_name = entry.filename().as_str().map_err(|_| {
+            crate::ErrorKind::InputError(format!(
+                "Override entry {} has an invalid filename in reopened modpack archive",
+                spec.entry_name
+            ))
+        })?;
+        if entry_name != spec.entry_name
+            || entry.crc32() != spec.crc32
+            || entry.uncompressed_size() != spec.uncompressed_size
+        {
+            return Err(crate::ErrorKind::InputError(format!(
+                "Override entry {} does not match the original modpack archive layout",
+                spec.entry_name
+            ))
+            .into());
+        }
+        self.extract_entry(spec.index, &spec.target_path, semaphore, progress)
+            .await
     }
 }
 
@@ -1391,6 +1425,8 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                 Ok(OverrideExtractionSpec {
                     index,
                     entry_name: filename.to_string(),
+                    crc32: file.crc32(),
+                    uncompressed_size: file.uncompressed_size(),
                     target_path: instance_full_path.join(&relative_path),
                     relative_path,
                 })
@@ -1486,9 +1522,8 @@ pub(crate) async fn install_zipped_mrpack_files_with_reporter(
                         &mut report_progress as &mut ExtractProgressFn<'_>,
                     );
                     let extract_result = reader
-                        .extract_entry(
-                            spec.index,
-                            &spec.target_path,
+                        .extract_override_entry(
+                            &spec,
                             &state.io_semaphore,
                             progress,
                         )
@@ -1851,6 +1886,8 @@ mod tests {
         OverrideExtractionSpec {
             index,
             entry_name: format!("overrides/{target}"),
+            crc32: 0,
+            uncompressed_size: 0,
             relative_path: target.to_string(),
             target_path: PathBuf::from(target),
         }
@@ -2020,5 +2057,93 @@ mod tests {
             reader.read_entry_to_string(index).await.unwrap(),
             r#"{"formatVersion":1,"game":"minecraft","versionId":"test","name":"test","files":[]}"#
         );
+    }
+
+    #[tokio::test]
+    async fn parallel_override_readers_extract_the_original_entry_contents()
+    -> crate::Result<()> {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("overrides.mrpack");
+        let entries = [
+            ("overrides/config/first.toml", b"first = true".as_slice()),
+            ("overrides/config/second.toml", b"second = true".as_slice()),
+            (
+                "client-overrides/options.txt",
+                b"fancyGraphics:true".as_slice(),
+            ),
+        ];
+        let mut archive = tokio::fs::File::create(&path).await.unwrap();
+        let mut writer = ZipFileWriter::with_tokio(&mut archive);
+        for (name, contents) in entries {
+            writer
+                .write_entry_whole(
+                    ZipEntryBuilder::new(
+                        name.to_string().into(),
+                        Compression::Deflate,
+                    ),
+                    contents,
+                )
+                .await
+                .unwrap();
+        }
+        writer.close().await.unwrap();
+        drop(archive);
+
+        let source = CreatePackFile::Path(path);
+        let reader = MrpackZipReader::new(&source).await.unwrap();
+        let specs = reader
+            .file()
+            .entries()
+            .iter()
+            .enumerate()
+            .map(|(index, entry)| {
+                let entry_name = entry.filename().as_str().unwrap().to_string();
+                let relative_path =
+                    override_relative_path(&entry_name, "").unwrap();
+                OverrideExtractionSpec {
+                    index,
+                    entry_name,
+                    crc32: entry.crc32(),
+                    uncompressed_size: entry.uncompressed_size(),
+                    target_path: directory
+                        .path()
+                        .join("output")
+                        .join(&relative_path),
+                    relative_path,
+                }
+            })
+            .collect::<Vec<_>>();
+        let semaphore = Arc::new(crate::util::fetch::IoSemaphore(
+            tokio::sync::Semaphore::new(OVERRIDE_EXTRACTION_CONCURRENCY),
+        ));
+        let extracted = futures::stream::iter(specs)
+            .map(|spec| {
+                let source = source.clone();
+                let semaphore = Arc::clone(&semaphore);
+                async move {
+                    let mut reader = MrpackZipReader::new(&source).await?;
+                    reader
+                        .extract_override_entry(&spec, &semaphore, None)
+                        .await?;
+                    Ok::<_, crate::Error>(spec)
+                }
+            })
+            .buffer_unordered(OVERRIDE_EXTRACTION_CONCURRENCY)
+            .collect::<Vec<_>>()
+            .await;
+        let specs = extracted.into_iter().collect::<crate::Result<Vec<_>>>()?;
+
+        for spec in specs {
+            let expected = entries
+                .iter()
+                .find(|(name, _)| *name == spec.entry_name)
+                .unwrap()
+                .1;
+            assert_eq!(
+                tokio::fs::read(spec.target_path).await.unwrap(),
+                expected
+            );
+        }
+        Ok(())
     }
 }
