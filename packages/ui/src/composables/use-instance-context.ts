@@ -1,4 +1,4 @@
-import { type ComputedRef, computed } from 'vue'
+import { computed, type ComputedRef } from 'vue'
 import { useRoute } from 'vue-router'
 
 export interface InstanceContext {

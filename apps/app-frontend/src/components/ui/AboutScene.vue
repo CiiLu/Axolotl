@@ -1,12 +1,13 @@
 <template>
-	<canvas class="size-full" id="about_scene" />
+	<canvas id="about_scene" class="size-full" />
 </template>
 
 <script setup lang="ts">
-import { useTheming } from '@/store/theme'
 import * as THREE from 'three'
-import { GLTFLoader, type GLTF } from 'three/examples/jsm/Addons.js'
+import { type GLTF,GLTFLoader } from 'three/examples/jsm/Addons.js'
 import { onMounted, onScopeDispose, useTemplateRef } from 'vue'
+
+import { useTheming } from '@/store/theme'
 
 const themeStore = useTheming()
 function isDarkMode() {
@@ -266,8 +267,8 @@ function main() {
 	// .multiplyScalar(1.2)
 	// .multiplyScalar(3)
 
-	var circleMeshList: THREE.Mesh[] = []
-	var nextCircleCreateTime = 0.0
+	let circleMeshList: THREE.Mesh[] = []
+	let nextCircleCreateTime = 0.0
 	function updateCircle(deltaTime: number, elapsedTime: number) {
 		circleMeshList = circleMeshList.filter((m) => {
 			m.position.y += deltaTime * 2.0

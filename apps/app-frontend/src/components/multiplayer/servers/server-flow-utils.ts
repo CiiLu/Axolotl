@@ -1,6 +1,9 @@
 import {
 	type FabricInstallerVersionsResponse,
 	fabricInstallerVersionsUrl,
+	latestStablePaperBuild,
+	type PaperBuildsResponse,
+	paperBuildsUrl,
 	quiltInstallerVersionsUrl,
 	resolveServerJar,
 	type ServerJarDownload,
@@ -119,6 +122,12 @@ export async function resolveServerLauncher(
 				loaderVersion,
 				installerVersion: installers[0]?.version,
 			})
+		}
+		case 'paper': {
+			const builds = await fetchJson<PaperBuildsResponse>(paperBuildsUrl(gameVersion))
+			const build = latestStablePaperBuild(builds)
+			if (!build) return null
+			return resolveServerJar(type, { gameVersion, paperBuild: build })
 		}
 		default:
 			return null

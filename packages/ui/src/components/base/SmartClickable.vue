@@ -1,5 +1,8 @@
 <template>
-	<div class="smart-clickable grid" :class="{ 'smart-clickable--has-clickable': !!$slots.clickable }">
+	<div
+		class="smart-clickable grid"
+		:class="{ 'smart-clickable--has-clickable': !!$slots.clickable }"
+	>
 		<slot name="clickable" />
 		<div
 			v-bind="$attrs"

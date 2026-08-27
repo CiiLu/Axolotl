@@ -100,6 +100,8 @@ export const servers = {
 		}),
 	installModpack: (serverId: string, options: InstallModpackOptions) =>
 		invoke<void>(command('servers_install_modpack'), { serverId, ...options }),
+	installForge: (serverId: string, mcVersion: string, build: string, javaPath?: string) =>
+		invoke<void>(command('servers_install_forge'), { serverId, mcVersion, build, javaPath }),
 	start: (
 		serverId: string,
 		options?: { javaPath?: string; memoryMb?: number; jvmArgs?: string[] },
