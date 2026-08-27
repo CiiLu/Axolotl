@@ -72,11 +72,6 @@ import {
 import { mergeProviderResults } from '@/helpers/browse-merge'
 import { createBrowseProjectTabs, getBrowseProjectTabOptions } from '@/helpers/browse-project-tabs'
 import {
-	curseForgeQueryVariants,
-	expandSearchQuery,
-	normalizeSearchText,
-} from '@/helpers/search-query'
-import {
 	completeBrowseReturnNavigation,
 	consumeBrowseReturnSnapshot,
 	isBrowseReturnSourcePath,
@@ -136,6 +131,11 @@ import {
 	type PlanetMinecraftProject,
 	searchPlanetMinecraftProjects,
 } from '@/helpers/planet-minecraft'
+import {
+	curseForgeQueryVariants,
+	expandSearchQuery,
+	normalizeSearchText,
+} from '@/helpers/search-query'
 import {
 	type BrowseContentSource,
 	get as getSettings,
@@ -2112,10 +2112,12 @@ async function search(requestParams: string, signal: AbortSignal) {
 				per_page: limit,
 			}
 		}
-		const projects = await searchMcArchiveMods(normalizeSearchText(rawQuery), gameVersion).catch((error) => {
-			debugLog('mcarchive search failed', error)
-			throw error
-		})
+		const projects = await searchMcArchiveMods(normalizeSearchText(rawQuery), gameVersion).catch(
+			(error) => {
+				debugLog('mcarchive search failed', error)
+				throw error
+			},
+		)
 		signal.throwIfAborted()
 		// The MCArchive list endpoint deliberately returns project summaries. It does
 		// not include modVersions, so applying the selected Minecraft version here
@@ -2244,8 +2246,11 @@ async function search(requestParams: string, signal: AbortSignal) {
 	const curseForgeQueryVariantsList = queryExpansion
 		? curseForgeQueryVariants(curseForgeQueryBase)
 		: []
-	const primaryCurseForgeFilter =
-		queryExpansion ? (curseForgeQueryVariantsList[0] ?? null) : null
+	// An absent query must keep CurseForge browsable unfiltered: `null` means
+	// "skip CurseForge in this attempt" (used by fallback steps), so an empty
+	// query maps to an empty filter, which the request layer turns into no
+	// searchFilter.
+	const primaryCurseForgeFilter = queryExpansion ? (curseForgeQueryVariantsList[0] ?? null) : ''
 
 	const runProviderAttempt = async (
 		attemptParams: {
@@ -2319,9 +2324,7 @@ async function search(requestParams: string, signal: AbortSignal) {
 			modrinthError: modrinthResult.status === 'rejected' ? modrinthResult.reason : null,
 			curseForgeError: curseForgeResult.status === 'rejected' ? curseForgeResult.reason : null,
 			directModrinthError:
-				directModrinthResult.status === 'rejected'
-					? directModrinthResult.reason
-					: null,
+				directModrinthResult.status === 'rejected' ? directModrinthResult.reason : null,
 		}
 	}
 	type ProviderAttemptResults = Awaited<ReturnType<typeof runProviderAttempt>>
@@ -2359,7 +2362,11 @@ async function search(requestParams: string, signal: AbortSignal) {
 			}
 		}
 		const maxVariants = Math.max(mrVariants.length, cfVariants.length)
-		for (let index = 0; index < maxVariants && steps.length < MAX_SEARCH_VARIANT_ATTEMPTS; index += 1) {
+		for (
+			let index = 0;
+			index < maxVariants && steps.length < MAX_SEARCH_VARIANT_ATTEMPTS;
+			index += 1
+		) {
 			const modrinthQuery = mrVariants[index] ?? null
 			const curseforgeFilter = cfVariants[index] ?? null
 			if (modrinthQuery !== null || curseforgeFilter !== null) {
