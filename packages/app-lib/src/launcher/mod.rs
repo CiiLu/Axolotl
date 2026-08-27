@@ -1630,6 +1630,16 @@ pub async fn launch_minecraft(
     if !natives_dir.exists() {
         io::create_dir_all(&natives_dir).await?;
     }
+    download::ensure_native_libraries_extracted(
+        &state.directories.natives_dir(),
+        &state.directories.libraries_dir(),
+        &state.directories.caches_dir(),
+        version_info.libraries.as_slice(),
+        &version_jar,
+        &java_version.architecture,
+        minecraft_updated,
+    )
+    .await?;
 
     let quick_play_version =
         QuickPlayVersion::find_version(version_index, &minecraft.versions);
