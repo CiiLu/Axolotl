@@ -1398,6 +1398,25 @@ pub struct FetchSemaphore(pub Semaphore);
 
 pub(crate) static DOWNLOAD_DNS_RESOLVER: LazyLock<Arc<DownloadDnsResolver>> =
     LazyLock::new(|| Arc::new(DownloadDnsResolver::default()));
+
+/// Forces download requests to resolve `host` through `resolver_host` while
+/// preserving `host` in the URL, HTTP Host header, and TLS SNI.
+#[allow(dead_code)]
+pub fn set_download_dns_host_override(
+    host: &str,
+    resolver_host: &str,
+) -> crate::Result<()> {
+    DOWNLOAD_DNS_RESOLVER
+        .set_host_override(host, resolver_host)
+        .map_err(|error| crate::ErrorKind::InputError(error.to_string()).into())
+}
+
+#[allow(dead_code)]
+pub fn clear_download_dns_host_override(host: &str) -> crate::Result<()> {
+    DOWNLOAD_DNS_RESOLVER
+        .clear_host_override(host)
+        .map_err(|error| crate::ErrorKind::InputError(error.to_string()).into())
+}
 static TAIL_HEDGE_SEMAPHORE: LazyLock<Semaphore> =
     LazyLock::new(|| Semaphore::new(MAX_GLOBAL_TAIL_HEDGES));
 static FILE_VALIDATION_SEMAPHORE: LazyLock<Semaphore> =
@@ -8095,6 +8114,27 @@ mod tests {
             .unwrap();
         assert!(remaining <= MAX_FAILURE_COOLDOWN);
         H2_FALLBACK_AUTHORITIES.lock().remove(authority);
+    }
+
+    #[test]
+    fn global_download_dns_override_can_be_registered_and_cleared() {
+        set_download_dns_host_override(
+            "request-host.test",
+            "resolver-target.test",
+        )
+        .unwrap();
+        assert_eq!(
+            DOWNLOAD_DNS_RESOLVER
+                .host_override("request-host.test")
+                .as_deref(),
+            Some("resolver-target.test"),
+        );
+        clear_download_dns_host_override("request-host.test").unwrap();
+        assert!(
+            DOWNLOAD_DNS_RESOLVER
+                .host_override("request-host.test")
+                .is_none()
+        );
     }
 
     #[test]
