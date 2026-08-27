@@ -14,19 +14,26 @@ import {
 } from '@modrinth/assets'
 import { Avatar, defineMessages, NewButton as Button, useVIntl } from '@modrinth/ui'
 import { getVersion } from '@tauri-apps/api/app'
-import { inject, ref } from 'vue'
+import { inject, nextTick, onScopeDispose, ref, shallowRef } from 'vue'
 
 import AfdianIcon from '@/assets/external/afdian.png'
 import QqIcon from '@/assets/external/qq.svg?component'
 import { AxolotlBrandConfig } from '@/config'
-import { contributors, teamMembers } from '@/data/about'
+import { contributors, type TeamMember, teamMembers } from '@/data/about'
 
-import QqChannelIcon from './QqChannelIcon.vue'
 import AboutScene from '../AboutScene.vue'
+import { type AboutMemberExperience, getAboutMemberExperience } from './about-member-experiences'
+import QqChannelIcon from './QqChannelIcon.vue'
 
 const { formatMessage } = useVIntl()
 const version = await getVersion()
 const copied = ref(false)
+const experienceHost = ref<HTMLElement>()
+const activeMemberExperience = shallowRef<AboutMemberExperience>()
+const pressingMemberName = ref<string>()
+let longPressTimer: ReturnType<typeof window.setTimeout> | undefined
+let pressStart = { x: 0, y: 0 }
+let suppressNextMemberClick = false
 const replayOnboarding = inject<(mode: 'main' | 'instance') => Promise<void>>('replayOnboarding')
 
 const licenseUrl = `${AxolotlBrandConfig.repositoryUrl}/blob/main/LICENSE`
@@ -39,6 +46,52 @@ async function copyQqGroupNumber() {
 		copied.value = false
 	}, 3000)
 }
+
+function cancelMemberLongPress() {
+	if (longPressTimer) window.clearTimeout(longPressTimer)
+	longPressTimer = undefined
+	pressingMemberName.value = undefined
+}
+
+function startMemberLongPress(member: TeamMember, event: PointerEvent) {
+	const experience = getAboutMemberExperience(member.experience)
+	if (!experience || event.button !== 0) return
+
+	cancelMemberLongPress()
+	pressStart = { x: event.clientX, y: event.clientY }
+	pressingMemberName.value = member.name
+	longPressTimer = window.setTimeout(async () => {
+		activeMemberExperience.value = experience
+		suppressNextMemberClick = true
+		cancelMemberLongPress()
+		await nextTick()
+		experienceHost.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+	}, experience.longPressDuration)
+}
+
+function moveMemberLongPress(event: PointerEvent) {
+	if (!longPressTimer) return
+	if (Math.hypot(event.clientX - pressStart.x, event.clientY - pressStart.y) > 8) {
+		cancelMemberLongPress()
+	}
+}
+
+function handleMemberClick(event: MouseEvent) {
+	if (!suppressNextMemberClick) return
+	suppressNextMemberClick = false
+	event.preventDefault()
+	event.stopPropagation()
+}
+
+function handleMemberContextMenu(member: TeamMember, event: MouseEvent) {
+	if (getAboutMemberExperience(member.experience)) event.preventDefault()
+}
+
+function closeMemberExperience() {
+	activeMemberExperience.value = undefined
+}
+
+onScopeDispose(cancelMemberLongPress)
 
 const messages = defineMessages({
 	productTitle: {
@@ -171,17 +224,23 @@ const projectLinks = [
 <template>
 	<div class="about-page flex flex-col gap-6">
 		<section id="settings-target-about-product" tabindex="-1" class="about-panel">
-			<div class="flex items-center gap-4">
-          <div
-				  class="m-0 w-full overflow-hidden h-200 rounded-xl"
-				  style="
-					  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
-					  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
-				  "
-			  >
-				  <AboutScene />
-			  </div>
-				<div class="min-w-0">
+			<div class="flex flex-col items-center gap-4">
+				<div
+					ref="experienceHost"
+					class="relative m-0 w-full overflow-hidden h-64 rounded-xl"
+					style="
+						mask-image: linear-gradient(to bottom, black 97%, transparent 100%);
+						-webkit-mask-image: linear-gradient(to bottom, black 97%, transparent 100%);
+					"
+				>
+					<AboutScene />
+					<component
+						:is="activeMemberExperience?.component"
+						v-if="activeMemberExperience"
+						@exit="closeMemberExperience"
+					/>
+				</div>
+				<div class="min-w-0 text-center">
 					<h2 class="m-0 text-xl font-semibold text-contrast">
 						{{
 							formatMessage(messages.productTitle, {
@@ -194,7 +253,7 @@ const projectLinks = [
 					</p>
 				</div>
 			</div>
-			<p class="m-5 mt-9 text-primary">
+			<p class="m-0 mt-3 text-center text-primary">
 				{{ formatMessage(messages.productDescription) }}
 			</p>
 		</section>
@@ -211,8 +270,18 @@ const projectLinks = [
 						:href="member.url"
 						:target="member.url ? '_blank' : undefined"
 						:rel="member.url ? 'noopener noreferrer' : undefined"
-						class="flex min-w-0 flex-col items-center gap-3 rounded-xl bg-surface-4 p-4"
-						:class="member.url ? 'transition-colors hover:bg-surface-5' : 'cursor-default'"
+						class="flex min-w-0 select-none flex-col items-center gap-3 rounded-xl bg-surface-4 p-4"
+						:class="[
+							member.url ? 'transition-colors hover:bg-surface-5' : 'cursor-default',
+							pressingMemberName === member.name ? 'ring-4 ring-brand-shadow' : '',
+						]"
+						@pointerdown="startMemberLongPress(member, $event)"
+						@pointermove="moveMemberLongPress"
+						@pointerup="cancelMemberLongPress"
+						@pointercancel="cancelMemberLongPress"
+						@dragstart="cancelMemberLongPress"
+						@click="handleMemberClick"
+						@contextmenu="handleMemberContextMenu(member, $event)"
 					>
 						<Avatar :src="member.avatarUrl" :alt="member.name" size="4rem" circle no-shadow />
 						<span class="block truncate text-center font-semibold text-contrast">{{

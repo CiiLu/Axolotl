@@ -167,7 +167,11 @@ export function createModpackServerFlowContext(
 		availableGameVersions.value = gameVersion ? [gameVersion] : []
 		loaderSupported.value = SUPPORTED_MODPACK_LOADERS.includes(loader.type)
 
-		name.value = packProject.title
+		// Default the server name to `<modpack title> <version number>` so different
+		// versions of the same modpack produce distinct server names instead of
+		// colliding.  A short uid is appended only if a name collision remains
+		// (see beginInstall), mirroring the direct-server id style.
+		name.value = `${packProject.title} ${packVersion.version_number ?? ''}`.trim()
 		selectedLoaderVersion.value = ''
 		loaderVersions.value = []
 	}
@@ -264,8 +268,24 @@ export function createModpackServerFlowContext(
 			}
 
 			if (!createdServer.value) {
+				// Ensure the chosen name is unique among existing servers.  When it
+				// collides we append a short uid (mirroring the direct-server id
+				// style) so duplicate modpack versions stay distinguishable; if the
+				// name is free, no suffix is added.
+				let finalName = name.value.trim()
+				try {
+					const existing = await servers.list()
+					const taken = new Set(existing.map((server) => server.name.trim().toLowerCase()))
+					if (taken.has(finalName.toLowerCase())) {
+						const uid = Math.random().toString(36).slice(2, 6)
+						finalName = `${finalName} ${uid}`
+					}
+				} catch {
+					// Best-effort uniqueness; the backend id already disambiguates.
+				}
+
 				const manifest = await servers.create({
-					name: name.value,
+					name: finalName,
 					serverType: serverType.value,
 					gameVersion: selectedGameVersion.value,
 					loaderVersion: needsLoaderVersion.value ? selectedLoaderVersion.value : undefined,
@@ -318,27 +338,27 @@ export function createModpackServerFlowContext(
 					throw new Error('Modpack has no downloadable file')
 				}
 
-			// The download runs through the shared background runner, so closing
-			// the wizard keeps it going; progress renders from the shared registry.
-			dispatched = true
-			installPhase.value = 'downloading'
-			// [SERVER-DOWNLOAD-BRIDGE] Pass the download manager reference
-			// captured during setup so the synthetic job appears in sidebar.
-			await startModpackServerInstall(
-				serverId,
-				{
-					mrpackUrl: primaryFile.url,
-					mrpackSha1: primaryFile.hashes?.sha1,
-					jarUrl: jar.url,
-					jarFilename: jar.filename,
-					jarSha1: jar.sha1,
-					modpackProjectId: project.value.id,
-					modpackVersionId: version.value.id,
-					modpackTitle: modpackTitle.value,
-					modpackIconUrl: modpackIconUrl.value,
-				},
-				downloadManager,
-			)
+				// The download runs through the shared background runner, so closing
+				// the wizard keeps it going; progress renders from the shared registry.
+				dispatched = true
+				installPhase.value = 'downloading'
+				// [SERVER-DOWNLOAD-BRIDGE] Pass the download manager reference
+				// captured during setup so the synthetic job appears in sidebar.
+				await startModpackServerInstall(
+					serverId,
+					{
+						mrpackUrl: primaryFile.url,
+						mrpackSha1: primaryFile.hashes?.sha1,
+						jarUrl: jar.url,
+						jarFilename: jar.filename,
+						jarSha1: jar.sha1,
+						modpackProjectId: project.value.id,
+						modpackVersionId: version.value.id,
+						modpackTitle: `${modpackTitle.value} ${modpackVersionNumber.value}`.trim(),
+						modpackIconUrl: modpackIconUrl.value,
+					},
+					downloadManager,
+				)
 				if (isStale()) return
 
 				// Modpack installation complete, no auto-start.

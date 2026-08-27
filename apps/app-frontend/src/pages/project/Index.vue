@@ -337,6 +337,7 @@
 					:translations="translations"
 					:translation-mode="translationMode"
 					:translation-style="translationStyle"
+					:start-server="(version) => openModpackServerFlow(version)"
 				/>
 			</template>
 			<template v-else> Project data couldn't not be loaded. </template>
@@ -644,15 +645,18 @@ const serverCapableModpack = computed(
 )
 const modpackServerModal = ref()
 
-async function openModpackServerFlow() {
+async function openModpackServerFlow(targetVersion) {
 	if (!data.value) return
-	let targetVersion = versions.value[0]
-	if (!targetVersion) {
-		const versionId = data.value.versions[0]
-		targetVersion = versionId ? await get_version(versionId, 'bypass').catch(() => null) : null
+	let version = targetVersion
+	if (!version) {
+		version = versions.value[0]
+		if (!version) {
+			const versionId = data.value.versions[0]
+			version = versionId ? await get_version(versionId, 'bypass').catch(() => null) : null
+		}
 	}
-	if (!targetVersion) return
-	modpackServerModal.value?.show(data.value, targetVersion)
+	if (!version) return
+	modpackServerModal.value?.show(data.value, version)
 }
 
 function handleModpackServerCreated(serverId) {

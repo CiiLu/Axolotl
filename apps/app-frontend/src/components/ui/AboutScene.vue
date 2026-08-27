@@ -1,12 +1,13 @@
 <template>
-	<canvas class="size-full" id="about_scene" />
+	<canvas id="about_scene" class="size-full" />
 </template>
 
 <script setup lang="ts">
-import { useTheming } from '@/store/theme'
 import * as THREE from 'three'
-import { GLTFLoader, type GLTF } from 'three/examples/jsm/Addons.js'
+import { type GLTF, GLTFLoader } from 'three/examples/jsm/Addons.js'
 import { onMounted, onScopeDispose, useTemplateRef } from 'vue'
+
+import { useTheming } from '@/store/theme'
 
 const themeStore = useTheming()
 function isDarkMode() {
@@ -172,6 +173,8 @@ function main() {
 	const canvas = document.querySelector<HTMLCanvasElement>('#about_scene')
 	if (!canvas) return console.error('No canvas')
 
+	let isUpdating = true
+
 	const canvasSize = new THREE.Vector2(
 		canvas.getBoundingClientRect().width,
 		canvas.getBoundingClientRect().height,
@@ -254,7 +257,7 @@ function main() {
 			mixer.update(deltaTime)
 		}
 	}
-	let updateGLTF = (deltaTime: number, elapsedTime: number) => {}
+	let updateGLTF = (_deltaTime: number, _elapsedTime: number) => {}
 	load().then((updateFn) => {
 		if (updateFn) updateGLTF = updateFn
 	})
@@ -266,8 +269,8 @@ function main() {
 	// .multiplyScalar(1.2)
 	// .multiplyScalar(3)
 
-	var circleMeshList: THREE.Mesh[] = []
-	var nextCircleCreateTime = 0.0
+	let circleMeshList: THREE.Mesh[] = []
+	let nextCircleCreateTime = 0.0
 	function updateCircle(deltaTime: number, elapsedTime: number) {
 		circleMeshList = circleMeshList.filter((m) => {
 			m.position.y += deltaTime * 2.0
@@ -289,7 +292,7 @@ function main() {
 		}
 	}
 
-	function animate(time: number) {
+	function animate(_time: number) {
 		if (isUpdating === false) return
 		requestAnimationFrame(animate)
 
@@ -317,7 +320,6 @@ function main() {
 		camera.position.copy(newPosition)
 	}
 
-	var isUpdating = true
 	function updateSize() {
 		if (!isUpdating) return
 		if (!canvas) return

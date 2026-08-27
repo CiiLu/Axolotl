@@ -14,6 +14,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             servers_read_file,
             servers_write_file,
             servers_download_file,
+            servers_install_forge,
             servers_install_modpack,
             servers_start,
             servers_send_command,
@@ -106,6 +107,16 @@ pub async fn servers_download_file(
     expected_sha1: Option<String>,
 ) -> Result<()> {
     Ok(servers::download_file(server_id, url, filename, expected_sha1).await?)
+}
+
+#[tauri::command]
+pub async fn servers_install_forge(
+    server_id: &str,
+    mc_version: &str,
+    build: &str,
+    java_path: Option<String>,
+) -> Result<()> {
+    Ok(servers::install_forge(server_id, mc_version, build, java_path).await?)
 }
 
 #[tauri::command]

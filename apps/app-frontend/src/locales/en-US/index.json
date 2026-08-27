@@ -5798,18 +5798,6 @@
   "app.project.install-context.install-content-to-instance": {
     "message": "Install content to instance"
   },
-  "app.project.modpack-server.created-description": {
-    "message": "{name} is ready. Configure and start it in Multiplayer."
-  },
-  "app.project.modpack-server.created-title": {
-    "message": "Server created"
-  },
-  "app.project.modpack-server.open": {
-    "message": "Open server"
-  },
-  "app.project.modpack-server.start": {
-    "message": "Start server"
-  },
   "app.project.mcarchive.install": {
     "message": "Install"
   },
@@ -5848,6 +5836,18 @@
   },
   "app.project.mcarchive.versions": {
     "message": "Versions"
+  },
+  "app.project.modpack-server.created-description": {
+    "message": "{name} is ready. Configure and start it in Multiplayer."
+  },
+  "app.project.modpack-server.created-title": {
+    "message": "Server created"
+  },
+  "app.project.modpack-server.open": {
+    "message": "Open server"
+  },
+  "app.project.modpack-server.start": {
+    "message": "Start server"
   },
   "app.project.open-in-mcmod": {
     "message": "Open in MC Mod"
@@ -5915,6 +5915,9 @@
   "app.project.versions.already-installed": {
     "message": "Already installed"
   },
+  "app.project.versions.start-server": {
+    "message": "Create server"
+  },
   "app.restarting": {
     "message": "Restarting..."
   },
@@ -5936,8 +5939,14 @@
   "app.server.search-instance": {
     "message": "Search for an instance"
   },
+  "app.servers.action.continue-download": {
+    "message": "Continue download"
+  },
   "app.servers.action.open-folder": {
     "message": "Open folder"
+  },
+  "app.servers.action.retry-download": {
+    "message": "Retry download"
   },
   "app.servers.action.share": {
     "message": "Share online"
@@ -5987,9 +5996,6 @@
   "app.servers.empty.heading": {
     "message": "No servers yet"
   },
-  "app.servers.eula.accept": {
-    "message": "Accept and continue"
-  },
   "app.servers.eula.continue": {
     "message": "Continue"
   },
@@ -5997,7 +6003,7 @@
     "message": "Cancel"
   },
   "app.servers.eula.description": {
-    "message": "By continuing, you agree to the Minecraft End User License Agreement (EULA)."
+    "message": "By continuing, you agree to the Minecraft End User License Agreement (EULA). Please review the agreement below before proceeding."
   },
   "app.servers.eula.title": {
     "message": "Minecraft EULA"
@@ -6028,6 +6034,33 @@
   },
   "app.servers.loading": {
     "message": "Loading servers..."
+  },
+  "app.servers.modpack.background-hint": {
+    "message": "You can close this window — the download continues in the background."
+  },
+  "app.servers.modpack.current-file": {
+    "message": "Now installing {file}"
+  },
+  "app.servers.modpack.done": {
+    "message": "Installation complete"
+  },
+  "app.servers.modpack.download-in-background": {
+    "message": "Download in background"
+  },
+  "app.servers.modpack.downloading": {
+    "message": "Downloading modpack files..."
+  },
+  "app.servers.modpack.first-run-crashed": {
+    "message": "The server crashed during its first start. Check that your selected Java version is compatible, then try again."
+  },
+  "app.servers.modpack.preparing": {
+    "message": "Preparing server..."
+  },
+  "app.servers.modpack.unsupported-loader-description": {
+    "message": "This modpack uses {loader}, but Axolotl can only start modpack servers with vanilla, Fabric, or Quilt. Support for {loader} is coming soon."
+  },
+  "app.servers.modpack.unsupported-loader-title": {
+    "message": "{loader} servers are not supported yet"
   },
   "app.servers.port.change": {
     "message": "Change port"
@@ -6374,11 +6407,17 @@
   "app.servers.status.crashed": {
     "message": "Crashed"
   },
-  "app.servers.status.downloading": {
-    "message": "Downloading"
-  },
   "app.servers.status.created": {
     "message": "Not set up"
+  },
+  "app.servers.status.download-failed": {
+    "message": "Download failed"
+  },
+  "app.servers.status.download-interrupted": {
+    "message": "Download interrupted"
+  },
+  "app.servers.status.downloading": {
+    "message": "Downloading"
   },
   "app.servers.status.eula-pending": {
     "message": "EULA pending"
@@ -6464,14 +6503,17 @@
   "app.servers.wizard.type-title": {
     "message": "Server type"
   },
-  "app.servers.modpack.downloading": {
-    "message": "Downloading modpack files..."
+  "app.servers.type.vanilla": {
+    "message": "Vanilla"
   },
-  "app.servers.modpack.preparing": {
-    "message": "Preparing server..."
+  "app.servers.type.fabric": {
+    "message": "Fabric"
   },
-  "app.servers.modpack.done": {
-    "message": "Installation complete"
+  "app.servers.type.paper": {
+    "message": "Paper"
+  },
+  "app.servers.type.forge": {
+    "message": "Forge"
   },
   "app.settings.about.afdian": {
     "message": "Support on Afdian"
@@ -6505,6 +6547,30 @@
   },
   "app.settings.about.development-team": {
     "message": "Development team"
+  },
+  "app.settings.about.game.completed": {
+    "message": "Rainbow axolotl!"
+  },
+  "app.settings.about.game.exit": {
+    "message": "Exit game"
+  },
+  "app.settings.about.game.game-over": {
+    "message": "The tide is rising!"
+  },
+  "app.settings.about.game.highest-level": {
+    "message": "Highest: level {level}"
+  },
+  "app.settings.about.game.restart": {
+    "message": "Restart"
+  },
+  "app.settings.about.game.score": {
+    "message": "Score: {score}"
+  },
+  "app.settings.about.game.tap-to-drop": {
+    "message": "Click to drop a pink axolotl"
+  },
+  "app.settings.about.game.title": {
+    "message": "Axolotl merge"
   },
   "app.settings.about.license-attribution": {
     "message": "License & attribution"
