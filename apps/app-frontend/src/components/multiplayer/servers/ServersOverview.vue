@@ -63,7 +63,10 @@ onMounted(() => {
 	void refresh()
 })
 
-function openServer(id: string) {
+async function openServer(id: string) {
+	// Refresh first so the freshly created server is present in the shared store
+	// before ServerDetail mounts; otherwise it briefly shows "server not found".
+	await refresh().catch(() => {})
 	void router.push('/multiplayer/servers/' + encodeURIComponent(id))
 }
 
@@ -171,7 +174,7 @@ async function toggleRunning(server: ServerView) {
 			/>
 		</div>
 
-		<CreateServerModal ref="createModal" />
+		<CreateServerModal ref="createModal" @created="openServer" />
 		<EulaModal ref="eulaModal" :text="eulaText" @continue="acceptEula" @decline="declineEula" />
 	</div>
 </template>

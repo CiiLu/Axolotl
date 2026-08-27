@@ -6392,6 +6392,9 @@
   "app.servers.status.starting": {
     "message": "Starting"
   },
+  "app.servers.wizard.background-hint": {
+    "message": "You can close this window — the download continues in the background."
+  },
   "app.servers.wizard.configure-heading": {
     "message": "Adjust the server settings, or finish to edit them later."
   },
@@ -6400,6 +6403,9 @@
   },
   "app.servers.wizard.done": {
     "message": "Server ready"
+  },
+  "app.servers.wizard.download-in-background": {
+    "message": "Download in background"
   },
   "app.servers.wizard.downloading": {
     "message": "Downloading server files..."

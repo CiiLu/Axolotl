@@ -46,25 +46,41 @@ export function useServerLifecycle() {
 		unregisterEulaListener?.()
 	})
 
-	/** Starts the server; if the EULA is unaccepted, shows the EULA modal first. */
+	/**
+	 * Starts the server, gating on the EULA file:
+	 * - eula.txt missing → code-create it with `eula=false`, then show the modal
+	 * - eula.txt present and `eula=false` → show the modal
+	 * - eula.txt present and `eula=true` → start directly
+	 */
 	async function tryStartServer(server: ServerView) {
-		// Always check the actual eula.txt file on the server
-		try {
-			const eulaTextContent = await serversApi.readFile(server.id, 'eula.txt')
-			const accepted = eulaTextContent.split('\n').some(line => line.trim() === 'eula=true')
-			
-			if (!accepted) {
-				// EULA not accepted, show modal
-				eulaText.value = eulaTextContent
-				pendingId = server.id
-				eulaModal.value?.show()
-				return
-			}
-		} catch {
-			// eula.txt doesn't exist yet, will be created by the server
+		const accepted = await ensureEula(server.id)
+		if (accepted) {
+			await launchServer(server.id)
+		} else {
+			pendingId = server.id
+			eulaModal.value?.show()
 		}
-		
-		await launchServer(server.id)
+	}
+
+	/**
+	 * Reads the server's eula.txt. When absent, writes a code-created
+	 * `eula=false` file so the acceptance prompt can be shown without booting
+	 * the server. Returns whether the EULA is already accepted.
+	 */
+	async function ensureEula(serverId: string): Promise<boolean> {
+		let text: string
+		try {
+			text = await serversApi.readFile(serverId, 'eula.txt')
+		} catch {
+			// eula.txt doesn't exist yet — code-create it with eula=false so the
+			// manual start gate can offer the prompt without starting the jar.
+			text = setEulaAccepted('', false)
+			await serversApi.writeFile(serverId, 'eula.txt', text).catch(() => {})
+		}
+		const doc = parseEula(text)
+		if (doc.accepted) return true
+		eulaText.value = text
+		return false
 	}
 
 	/**

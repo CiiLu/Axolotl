@@ -343,6 +343,10 @@ export function createModpackServerFlowContext(
 
 				// Modpack installation complete, no auto-start.
 				// User will click "Start" later, which will handle EULA check via tryStartServer.
+				// A code-created `eula.txt` (eula=false) is written so the manual start
+				// gate can offer the EULA without booting the jar.
+				const eula = setEulaAccepted('', false)
+				await servers.writeFile(serverId, 'eula.txt', eula).catch(() => {})
 				installPhase.value = 'done'
 			} catch (error) {
 				if (!dispatched && createdServer.value) {

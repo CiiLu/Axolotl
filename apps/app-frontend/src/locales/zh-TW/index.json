@@ -6269,6 +6269,9 @@
   "app.servers.status.starting": {
     "message": "啟動中"
   },
+  "app.servers.wizard.background-hint": {
+    "message": "您可以關閉此視窗，下載將在背景繼續進行。"
+  },
   "app.servers.wizard.configure-heading": {
     "message": "調整伺服器設定，或直接完成，稍後再編輯。"
   },
@@ -6277,6 +6280,9 @@
   },
   "app.servers.wizard.done": {
     "message": "伺服器已就緒"
+  },
+  "app.servers.wizard.download-in-background": {
+    "message": "背景下載"
   },
   "app.servers.wizard.downloading": {
     "message": "正在下載伺服器端檔案…"

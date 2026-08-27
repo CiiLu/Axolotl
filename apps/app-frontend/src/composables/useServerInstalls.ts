@@ -10,6 +10,7 @@ import {
 	servers,
 } from '@/helpers/servers'
 
+import { createServerDownloadBridge } from './server-download-bridge'
 import { refresh as refreshServerList } from './useServers'
 
 const LOG_CAPACITY = 500
@@ -71,44 +72,18 @@ export async function startModpackServerInstall(
 
 	// [SERVER-DOWNLOAD-BRIDGE] Create a synthetic job that mirrors this server
 	// install in the global Downloads page.  The job_id uses a `server-` prefix
-	// to avoid collisions with backend-tracked install jobs.
+	// to avoid collisions with backend-tracked install jobs.  The shared bridge
+	// centralises the snapshot shape used by every server download (modpack and
+	// vanilla) so they stay consistent in the sidebar.
 	const syntheticJobId = `server-${serverId}`
-	const now = new Date().toISOString()
-
-	if (downloadManager) {
-		console.log(
-			`[SERVER-DOWNLOAD-BRIDGE] Creating synthetic job ${syntheticJobId} for server "${options.modpackTitle}"`,
-		)
-		downloadManager.addSyntheticJob({
-			job_id: syntheticJobId,
-			instance_id: null,
-			instance_deleted: false,
-			kind: 'create_instance',
-			status: 'running',
-			execution_mode: 'normal',
-			provider: options.modpackProjectId ? 'modrinth' : 'local',
-			target: { type: 'new_instance' },
-			phase: 'downloading_content',
-			details: { type: 'empty' },
-			created: now,
-			modified: now,
-			display: {
+	const bridge = downloadManager
+		? createServerDownloadBridge(downloadManager, syntheticJobId, {
 				title: options.modpackTitle ?? 'Server',
 				icon: options.modpackIconUrl ?? null,
-			},
-			summary: {
-				files_completed: 0,
-				files_total: null,
-				bytes_downloaded: 0,
-				bytes_total: null,
-				speed_bytes_per_second: null,
-				eta_seconds: null,
-				source: null,
-				fallback_count: 0,
-			},
-			items: [],
-		})
-	} else {
+				provider: options.modpackProjectId ? 'modrinth' : 'local',
+			})
+		: null
+	if (!bridge) {
 		console.warn(
 			`[SERVER-DOWNLOAD-BRIDGE] No download manager available — job ${syntheticJobId} will NOT appear in sidebar`,
 		)
@@ -139,38 +114,7 @@ export async function startModpackServerInstall(
 			? (total - payload.downloaded) / speed
 			: null
 
-		if (downloadManager) {
-			const ts = new Date().toISOString()
-			downloadManager.setSyntheticJob({
-				job_id: syntheticJobId,
-				instance_id: null,
-				instance_deleted: false,
-				kind: 'create_instance',
-				status: 'running',
-				execution_mode: 'normal',
-				provider: options.modpackProjectId ? 'modrinth' : 'local',
-				target: { type: 'new_instance' },
-				phase: 'downloading_content',
-				details: { type: 'empty' },
-				created: now,
-				modified: ts,
-				display: {
-					title: options.modpackTitle ?? 'Server',
-					icon: options.modpackIconUrl ?? null,
-				},
-				summary: {
-					files_completed: 0,
-					files_total: null,
-					bytes_downloaded: payload.downloaded,
-					bytes_total: total,
-					speed_bytes_per_second: speed,
-					eta_seconds: eta,
-					source: null,
-					fallback_count: 0,
-				},
-				items: [],
-			})
-		}
+		bridge?.update({ downloaded: payload.downloaded, total }, speed, eta)
 	})
 	const unlistenLogs = await serverEventListener((id, payload) => {
 		if (id !== serverId || payload.event !== 'log') return
@@ -180,14 +124,10 @@ export async function startModpackServerInstall(
 
 	// [SERVER-DOWNLOAD-BRIDGE] Register a cancel handler so the Downloads page
 	// can abort the running server install when the user clicks Cancel.
-	let cancelled = false
-	if (downloadManager) {
-		downloadManager.onSyntheticCancel(syntheticJobId, async () => {
-			cancelled = true
-			console.log(`[SERVER-DOWNLOAD-BRIDGE] Cancelling server install ${serverId}`)
-			await servers.stop(serverId).catch(() => {})
-		})
-	}
+	bridge?.cancel(async () => {
+		console.log(`[SERVER-DOWNLOAD-BRIDGE] Cancelling server install ${serverId}`)
+		await servers.stop(serverId).catch(() => {})
+	})
 
 	let installSucceeded = false
 	try {
@@ -196,47 +136,9 @@ export async function startModpackServerInstall(
 	} finally {
 		unlistenProgress()
 		unlistenLogs()
-		if (downloadManager) {
-			downloadManager.offSyntheticCancel(syntheticJobId)
-		}
-		// [SERVER-DOWNLOAD-BRIDGE] Mark the synthetic job as succeeded, failed,
-		// or cancelled so it transitions out of the active tab and into history.
-		if (downloadManager && !cancelled) {
-			const ts = new Date().toISOString()
-			console.log(
-				`[SERVER-DOWNLOAD-BRIDGE] Finalising synthetic job ${syntheticJobId}: ${installSucceeded ? 'succeeded' : 'failed'}`,
-			)
-			downloadManager.setSyntheticJob({
-				job_id: syntheticJobId,
-				instance_id: null,
-				instance_deleted: false,
-				kind: 'create_instance',
-				status: installSucceeded ? 'succeeded' : 'failed',
-				execution_mode: 'normal',
-				provider: options.modpackProjectId ? 'modrinth' : 'local',
-				target: { type: 'new_instance' },
-				phase: installSucceeded ? 'completed' : 'downloading_content',
-				details: { type: 'empty' },
-				created: now,
-				modified: ts,
-				finished: ts,
-				display: {
-					title: options.modpackTitle ?? 'Server',
-					icon: options.modpackIconUrl ?? null,
-				},
-				summary: {
-					files_completed: 0,
-					files_total: null,
-					bytes_downloaded: entry.progress?.downloaded ?? 0,
-					bytes_total: entry.progress?.total ?? null,
-					speed_bytes_per_second: null,
-					eta_seconds: null,
-					source: null,
-					fallback_count: 0,
-				},
-				items: [],
-			})
-		}
+		// [SERVER-DOWNLOAD-BRIDGE] Mark the synthetic job as succeeded or failed
+		// so it transitions out of the active tab and into history.
+		bridge?.complete(installSucceeded, entry.progress ?? undefined)
 		activeInstalls[serverId] = undefined
 		void refreshServerList()
 	}

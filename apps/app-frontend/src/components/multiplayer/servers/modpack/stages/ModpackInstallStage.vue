@@ -114,10 +114,7 @@ const isBusy = computed(
 		</Admonition>
 
 		<div
-			v-if="
-				ctx.installPhase.value === 'done' ||
-				ctx.installPhase.value === 'error'
-			"
+			v-if="ctx.installPhase.value === 'error'"
 			class="flex flex-col gap-2"
 		>
 			<span class="text-sm font-semibold text-secondary">

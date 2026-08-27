@@ -6446,18 +6446,24 @@
 	"app.servers.status.starting": {
 		"message": "启动中"
 	},
-	"app.servers.wizard.configure-heading": {
-		"message": "调整服务器设置，或直接完成，稍后再编辑。"
-	},
+ 	"app.servers.wizard.background-hint": {
+ 		"message": "您可以关闭此窗口，下载将在后台继续进行。"
+ 	},
+ 	"app.servers.wizard.configure-heading": {
+ 		"message": "调整服务器设置，或直接完成，稍后再编辑。"
+ 	},
 	"app.servers.wizard.configure-title": {
 		"message": "配置"
 	},
 	"app.servers.wizard.done": {
 		"message": "服务器已就绪"
 	},
-	"app.servers.wizard.downloading": {
-		"message": "正在下载服务端文件…"
-	},
+ 	"app.servers.wizard.download-in-background": {
+ 		"message": "后台下载"
+ 	},
+ 	"app.servers.wizard.downloading": {
+ 		"message": "正在下载服务端文件…"
+ 	},
 	"app.servers.wizard.eula-wait": {
 		"message": "等待确认 EULA"
 	},
