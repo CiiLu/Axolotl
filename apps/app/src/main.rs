@@ -170,13 +170,17 @@ fn is_skin_editor_referer(
     let Ok(url) = referer.parse::<url::Url>() else {
         return false;
     };
-    if !is_allowed_source(url.origin().ascii_serialization().as_str())
-        || url.path() != "/index.html"
-    {
+    if !is_allowed_source(url.origin().ascii_serialization().as_str()) {
         return false;
     }
-    url.query_pairs()
-        .any(|(key, value)| key == "embed" && value == "skin")
+    if url.path() == "/index.html" {
+        return url
+            .query_pairs()
+            .any(|(key, value)| key == "embed" && value == "skin");
+    }
+    // Top-level iframe navigation initiated by the launcher, whose route
+    // path (e.g. `/` or `/lab/skin-editor`) is never `/index.html`.
+    true
 }
 
 // Should be called in launcher initialization
