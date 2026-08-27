@@ -942,6 +942,24 @@ fn is_official_modrinth_cdn_redirect(location: Option<&str>) -> bool {
         || authority.eq_ignore_ascii_case("cdn.modrinth.com:443")
 }
 
+fn tianpao_modrinth_redirect_target(
+    current: &Url,
+    redirect: &Url,
+) -> Option<Url> {
+    if current.host_str() != Some(TIANPAO_HOST)
+        || !current.path().starts_with("/data/")
+        || !redirect.host_str().is_some_and(|host| {
+            host.eq_ignore_ascii_case(MODRINTH_CDN_LEGACY_HOST)
+                || host.eq_ignore_ascii_case(MODRINTH_CDN_OFFICIAL_HOST)
+        })
+    {
+        return None;
+    }
+    let mut target = redirect.clone();
+    target.set_host(Some(MODRINTH_CDN_LEGACY_HOST)).ok()?;
+    Some(target)
+}
+
 fn is_mrpack_url(url: &str) -> bool {
     reqwest::Url::parse(url)
         .ok()
@@ -3594,11 +3612,11 @@ async fn send_path_request_with_clients(
             ))
             .into());
         }
-        current = Url::parse(&canonical_modrinth_cdn_url(
-            repair_official_cdn_redirect(&original, &next, &location)
-                .unwrap_or(next)
-                .as_ref(),
-        ))?;
+        current = tianpao_modrinth_redirect_target(&current, &next)
+            .or_else(|| {
+                repair_official_cdn_redirect(&original, &next, &location)
+            })
+            .unwrap_or(next);
     }
     unreachable!()
 }
@@ -8079,6 +8097,41 @@ mod tests {
         assert!(!is_mrpack_url(
             "https://cdn.modrinth.com/data/project/version/mod.jar"
         ));
+    }
+
+    #[test]
+    fn tianpao_modrinth_redirect_keeps_the_legacy_cdn_host() {
+        let current = Url::parse(
+            "https://mod.tianpao.top/data/project/version/file.jar?download=1",
+        )
+        .unwrap();
+        let redirect = Url::parse(
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar?download=1",
+        )
+        .unwrap();
+
+        assert_eq!(
+            tianpao_modrinth_redirect_target(&current, &redirect)
+                .unwrap()
+                .as_str(),
+            "https://cdn.modrinth.com/data/project/version/file.jar?download=1",
+        );
+    }
+
+    #[test]
+    fn non_tianpao_redirect_keeps_its_original_official_host() {
+        let current = Url::parse(
+            "https://other-mirror.example/data/project/version/file.jar",
+        )
+        .unwrap();
+        let redirect = Url::parse(
+            "https://cdn-alt.modrinth.com/data/project/version/file.jar",
+        )
+        .unwrap();
+
+        assert!(
+            tianpao_modrinth_redirect_target(&current, &redirect).is_none()
+        );
     }
 
     #[test]

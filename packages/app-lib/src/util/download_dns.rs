@@ -4,8 +4,10 @@ use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, LazyLock};
 
-const DEFAULT_HOST_OVERRIDES: [(&str, &str); 1] =
-    [("mod.tianpao.top", "www.shopify.com")];
+const DEFAULT_HOST_OVERRIDES: [(&str, &str); 2] = [
+    ("mod.tianpao.top", "www.shopify.com"),
+    ("cdn.modrinth.com", "www.shopify.com"),
+];
 
 #[derive(Clone)]
 pub struct DownloadDnsResolver {
@@ -409,6 +411,16 @@ mod tests {
         assert_eq!(
             DownloadDnsResolver::default()
                 .host_override("mod.tianpao.top")
+                .as_deref(),
+            Some("www.shopify.com"),
+        );
+    }
+
+    #[test]
+    fn legacy_modrinth_cdn_uses_the_shopify_resolver_host() {
+        assert_eq!(
+            DownloadDnsResolver::default()
+                .host_override("cdn.modrinth.com")
                 .as_deref(),
             Some("www.shopify.com"),
         );
