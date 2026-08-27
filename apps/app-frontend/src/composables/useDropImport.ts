@@ -9,16 +9,19 @@ import type {
 	BatchDropGroup,
 	BatchDropItem,
 	BatchDropPhase,
+	ClassificationResult,
 	SymlinkMethodChoice,
 } from '@modrinth/ui'
-import { useDebugLogger, useGlobalDrop, useVIntl } from '@modrinth/ui'
-import { useInstanceContext } from '@modrinth/ui/src/composables/use-instance-context'
+import {
+	useDebugLogger,
+	useGlobalDrop,
+	useInstanceContext,
+	useVIntl,
+} from '@modrinth/ui'
 import { computed, type ComputedRef, nextTick, ref } from 'vue'
 import type { Router } from 'vue-router'
 
-import type { ContentInstallContext } from '@/providers/content-install'
 import {
-	type ClassificationResult,
 	classifyDroppedItem,
 	classifyDroppedItemWithExtraction,
 	detectFileLock,
@@ -44,6 +47,7 @@ import { getDisplayInstanceIcon } from '@/helpers/instance-icons'
 import { areLoadersCompatible, isVersionInRange } from '@/helpers/version-compatibility'
 import type { AppNotificationManager } from '@/providers/app-notifications'
 import type { AppPopupNotificationManager } from '@/providers/app-popup-notifications'
+import type { ContentInstallContext } from '@/providers/content-install'
 
 // Re-export types for external use
 export type { ClassificationResult, ModrinthLookupResult, ScanResult }
@@ -220,7 +224,7 @@ export function useDropImport(options: DropImportOptions) {
 	const compatibleModeGameDir = ref<string | null>(null)
 	const compatibleModeLauncherType = ref<string>('Generic')
 	const launcherZipTempDir = ref<string | null>(null)
-	const dropProcessingNotificationId = ref<number | null>(null)
+	const dropProcessingNotificationId = ref<string | number | null>(null)
 
 	// ── Batch drop state ─────────────────────────────────────────────────
 	const batchPhase = ref<BatchDropPhase>('idle')
@@ -559,6 +563,8 @@ export function useDropImport(options: DropImportOptions) {
 		return result
 	}
 
+	// ── Compatible mode ──────────────────────────────────────────────────
+
 	async function handleCompatibleModeConfirm(choice: 'compatible' | 'old-way' | 'cancel') {
 		if (choice === 'cancel') {
 			currentImportContext.value = null
@@ -695,7 +701,7 @@ export function useDropImport(options: DropImportOptions) {
 
 		const filePath = classification?.file_path ?? dropFilePath.value
 		const fileName =
-			filePath?.split(/[/\\]/).pop() ?? classification.base_path?.split(/[/\\]/).pop() ?? 'file'
+			filePath?.split(/[/\\]/).pop() ?? classification?.base_path?.split(/[/\\]/).pop() ?? 'file'
 		dropDebug('handleDropConfirm: routing decision', {
 			type,
 			isLauncherImport,
@@ -919,8 +925,8 @@ export function useDropImport(options: DropImportOptions) {
 			dropDebug('handleDropConfirm: data pack requires a world target', {
 				filePath,
 			})
-			pendingInstall.value = { type, filePath, innerBase }
-			dataPackWorldModal.value?.show(isInInstance.value ? instanceId.value : undefined)
+		pendingInstall.value = { type, filePath, innerBase }
+		dataPackWorldModal.value?.show(isInInstance.value ? (instanceId.value ?? undefined) : undefined)
 			return
 		}
 
@@ -1467,9 +1473,9 @@ export function useDropImport(options: DropImportOptions) {
 					inst.name,
 					choice?.symlink ?? (Array.isArray(choices) ? false : choices),
 					resolvedInstancePath(inst, ctx),
-					inst.compatibleMode ? undefined : choice?.gameVersion,
-					inst.compatibleMode ? undefined : choice?.loader,
-					inst.compatibleMode ? undefined : choice?.loaderVersion,
+					inst.compatibleMode ? undefined : (choice?.gameVersion ?? undefined),
+					inst.compatibleMode ? undefined : (choice?.loader ?? undefined),
+					inst.compatibleMode ? undefined : (choice?.loaderVersion ?? undefined),
 					choice?.gameDirOverride ?? null,
 				)
 				await wait_for_install_job(job.job_id)
@@ -1532,9 +1538,9 @@ export function useDropImport(options: DropImportOptions) {
 					inst.name,
 					choice?.symlink ?? (Array.isArray(choices) ? false : choices),
 					resolvedInstancePath(inst, ctx),
-					inst.compatibleMode ? undefined : choice?.gameVersion,
-					inst.compatibleMode ? undefined : choice?.loader,
-					inst.compatibleMode ? undefined : choice?.loaderVersion,
+					inst.compatibleMode ? undefined : (choice?.gameVersion ?? undefined),
+					inst.compatibleMode ? undefined : (choice?.loader ?? undefined),
+					inst.compatibleMode ? undefined : (choice?.loaderVersion ?? undefined),
 					choice?.gameDirOverride ?? null,
 				)
 				await wait_for_install_job(job.job_id)

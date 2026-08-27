@@ -5852,6 +5852,18 @@
 	"app.project.install-context.install-content-to-instance": {
 		"message": "将内容安装到实例中"
 	},
+	"app.project.modpack-server.created-description": {
+		"message": "{name} 已就绪。请在多人游戏中配置并启动。"
+	},
+	"app.project.modpack-server.created-title": {
+		"message": "服务器已创建"
+	},
+	"app.project.modpack-server.open": {
+		"message": "打开服务器"
+	},
+	"app.project.modpack-server.start": {
+		"message": "开服"
+	},
 	"app.project.mcarchive.install": {
 		"message": "安装"
 	},
@@ -6032,11 +6044,14 @@
 	"app.servers.eula.accept": {
 		"message": "同意并继续"
 	},
+	"app.servers.eula.continue": {
+		"message": "继续"
+	},
 	"app.servers.eula.decline": {
 		"message": "取消"
 	},
 	"app.servers.eula.description": {
-		"message": "服务器启动前需要同意 Minecraft 最终用户许可协议（EULA）。请查看以下内容："
+		"message": "继续即表示同意 Minecraft 最终用户许可协议 (EULA)。"
 	},
 	"app.servers.eula.title": {
 		"message": "Minecraft EULA"
@@ -6413,6 +6428,9 @@
 	"app.servers.status.crashed": {
 		"message": "已崩溃"
 	},
+	"app.servers.status.downloading": {
+		"message": "下载中"
+	},
 	"app.servers.status.created": {
 		"message": "未配置"
 	},
@@ -6428,18 +6446,24 @@
 	"app.servers.status.starting": {
 		"message": "启动中"
 	},
-	"app.servers.wizard.configure-heading": {
-		"message": "调整服务器设置，或直接完成，稍后再编辑。"
-	},
+ 	"app.servers.wizard.background-hint": {
+ 		"message": "您可以关闭此窗口，下载将在后台继续进行。"
+ 	},
+ 	"app.servers.wizard.configure-heading": {
+ 		"message": "调整服务器设置，或直接完成，稍后再编辑。"
+ 	},
 	"app.servers.wizard.configure-title": {
 		"message": "配置"
 	},
 	"app.servers.wizard.done": {
 		"message": "服务器已就绪"
 	},
-	"app.servers.wizard.downloading": {
-		"message": "正在下载服务端文件…"
-	},
+ 	"app.servers.wizard.download-in-background": {
+ 		"message": "后台下载"
+ 	},
+ 	"app.servers.wizard.downloading": {
+ 		"message": "正在下载服务端文件…"
+ 	},
 	"app.servers.wizard.eula-wait": {
 		"message": "等待确认 EULA"
 	},
@@ -6493,6 +6517,33 @@
 	},
 	"app.servers.wizard.type-title": {
 		"message": "服务端类型"
+	},
+	"app.servers.modpack.background-hint": {
+		"message": "您可以关闭此窗口，下载将在后台继续进行。"
+	},
+	"app.servers.modpack.current-file": {
+		"message": "正在安装 {file}"
+	},
+	"app.servers.modpack.download-in-background": {
+		"message": "后台下载"
+	},
+	"app.servers.modpack.downloading": {
+		"message": "正在下载整合包文件..."
+	},
+	"app.servers.modpack.first-run-crashed": {
+		"message": "服务器在首次启动时崩溃。请检查所选 Java 版本是否兼容，然后重试。"
+	},
+	"app.servers.modpack.preparing": {
+		"message": "正在准备服务器..."
+	},
+	"app.servers.modpack.done": {
+		"message": "安装完成"
+	},
+	"app.servers.modpack.unsupported-loader-description": {
+		"message": "此整合包使用 {loader}，但 Axolotl 目前仅支持原版、Fabric 和 Quilt 整合包服务端。{loader} 支持即将推出。"
+	},
+	"app.servers.modpack.unsupported-loader-title": {
+		"message": "{loader} 服务端暂不支持"
 	},
 	"app.settings.about.afdian": {
 		"message": "在爱发电赞助"

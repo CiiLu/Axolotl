@@ -1,13 +1,15 @@
 <script setup lang="ts">
+import type { Labrinth } from '@modrinth/api-client'
 import { commonMessages, defineMessages, MultiStageModal } from '@modrinth/ui'
 import { computed, ref, useTemplateRef, watch } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
-import {
-	createCreateServerFlowContext,
-	provideCreateServerFlow,
-} from '@/components/multiplayer/servers/create-server-flow'
+import { provideCreateServerFlow } from '@/components/multiplayer/servers/create-server-flow'
 import EulaModal from '@/components/multiplayer/servers/EulaModal.vue'
+import {
+	createModpackServerFlowContext,
+	provideModpackServerFlow,
+} from '@/components/multiplayer/servers/modpack/create-modpack-server-flow'
 
 const emit = defineEmits<{
 	created: [serverId: string]
@@ -16,12 +18,13 @@ const emit = defineEmits<{
 const modal = useTemplateRef<ComponentExposed<typeof MultiStageModal>>('modal')
 const eulaModal = useTemplateRef<ComponentExposed<typeof EulaModal>>('eulaModal')
 
-const ctx = createCreateServerFlowContext(modal)
+const ctx = createModpackServerFlowContext(modal)
 provideCreateServerFlow(ctx)
+provideModpackServerFlow(ctx)
 
 const messages = defineMessages({
 	downloadInBackground: {
-		id: 'app.servers.wizard.download-in-background',
+		id: 'app.servers.modpack.download-in-background',
 		defaultMessage: 'Download in background',
 	},
 })
@@ -34,8 +37,6 @@ const cancelButton = computed(() => {
 	if (ctx.installPhase.value === 'done') {
 		return null
 	}
-	// The download continues in the background once the wizard closes; only the
-	// first-run boot locks closing until the server reaches its EULA gate.
 	return {
 		label: ctx.formatMessage(
 			ctx.installPhase.value === 'downloading'
@@ -57,24 +58,32 @@ watch(ctx.showEulaModal, (visible) => {
 	}
 })
 
-function show() {
+// The download keeps running in the background even if the wizard is closed.
+// Report the finished server once the flow reaches a terminal success state.
+watch(
+	() => ctx.installPhase.value,
+	(phase) => {
+		if (!wasHiddenDuringInstall.value || creationReported.value) return
+		if ((phase === 'done' || phase === 'eula') && ctx.createdServer.value) {
+			creationReported.value = true
+			emit('created', ctx.createdServer.value.id)
+		}
+	},
+)
+
+function show(project: Labrinth.Projects.v2.Project, version: Labrinth.Versions.v2.Version) {
 	wizardShown.value = true
 	wasHiddenDuringInstall.value = false
 	creationReported.value = false
 	ctx.reset()
+	ctx.setPack(project, version)
 	modal.value?.setStage(0)
 	modal.value?.show()
 }
 
 function handleHide() {
-	const wasShown = wizardShown.value
 	wizardShown.value = false
-	// An explicit "Finish" (wizard still open at a terminal state) navigates to
-	// the new server. A background close (wizard dismissed mid-install) leaves
-	// the server in the list instead of yanking the user to another page.
 	if (
-		wasShown &&
-		!wasHiddenDuringInstall.value &&
 		ctx.createdServer.value &&
 		(ctx.installPhase.value === 'done' || ctx.installPhase.value === 'eula')
 	) {
@@ -95,6 +104,7 @@ defineExpose({ show, hide: () => modal.value?.hide() })
 		ref="modal"
 		:stages="ctx.stageConfigs"
 		:context="ctx"
+		breadcrumbs
 		:back-button-enabled="
 			(flowCtx) =>
 				flowCtx.installPhase.value !== 'downloading' && flowCtx.installPhase.value !== 'first-run'

@@ -25,17 +25,17 @@ import { type as osType } from '@tauri-apps/plugin-os'
 import { computed, markRaw, type Ref, ref } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 
+import { createServerDownloadBridge } from '@/composables/server-download-bridge'
 import { refresh as refreshServerList } from '@/composables/useServers'
 import { find_filtered_jres, get_java_default_versions, get_max_memory } from '@/helpers/jre'
 import { get_game_versions, get_loader_versions } from '@/helpers/metadata'
 import {
 	serverEventListener,
-	type ServerEventPayload,
 	type ServerManifestData,
 	servers,
 } from '@/helpers/servers'
+import { injectDownloadManager } from '@/providers/download-manager'
 
-import ConfigureStage from './stages/ConfigureStage.vue'
 import InstallStage from './stages/InstallStage.vue'
 import SetupStage from './stages/SetupStage.vue'
 import TypeStage from './stages/TypeStage.vue'
@@ -59,9 +59,9 @@ export interface LoaderVersionOption {
 	stable: boolean
 }
 
-export interface CreateServerFlowContext {
+export interface CreateServerFlowContext<TCtx extends CreateServerFlowContext<TCtx>> {
 	modal: Ref<ComponentExposed<typeof MultiStageModal> | null>
-	stageConfigs: StageConfigInput<CreateServerFlowContext>[]
+	stageConfigs: StageConfigInput<TCtx>[]
 	formatMessage: ReturnType<typeof useVIntl>['formatMessage']
 
 	serverType: Ref<ServerTypeId>
@@ -103,8 +103,11 @@ export interface CreateServerFlowContext {
 	reset: () => void
 }
 
+/** Concrete context used by the vanilla (non-modpack) server creation flow. */
+export type CreateServerFlowContextValue = CreateServerFlowContext<CreateServerFlowContextValue>
+
 export const [injectCreateServerFlow, provideCreateServerFlow] =
-	createContext<CreateServerFlowContext>('CreateServerFlow')
+	createContext<CreateServerFlowContextValue>('CreateServerFlow')
 
 interface VanillaVersionEntry {
 	id: string
@@ -157,23 +160,6 @@ function toErrorMessage(error: unknown): string {
 	}
 }
 
-async function waitForServerStop(serverId: string): Promise<ServerEventPayload | null> {
-	return new Promise((resolve) => {
-		void serverEventListener((eventServerId, payload) => {
-			if (eventServerId !== serverId || payload.event !== 'stopped') return
-			resolve(payload)
-		}).then((unlisten) => {
-			setTimeout(
-				() => {
-					unlisten()
-					resolve(null)
-				},
-				10 * 60 * 1000,
-			)
-		})
-	})
-}
-
 function javaMajorFromVersion(version: string): number | null {
 	const parts = version
 		.split(/[._]/)
@@ -186,8 +172,20 @@ function javaMajorFromVersion(version: string): number | null {
 
 export function createCreateServerFlowContext(
 	modal: Ref<ComponentExposed<typeof MultiStageModal> | null>,
-): CreateServerFlowContext {
+): CreateServerFlowContextValue {
 	const { formatMessage } = useVIntl()
+
+	// [SERVER-DOWNLOAD-BRIDGE] Capture the download manager once during Vue
+	// setup context.  Vue's inject() only works in the synchronous setup
+	// scope — after any `await` the injection context is lost.  We store the
+	// reference here and pass it explicitly to the shared download bridge so
+	// the vanilla server download appears in the sidebar like the modpack flow.
+	let downloadManager: ReturnType<typeof injectDownloadManager> | null = null
+	try {
+		downloadManager = injectDownloadManager()
+	} catch {
+		// Not inside a provider tree — server downloads will not appear in sidebar.
+	}
 
 	const wizardMessages = defineMessages({
 		typeStageTitle: { id: 'app.servers.wizard.type-title', defaultMessage: 'Server type' },
@@ -315,6 +313,10 @@ export function createCreateServerFlowContext(
 		installError.value = null
 		installLog.value = []
 		downloadProgress.value = null
+		// A cancelled/retried install leaves its download promise running in the
+		// background; reopening the wizard starts a fresh call. The bridge is
+		// captured per-call and closed out in the surrounding try/finally.
+		let activeBridge: ReturnType<typeof createServerDownloadBridge> | null = null
 		try {
 			const requiredJava = requiredJavaMajorVersion(selectedGameVersion.value)
 			const selectedMajor = javaMajorFromVersion(selectedJava.value.version)
@@ -384,43 +386,45 @@ export function createCreateServerFlowContext(
 			}
 
 			installPhase.value = 'downloading'
+			// [SERVER-DOWNLOAD-BRIDGE] Mirror this server download in the sidebar
+			// so it behaves like the modpack flow: the user can close the wizard
+			// and the job keeps running (and is cancellable) from Downloads.
+			const syntheticJobId = `server-${manifest.id}`
+			activeBridge = downloadManager
+				? createServerDownloadBridge(downloadManager, syntheticJobId, {
+						title: name.value,
+						icon: null,
+						provider: 'minecraft',
+					})
+				: null
+			activeBridge?.cancel(async () => {
+				await servers.stop(manifest.id).catch(() => {})
+			})
 			const unlistenProgress = await serverEventListener((serverId, payload) => {
 				if (serverId !== manifest.id || payload.event !== 'download_progress') return
 				downloadProgress.value = {
 					downloaded: payload.downloaded,
 					total: payload.total ?? null,
 				}
+				activeBridge?.update(downloadProgress.value, null, null)
 			})
 			try {
 				await servers.downloadFile(manifest.id, url, filename, sha1)
+				activeBridge?.complete(true, downloadProgress.value ?? undefined)
 			} finally {
 				unlistenProgress()
 			}
 
-			installPhase.value = 'first-run'
-			const unlistenLogs = await serverEventListener((serverId, payload) => {
-				if (serverId !== manifest.id || payload.event !== 'log') return
-				installLog.value.push(payload.line)
-				if (installLog.value.length > 500) installLog.value.splice(0, installLog.value.length - 500)
-			})
-			try {
-				await servers.start(manifest.id)
-				await waitForServerStop(manifest.id)
-			} finally {
-				unlistenLogs()
-			}
-
-			const eula = await servers.readFile(manifest.id, 'eula.txt').catch(() => null)
-			if (eula !== null && !eula.includes('eula=true')) {
-				eulaText.value = eula
-				showEulaModal.value = true
-				installPhase.value = 'eula'
-				return
-			}
+			// [SERVER-EULA] Like the modpack flow, the server is not auto-started.
+			// A code-created `eula.txt` (eula=false) is written so the manual start
+			// gate (useServerLifecycle) can offer the EULA without booting the jar.
+			const eula = setEulaAccepted('', false)
+			await servers.writeFile(manifest.id, 'eula.txt', eula).catch(() => {})
 			installPhase.value = 'done'
 		} catch (error) {
 			installPhase.value = 'error'
 			installError.value = toErrorMessage(error)
+			activeBridge?.complete(false, downloadProgress.value ?? undefined)
 			// A half-installed server must not linger in the list; retrying starts over.
 			if (createdServer.value) {
 				const failed = createdServer.value
@@ -482,7 +486,7 @@ export function createCreateServerFlowContext(
 			(!needsLoaderVersion.value || selectedLoaderVersion.value !== ''),
 	)
 
-	const stageConfigs: StageConfigInput<CreateServerFlowContext>[] = [
+	const stageConfigs: StageConfigInput<CreateServerFlowContextValue>[] = [
 		{
 			id: 'type',
 			stageContent: markRaw(TypeStage),
@@ -517,12 +521,13 @@ export function createCreateServerFlowContext(
 			stageContent: markRaw(InstallStage),
 			title: (ctx) => ctx.formatMessage(wizardMessages.installStageTitle),
 			cannotNavigateForward: (ctx) => ctx.installPhase.value !== 'done',
-			disableClose: (ctx) =>
-				ctx.installPhase.value === 'downloading' || ctx.installPhase.value === 'first-run',
+			// Downloads continue in the background once the wizard closes; only
+			// the first-run boot locks closing until the server reaches its EULA gate.
+			disableClose: (ctx) => ctx.installPhase.value === 'first-run',
 			leftButtonConfig: () => null,
 			rightButtonConfig: (ctx) => ({
 				label: ctx.formatMessage(
-					ctx.installPhase.value === 'error' ? wizardMessages.retry : wizardMessages.next,
+					ctx.installPhase.value === 'error' ? wizardMessages.retry : wizardMessages.finish,
 				),
 				color: 'brand',
 				icon: ctx.installPhase.value === 'error' ? RefreshCwIcon : null,
@@ -533,22 +538,8 @@ export function createCreateServerFlowContext(
 						ctx.retryInstall()
 						return
 					}
-					ctx.modal.value?.nextStage()
-				},
-			}),
-		},
-		{
-			id: 'configure',
-			stageContent: markRaw(ConfigureStage),
-			title: (ctx) => ctx.formatMessage(wizardMessages.configureStageTitle),
-			maxWidth: 'min(60rem, calc(95vw - 10rem))',
-			leftButtonConfig: () => null,
-			rightButtonConfig: (ctx) => ({
-				label: ctx.formatMessage(wizardMessages.finish),
-				color: 'brand',
-				onClick: async () => {
-					const save = ctx.saveServerProperties.value
-					if (save === null || (await save())) ctx.modal.value?.hide()
+					// Server is ready — close the wizard so the host can navigate to it.
+					ctx.modal.value?.hide()
 				},
 			}),
 		},

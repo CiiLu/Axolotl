@@ -25,7 +25,8 @@ import {
 const router = useRouter()
 const { formatMessage } = useVIntl()
 const { servers, isRefreshing, refresh, stopServer } = useServers()
-const { eulaModal, eulaText, tryStartServer, acceptEula, declineEula } = useServerLifecycle()
+const { eulaModal, eulaText, tryStartServer, acceptEula, declineEula, resumeInstall } =
+	useServerLifecycle()
 const createModal = useTemplateRef<ComponentExposed<typeof CreateServerModal>>('createModal')
 
 const messages = defineMessages({
@@ -62,7 +63,10 @@ onMounted(() => {
 	void refresh()
 })
 
-function openServer(id: string) {
+async function openServer(id: string) {
+	// Refresh first so the freshly created server is present in the shared store
+	// before ServerDetail mounts; otherwise it briefly shows "server not found".
+	await refresh().catch(() => {})
 	void router.push('/multiplayer/servers/' + encodeURIComponent(id))
 }
 
@@ -166,11 +170,12 @@ async function toggleRunning(server: ServerView) {
 				:variant="displayMode === 'cards' ? 'library' : 'standard'"
 				@open="openServer(entry.id)"
 				@start-stop="toggleRunning(entry)"
+				@resume="resumeInstall(entry)"
 			/>
 		</div>
 
-		<CreateServerModal ref="createModal" />
-		<EulaModal ref="eulaModal" :text="eulaText" @accept="acceptEula" @decline="declineEula" />
+		<CreateServerModal ref="createModal" @created="openServer" />
+		<EulaModal ref="eulaModal" :text="eulaText" @continue="acceptEula" @decline="declineEula" />
 	</div>
 </template>
 

@@ -36,6 +36,7 @@ export async function get_importable_instances(launcherType, basePath) {
 }
 
 /// Import an instance from a launcher type and base path
+/** @param {string|undefined} instancePath @param {string|undefined} gameVersion @param {string|undefined} loader @param {string|undefined} loaderVersion @param {string|null|undefined} gameDirOverride */
 export async function import_instance(
 	launcherType,
 	basePath,

@@ -12,10 +12,11 @@ use tokio::process::{Child, ChildStdin, Command};
 
 use crate::event::ServerPayloadType;
 use crate::event::emit::emit_server;
-use crate::state::clear_log_buffer;
+use crate::state::{clear_log_buffer, get_log_buffer};
+use crate::util::io::IOError;
 use crate::{ErrorKind, Result};
 
-use super::logs::stream_server_output;
+use super::logs::{analyze_exit_reason, stream_server_output};
 use super::manifest::{
     read_manifest, resolve_jar_name, server_path, write_manifest,
 };
@@ -84,6 +85,14 @@ async fn start_inner(
         .or(manifest.memory_mb)
         .unwrap_or(DEFAULT_MEMORY_MB);
 
+    // Ensure eula.txt exists (create with eula=false if missing)
+    let eula_path = dir.join("eula.txt");
+    if !eula_path.exists() {
+        tokio::fs::write(&eula_path, "eula=false\n")
+            .await
+            .map_err(|e| IOError::with_path(e, &eula_path))?;
+    }
+
     let mut command = Command::new(&java);
     command.arg(format!("-Xmx{memory}M"));
     for arg in jvm_args.unwrap_or_else(|| manifest.jvm_args.clone()) {
@@ -91,6 +100,19 @@ async fn start_inner(
     }
     command.arg("-jar").arg(&jar_name).arg("nogui");
     command.current_dir(&dir);
+    // Dynamic-loader injection variables (Steam overlays, debugging tools,
+    // stale shell exports) lengthen every dyld failure message the JVM
+    // produces, which is exactly what trips the JNA < 5.13 macOS assertion;
+    // they have no business affecting a managed server either.
+    for variable in [
+        "DYLD_LIBRARY_PATH",
+        "DYLD_FALLBACK_LIBRARY_PATH",
+        "DYLD_FRAMEWORK_PATH",
+        "DYLD_FALLBACK_FRAMEWORK_PATH",
+        "DYLD_INSERT_LIBRARIES",
+    ] {
+        command.env_remove(variable);
+    }
     command.stdout(std::process::Stdio::piped());
     command.stderr(std::process::Stdio::piped());
     command.stdin(std::process::Stdio::piped());
@@ -222,12 +244,23 @@ async fn monitor_server_process(
             .map(|status| !status.success() && !stop_requested && eula_accepted)
             .unwrap_or(false);
 
+        // Classify self-exits from the tail of the console output so the UI
+        // can react (e.g. offer the EULA dialog). User-requested stops and
+        // unmatched exits stay unclassified. The brief settle wait lets the
+        // output-stream tasks flush their final lines into the buffer first.
+        let reason = if stop_requested {
+            None
+        } else {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            analyze_exit_reason(&get_log_buffer(&server_id))
+        };
+
         if let Ok(mut manifest) = read_manifest(&dir).await {
             manifest.last_exit_crashed = crashed;
             let _ = write_manifest(&dir, &manifest).await;
         }
 
-        emit_server(&server_id, ServerPayloadType::Stopped { crashed })
+        emit_server(&server_id, ServerPayloadType::Stopped { crashed, reason })
             .await
             .ok();
         return;

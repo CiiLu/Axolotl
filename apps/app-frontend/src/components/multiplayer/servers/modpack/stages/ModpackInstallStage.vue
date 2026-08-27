@@ -3,29 +3,32 @@ import { CheckCircleIcon, SpinnerIcon } from '@modrinth/assets'
 import { Admonition, defineMessages, ProgressBar, useVIntl } from '@modrinth/ui'
 import { computed, onMounted } from 'vue'
 
-import { injectCreateServerFlow } from '../create-server-flow'
+import { injectCreateServerFlow } from '../../create-server-flow'
 
 const { formatMessage } = useVIntl()
 const ctx = injectCreateServerFlow()
 
-	const messages = defineMessages({
-		downloading: {
-			id: 'app.servers.wizard.downloading',
-			defaultMessage: 'Downloading server files...',
-		},
-		firstRun: { id: 'app.servers.wizard.first-run', defaultMessage: 'Running first start...' },
-		eulaWait: {
-			id: 'app.servers.wizard.eula-wait',
-			defaultMessage: 'Waiting for EULA confirmation',
-		},
-		done: { id: 'app.servers.wizard.done', defaultMessage: 'Server ready' },
-		failed: { id: 'app.servers.wizard.failed', defaultMessage: 'Setup failed' },
-		installLog: { id: 'app.servers.wizard.log', defaultMessage: 'Output' },
-		backgroundHint: {
-			id: 'app.servers.wizard.background-hint',
-			defaultMessage: 'You can close this window — the download continues in the background.',
-		},
-	})
+const messages = defineMessages({
+	downloading: {
+		id: 'app.servers.modpack.downloading',
+		defaultMessage: 'Downloading modpack files...',
+	},
+	preparing: {
+		id: 'app.servers.modpack.preparing',
+		defaultMessage: 'Preparing server...',
+	},
+	done: { id: 'app.servers.modpack.done', defaultMessage: 'Installation complete' },
+	failed: { id: 'app.servers.wizard.failed', defaultMessage: 'Setup failed' },
+	installLog: { id: 'app.servers.wizard.log', defaultMessage: 'Output' },
+	currentFile: {
+		id: 'app.servers.modpack.current-file',
+		defaultMessage: 'Now installing {file}',
+	},
+	backgroundHint: {
+		id: 'app.servers.modpack.background-hint',
+		defaultMessage: 'You can close this window — the download continues in the background.',
+	},
+})
 
 onMounted(() => {
 	if (ctx.installPhase.value === 'idle' || ctx.installPhase.value === 'error') {
@@ -35,10 +38,8 @@ onMounted(() => {
 
 const phaseText = computed(() => {
 	switch (ctx.installPhase.value) {
-		case 'first-run':
-			return formatMessage(messages.firstRun)
-		case 'eula':
-			return formatMessage(messages.eulaWait)
+		case 'preparing':
+			return formatMessage(messages.preparing)
 		case 'done':
 			return formatMessage(messages.done)
 		case 'error':
@@ -54,11 +55,18 @@ const progressPercent = computed(() => {
 	return Math.min(100, (progress.downloaded / progress.total) * 100)
 })
 
+const currentFile = computed(() => {
+	const match = [...ctx.installLog.value]
+		.map((line) => /^Downloading (.+)$/.exec(line)?.[1])
+		.filter(Boolean)
+		.at(-1)
+	return match ?? null
+})
+
 const isBusy = computed(
 	() =>
 		ctx.installPhase.value === 'preparing' ||
-		ctx.installPhase.value === 'downloading' ||
-		ctx.installPhase.value === 'first-run',
+		ctx.installPhase.value === 'downloading',
 )
 </script>
 
@@ -82,6 +90,13 @@ const isBusy = computed(
 			:label="formatMessage(messages.downloading)"
 			show-progress
 		/>
+
+		<p
+			v-if="currentFile && ctx.installPhase.value === 'downloading'"
+			class="m-0 -mt-2 truncate text-xs font-medium text-secondary"
+		>
+			{{ formatMessage(messages.currentFile, { file: currentFile }) }}
+		</p>
 
 		<p
 			v-if="ctx.installPhase.value === 'downloading'"
