@@ -33,6 +33,25 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.9.1',
+		version: '1.9.1',
+		publishedAt: '2026-08-27',
+		title: {
+			'en-US': 'Axolotl Launcher 1.9.1',
+			'zh-CN': 'Axolotl Launcher 1.9.1',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US':
+						'Fixed CurseForge showing no content under Discover when no search query is entered — browsing CurseForge now loads content again.',
+					'zh-CN':
+						'修复发现内容页不输入搜索词时 CurseForge 空白无内容的问题，现在打开 CurseForge 来源即可正常浏览内容。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.9.0',
 		version: '1.9.0',
 		publishedAt: '2026-08-26',
