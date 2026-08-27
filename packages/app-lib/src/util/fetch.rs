@@ -1,4 +1,10 @@
 //! Functions for fetching information from the Internet
+use super::download::modrinth_redirect::{
+    canonical_cdn_url,
+    is_official_redirect as is_official_modrinth_cdn_redirect,
+    repair_official_redirect as repair_official_cdn_redirect,
+    tianpao_redirect_target as tianpao_modrinth_redirect_target,
+};
 use super::download_dns::DownloadDnsResolver;
 use super::download_manager::{DownloadSpeedTracker, SpeedSnapshot};
 use super::io::{self, IOError};
@@ -34,6 +40,16 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
 };
 use url::Url;
+
+#[cfg(test)]
+fn canonical_modrinth_cdn_url(url: &str) -> String {
+    canonical_cdn_url(url)
+}
+
+#[cfg(test)]
+fn is_safe_redirect_location(location: &str) -> bool {
+    location.len() <= MAX_REDIRECT_LOCATION_BYTES && location.is_ascii()
+}
 use uuid::Uuid;
 
 pub const DOWNLOAD_META_HEADER: &str = "modrinth-download-meta";
@@ -43,7 +59,7 @@ const MCIM_BASE_URL: &str = "https://mod.mcimirror.top";
 pub(crate) const TIANPAO_HOST: &str = "mod.tianpao.top";
 const TIANPAO_BASE_URL: &str = "https://mod.tianpao.top";
 pub(crate) const MODRINTH_CDN_OFFICIAL_HOST: &str = "cdn-alt.modrinth.com";
-const MODRINTH_CDN_LEGACY_HOST: &str = "cdn.modrinth.com";
+pub(crate) const MODRINTH_CDN_LEGACY_HOST: &str = "cdn.modrinth.com";
 const METADATA_ATTEMPT_BUDGET: usize = 4;
 #[cfg(not(test))]
 const METADATA_HEDGE_DELAY: time::Duration = time::Duration::from_secs(2);
@@ -625,20 +641,6 @@ fn modrinth_request_kind(url: &str) -> Option<&'static str> {
 /// Rewrites the legacy `cdn.modrinth.com` host to the official
 /// `cdn-alt.modrinth.com` host, preserving scheme, path and query. Other
 /// hosts are returned unchanged, so the result can be used unconditionally.
-fn canonical_modrinth_cdn_url(url: &str) -> String {
-    let Ok(mut parsed) = Url::parse(url) else {
-        return url.to_string();
-    };
-    if parsed.scheme() == "https"
-        && parsed.host_str().is_some_and(|host| {
-            host.eq_ignore_ascii_case(MODRINTH_CDN_LEGACY_HOST)
-        })
-    {
-        let _ = parsed.set_host(Some(MODRINTH_CDN_OFFICIAL_HOST));
-    }
-    parsed.into()
-}
-
 fn is_modrinth_cdn_url(url: &str) -> bool {
     url.starts_with("https://cdn-alt.modrinth.com")
 }
@@ -897,69 +899,6 @@ fn attach_download_attempt_history(
     error.with_context(context)
 }
 
-fn is_safe_redirect_location(location: &str) -> bool {
-    location.len() <= MAX_REDIRECT_LOCATION_BYTES && location.is_ascii()
-}
-
-fn repair_official_cdn_redirect(
-    original: &Url,
-    redirect: &Url,
-    location: &str,
-) -> Option<Url> {
-    if location.is_ascii()
-        || !redirect.host_str().is_some_and(|host| {
-            host.eq_ignore_ascii_case(MODRINTH_CDN_LEGACY_HOST)
-                || host.eq_ignore_ascii_case(MODRINTH_CDN_OFFICIAL_HOST)
-        })
-        || original.path().is_empty()
-    {
-        return None;
-    }
-
-    let mut repaired = redirect.clone();
-    repaired.set_path(original.path());
-    repaired.set_query(original.query());
-    repaired.set_fragment(original.fragment());
-    Some(repaired)
-}
-
-fn is_official_modrinth_cdn_redirect(location: Option<&str>) -> bool {
-    let Some(location) = location.filter(|location| {
-        is_safe_redirect_location(location)
-            && location
-                .get(..8)
-                .is_some_and(|scheme| scheme.eq_ignore_ascii_case("https://"))
-    }) else {
-        return false;
-    };
-    let authority = location[8..]
-        .split(['/', '?', '#'])
-        .next()
-        .unwrap_or_default();
-    authority.eq_ignore_ascii_case("cdn-alt.modrinth.com")
-        || authority.eq_ignore_ascii_case("cdn-alt.modrinth.com:443")
-        || authority.eq_ignore_ascii_case("cdn.modrinth.com")
-        || authority.eq_ignore_ascii_case("cdn.modrinth.com:443")
-}
-
-fn tianpao_modrinth_redirect_target(
-    current: &Url,
-    redirect: &Url,
-) -> Option<Url> {
-    if current.host_str() != Some(TIANPAO_HOST)
-        || !current.path().starts_with("/data/")
-        || !redirect.host_str().is_some_and(|host| {
-            host.eq_ignore_ascii_case(MODRINTH_CDN_LEGACY_HOST)
-                || host.eq_ignore_ascii_case(MODRINTH_CDN_OFFICIAL_HOST)
-        })
-    {
-        return None;
-    }
-    let mut target = redirect.clone();
-    target.set_host(Some(MODRINTH_CDN_LEGACY_HOST)).ok()?;
-    Some(target)
-}
-
 fn is_mrpack_url(url: &str) -> bool {
     reqwest::Url::parse(url)
         .ok()
@@ -983,7 +922,7 @@ fn route(
 }
 
 fn official_route(url: &str, resource: ResourceClass) -> DownloadRoute {
-    let url = canonical_modrinth_cdn_url(url);
+    let url = canonical_cdn_url(url);
     let source = Url::parse(&url)
         .ok()
         .and_then(|url| url.host_str().map(str::to_string))
@@ -1284,7 +1223,7 @@ pub fn resolve_download_routes_for(
     resource: ResourceClass,
     mode: crate::state::DownloadSourceMode,
 ) -> Vec<DownloadRoute> {
-    let url = canonical_modrinth_cdn_url(url);
+    let url = canonical_cdn_url(url);
     let official = official_route(&url, resource);
     let mirror_first_loader = uses_mirror_first_loader_routes(&url, resource);
     let mut routes = explicit_mirror_routes(&url, resource);
@@ -5594,11 +5533,11 @@ async fn download_to_path_inner(
     // the single entry point so every caller (modpacks, single content
     // installs, missing-content recovery) gets the same behaviour before route
     // resolution decides whether a Tianpao mirror should be attempted first.
-    request.url = canonical_modrinth_cdn_url(&request.url);
+    request.url = canonical_cdn_url(&request.url);
     request.candidate_urls = request
         .candidate_urls
         .iter()
-        .map(|url| canonical_modrinth_cdn_url(url))
+        .map(|url| canonical_cdn_url(url))
         .collect();
     if let Some(parent) = destination.parent() {
         io::create_dir_all(parent).await?;

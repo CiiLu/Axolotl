@@ -15,6 +15,7 @@ pub(crate) mod h2_receive;
 pub(crate) mod h2_stream_budget;
 pub mod legacy;
 pub mod log;
+pub(crate) mod modrinth_redirect;
 pub(crate) mod native;
 pub(crate) mod native_breaker;
 pub(crate) mod native_budget;
