@@ -61,10 +61,8 @@ pub fn get_instances(base_path: &Path) -> Vec<(String, String)> {
             base_path.join(&game_dir)
         };
         if resolved.is_dir() {
-            instances.push((
-                key.clone(),
-                resolved.to_string_lossy().to_string(),
-            ));
+            instances
+                .push((key.clone(), resolved.to_string_lossy().to_string()));
         }
     }
     instances.sort_by(|a, b| a.0.cmp(&b.0));
