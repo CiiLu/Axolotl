@@ -2243,9 +2243,12 @@ pub async fn download_libraries(
 /// Ensures a version's extracted native libraries are present before launch.
 ///
 /// This is deliberately conservative: it only creates entries that are
-/// missing (or zero bytes long) from the locally cached native archives, never
+/// missing (or zero bytes long) from locally available native archives, never
 /// overwrites existing content, never touches the network, and degrades to the
-/// regular launch error path when a repair is impossible.
+/// regular launch error path when a repair is impossible. A missing archive is
+/// tolerated as long as the extracted natives directory already contains
+/// usable files — the archive is only needed for repairs, so its absence must
+/// not block an otherwise launchable game.
 pub(crate) async fn ensure_native_libraries_extracted(
     natives_root: &Path,
     libraries_dir: &Path,
@@ -2277,21 +2280,36 @@ pub(crate) async fn ensure_native_libraries_extracted(
             continue;
         };
 
-        let archive = local_native_archive_path(
+        let candidates = native_archive_candidates(
             libraries_dir,
             caches_dir,
             library,
             &classifier,
         )?;
 
-        if !archive.is_file() {
+        let Some(archive) =
+            candidates.iter().find(|candidate| candidate.is_file())
+        else {
+            if natives_dir_has_native_content(&natives_dir) {
+                tracing::warn!(
+                    library = %library.name,
+                    natives_dir = %natives_dir.display(),
+                    "Missing native library archive but extracted natives exist; skipping verification"
+                );
+                continue;
+            }
             return Err(crate::ErrorKind::LauncherError(format!(
                 "Native library archive for {} is missing at {}; repair or reinstall the instance",
                 library.name,
-                archive.display()
+                candidates
+                    .iter()
+                    .map(|candidate| candidate.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
             ))
             .into());
-        }
+        };
+        let archive = archive.clone();
 
         let expected = tokio::task::spawn_blocking({
             let archive = archive.clone();
@@ -2333,28 +2351,49 @@ pub(crate) async fn ensure_native_libraries_extracted(
     Ok(())
 }
 
-/// Locates the locally cached native archive for a library, mirroring the
-/// paths used by `download_libraries` so repairs use exactly the same files
-/// a fresh install would have extracted.
-fn local_native_archive_path(
+/// Locates candidate local native archives for a library, in order of
+/// preference: the versioned cache entry used by modern metadata shapes
+/// first, then the classified artifact under the libraries directory used
+/// by legacy metadata shapes. The classified path doubles as a fallback when
+/// caches have been cleaned, so repairs use exactly the same files a fresh
+/// install would have extracted.
+fn native_archive_candidates(
     libraries_dir: &Path,
     caches_dir: &Path,
     library: &Library,
     classifier: &str,
-) -> crate::Result<PathBuf> {
+) -> crate::Result<Vec<PathBuf>> {
+    let mut candidates = Vec::new();
     if let Some(classifiers) = library
         .downloads
         .as_ref()
         .and_then(|downloads| downloads.classifiers.as_ref())
         && let Some(native) = classifiers.get(classifier)
     {
-        return Ok(caches_dir
-            .join("minecraft-natives")
-            .join(format!("{}.jar", native.sha1)));
+        candidates.push(
+            caches_dir
+                .join("minecraft-natives")
+                .join(format!("{}.jar", native.sha1)),
+        );
     }
+    candidates.push(
+        libraries_dir
+            .join(classified_library_artifact_path(&library.name, classifier)?),
+    );
+    Ok(candidates)
+}
 
-    Ok(libraries_dir
-        .join(classified_library_artifact_path(&library.name, classifier)?))
+/// Whether the extracted natives directory contains at least one usable
+/// (regular, non-empty) file, indicating a prior successful extraction.
+fn natives_dir_has_native_content(natives_dir: &Path) -> bool {
+    std::fs::read_dir(natives_dir)
+        .map(|entries| {
+            entries.flatten().any(|entry| {
+                entry.file_type().is_ok_and(|file_type| file_type.is_file())
+                    && entry.metadata().is_ok_and(|metadata| metadata.len() > 0)
+            })
+        })
+        .unwrap_or(false)
 }
 
 /// Lists the file entries of a native archive, rejecting names that would
@@ -3125,6 +3164,69 @@ mod tests {
         .await
         .unwrap_err();
         assert!(error.to_string().contains("repair or reinstall"));
+    }
+
+    #[tokio::test]
+    async fn missing_native_archive_with_extracted_natives_is_tolerated() {
+        let directory = tempfile::tempdir().unwrap();
+        let natives_root = directory.path().join("natives");
+        let libraries_dir = directory.path().join("libraries");
+        let caches_dir = directory.path().join("caches");
+
+        let natives_dir = natives_root.join("1.16.5");
+        std::fs::create_dir_all(&natives_dir).unwrap();
+        std::fs::write(natives_dir.join("lwjgl.dll"), b"native-binary")
+            .unwrap();
+
+        let libraries = [modern_native_library("nonexistent")];
+        ensure_native_libraries_extracted(
+            &natives_root,
+            &libraries_dir,
+            &caches_dir,
+            &libraries,
+            "1.16.5",
+            "x86_64",
+            true,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            std::fs::read(natives_dir.join("lwjgl.dll")).unwrap(),
+            b"native-binary"
+        );
+    }
+
+    #[tokio::test]
+    async fn missing_cached_archive_falls_back_to_classified_library_archive() {
+        let directory = tempfile::tempdir().unwrap();
+        let natives_root = directory.path().join("natives");
+        let libraries_dir = directory.path().join("libraries");
+        let caches_dir = directory.path().join("caches");
+        let archive = libraries_dir.join(
+            "org/lwjgl/lwjgl-platform/3.2.1/lwjgl-platform-3.2.1-natives-windows.jar",
+        );
+        std::fs::create_dir_all(archive.parent().unwrap()).unwrap();
+        write_native_archive(&archive, &[("lwjgl.dll", b"from-libraries")]);
+
+        let libraries = [modern_native_library("deadbeef")];
+        ensure_native_libraries_extracted(
+            &natives_root,
+            &libraries_dir,
+            &caches_dir,
+            &libraries,
+            "1.16.5",
+            "x86_64",
+            true,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            std::fs::read(natives_root.join("1.16.5").join("lwjgl.dll"))
+                .unwrap(),
+            b"from-libraries"
+        );
     }
 
     #[tokio::test]
