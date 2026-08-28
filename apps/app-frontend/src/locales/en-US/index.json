@@ -5132,6 +5132,36 @@
   "app.modal.update-to-play.update-required-description": {
     "message": "An update is required to play {name}. Please update to the latest version to launch the game."
   },
+  "app.modpack-install.already-installed": {
+    "message": "This version is already installed"
+  },
+  "app.modpack-install.already-installed-description": {
+    "message": "Creating another instance will not change these existing instances: {names}"
+  },
+  "app.modpack-install.folder-name": {
+    "message": "Instance folder: {name}"
+  },
+  "app.modpack-install.folder-name-conflict": {
+    "message": "A folder with this name already exists. The instance folder will be: {name}"
+  },
+  "app.modpack-install.install": {
+    "message": "Install"
+  },
+  "app.modpack-install.instance-name": {
+    "message": "Instance name"
+  },
+  "app.modpack-install.instance-name-placeholder": {
+    "message": "My modpack instance"
+  },
+  "app.modpack-install.select-version": {
+    "message": "Select a version"
+  },
+  "app.modpack-install.title": {
+    "message": "Install modpack"
+  },
+  "app.modpack-install.version": {
+    "message": "Version"
+  },
   "app.modpack.change-version": {
     "message": "Change modpack version"
   },
@@ -6431,6 +6461,18 @@
   "app.servers.status.starting": {
     "message": "Starting"
   },
+  "app.servers.type.fabric": {
+    "message": "Fabric"
+  },
+  "app.servers.type.forge": {
+    "message": "Forge"
+  },
+  "app.servers.type.paper": {
+    "message": "Paper"
+  },
+  "app.servers.type.vanilla": {
+    "message": "Vanilla"
+  },
   "app.servers.wizard.background-hint": {
     "message": "You can close this window — the download continues in the background."
   },
@@ -6503,18 +6545,6 @@
   "app.servers.wizard.type-title": {
     "message": "Server type"
   },
-  "app.servers.type.vanilla": {
-    "message": "Vanilla"
-  },
-  "app.servers.type.fabric": {
-    "message": "Fabric"
-  },
-  "app.servers.type.paper": {
-    "message": "Paper"
-  },
-  "app.servers.type.forge": {
-    "message": "Forge"
-  },
   "app.settings.about.afdian": {
     "message": "Support on Afdian"
   },
@@ -6548,6 +6578,12 @@
   "app.settings.about.development-team": {
     "message": "Development team"
   },
+  "app.settings.about.game.best": {
+    "message": "Best: {score}"
+  },
+  "app.settings.about.game.best-label": {
+    "message": "Best"
+  },
   "app.settings.about.game.completed": {
     "message": "Rainbow axolotl!"
   },
@@ -6555,10 +6591,25 @@
     "message": "Exit game"
   },
   "app.settings.about.game.game-over": {
-    "message": "The tide is rising!"
+    "message": "The axolotls got stranded!"
   },
   "app.settings.about.game.highest-level": {
     "message": "Highest: level {level}"
+  },
+  "app.settings.about.game.level-label": {
+    "message": "Highest level"
+  },
+  "app.settings.about.game.new-record": {
+    "message": "New record!"
+  },
+  "app.settings.about.game.overtime": {
+    "message": "Tide surge!"
+  },
+  "app.settings.about.game.overtime-detail": {
+    "message": "The water rushes back — keep merging!"
+  },
+  "app.settings.about.game.overtimes-label": {
+    "message": "Overtimes"
   },
   "app.settings.about.game.restart": {
     "message": "Restart"
@@ -6566,8 +6617,20 @@
   "app.settings.about.game.score": {
     "message": "Score: {score}"
   },
+  "app.settings.about.game.score-label": {
+    "message": "Score"
+  },
+  "app.settings.about.game.settle": {
+    "message": "Settle"
+  },
+  "app.settings.about.game.settle-title": {
+    "message": "Run settled!"
+  },
   "app.settings.about.game.tap-to-drop": {
     "message": "Click to drop a pink axolotl"
+  },
+  "app.settings.about.game.tide-hint": {
+    "message": "The tide is falling — keep your axolotls underwater!"
   },
   "app.settings.about.game.title": {
     "message": "Axolotl merge"

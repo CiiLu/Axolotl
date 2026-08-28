@@ -41,6 +41,20 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.9.1',
 		},
 		changes: {
+			added: [
+				{
+					'en-US':
+						'Added a modpack installation confirmation dialog for Modrinth and CurseForge, with version selection and a custom instance name.',
+					'zh-CN': 'Modrinth 与 CurseForge 整合包安装新增确认弹窗，可选择版本并自定义实例名称。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'Modpack installation now shows existing installs and the collision-safe instance folder name before creating a separate instance.',
+					'zh-CN': '安装整合包前现在会显示已有安装状态及避免重名冲突后的实例文件夹名称，并可创建独立实例。',
+				},
+			],
 			fixed: [
 				{
 					'en-US':
