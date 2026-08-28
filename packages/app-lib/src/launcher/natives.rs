@@ -406,8 +406,12 @@ fn materialize_entry(
     }
     temporary.flush()?;
     temporary.as_file().sync_all()?;
-    if target.is_dir() {
-        std::fs::remove_dir_all(target)?;
+    if let Ok(metadata) = std::fs::symlink_metadata(target) {
+        if metadata.file_type().is_dir() {
+            std::fs::remove_dir_all(target)?;
+        } else if !metadata.file_type().is_file() {
+            std::fs::remove_file(target)?;
+        }
     }
     temporary.persist(target).map_err(|error| {
         native_error(format!(
@@ -535,6 +539,27 @@ mod tests {
                     .to_string_lossy()
                     .starts_with(".tmp-native-"))
         );
+    }
+
+    #[tokio::test]
+    async fn rejects_modern_archives_with_the_wrong_sha1() {
+        let root = tempfile::tempdir().unwrap();
+        let archive_path = root.path().join("natives.jar");
+        write_archive(&archive_path, &[("lwjgl.dll", b"native")]);
+        let mut archive = archive(archive_path);
+        archive.sha1 =
+            Some("0000000000000000000000000000000000000000".to_string());
+
+        let error = materialize_native_directory(
+            &[archive],
+            root.path(),
+            "1.18.2-forge-40.2.34",
+        )
+        .await
+        .unwrap_err();
+
+        assert!(error.to_string().contains("has SHA1"));
+        assert!(!root.path().join("1.18.2-forge-40.2.34/lwjgl.dll").exists());
     }
 
     #[tokio::test]
