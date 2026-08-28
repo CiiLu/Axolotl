@@ -814,8 +814,15 @@ async fn import_via_launcher(
             .await
         }
         ImportLauncherType::GDLauncher => {
+            let instance_dir = instance_path
+                .as_ref()
+                .map(PathBuf::from)
+                .filter(|path| path.is_dir())
+                .unwrap_or_else(|| {
+                    base_path.join("instances").join(instance_folder)
+                });
             gdlauncher::import_gdlauncher(
-                base_path.join("instances").join(instance_folder), // path to gdlauncher folder
+                instance_dir,
                 instance_id,
                 reporter.clone(),
                 details,
@@ -824,8 +831,15 @@ async fn import_via_launcher(
             .await
         }
         ImportLauncherType::Curseforge => {
+            let instance_dir = instance_path
+                .as_ref()
+                .map(PathBuf::from)
+                .filter(|path| path.is_dir())
+                .unwrap_or_else(|| {
+                    base_path.join("Instances").join(instance_folder)
+                });
             curseforge::import_curseforge(
-                base_path.join("Instances").join(instance_folder), // path to curseforge folder
+                instance_dir,
                 instance_id,
                 reporter.clone(),
                 details,
@@ -888,7 +902,13 @@ async fn import_via_launcher(
             }
         }
         ImportLauncherType::Axolotl => {
-            let path = resolve_axolotl_source(base_path, instance_folder);
+            let path = instance_path
+                .as_ref()
+                .map(PathBuf::from)
+                .filter(|path| path.is_dir())
+                .unwrap_or_else(|| {
+                    resolve_axolotl_source(base_path, instance_folder)
+                });
             axolotl::import_axolotl(
                 path,
                 instance_id,
