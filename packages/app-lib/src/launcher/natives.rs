@@ -74,14 +74,10 @@ pub(crate) fn resolve_native_archives(
             let cached = caches_dir
                 .join("minecraft-natives")
                 .join(format!("{}.jar", native.sha1));
-            let selected = if cached.is_file() {
-                cached
-            } else if classified_path.is_file() {
-                classified_path
-            } else {
-                cached
-            };
-            (selected, Some(native.sha1.clone()))
+            // Modern native archives are content-addressed by SHA1. Do not
+            // silently substitute the Maven artifact: it can be a different
+            // classifier/version and produce an ABI-incompatible DLL set.
+            (cached, Some(native.sha1.clone()))
         } else {
             (classified_path, None)
         };
@@ -538,6 +534,44 @@ mod tests {
                     .file_name()
                     .to_string_lossy()
                     .starts_with(".tmp-native-"))
+        );
+    }
+
+    #[test]
+    fn modern_native_resolution_does_not_fallback_to_unverified_maven_artifact()
+    {
+        let root = tempfile::tempdir().unwrap();
+        let libraries_dir = root.path().join("libraries");
+        let caches_dir = root.path().join("caches");
+        let classified = libraries_dir
+            .join("org/lwjgl/lwjgl/3.2.2/lwjgl-3.2.2-natives-windows.jar");
+        std::fs::create_dir_all(classified.parent().unwrap()).unwrap();
+        write_archive(&classified, &[("lwjgl.dll", b"wrong")]);
+        let library: Library = serde_json::from_value(serde_json::json!({
+            "name": "org.lwjgl:lwjgl:3.2.2",
+            "natives": {"windows": "natives-windows"},
+            "downloads": {"classifiers": {"natives-windows": {
+                "sha1": "05359f3aa50d36352815fc662ea73e1c00d22170",
+                "size": 279593,
+                "url": "https://libraries.minecraft.net/native.jar"
+            }}}
+        }))
+        .unwrap();
+
+        let archives = resolve_native_archives(
+            &libraries_dir,
+            &caches_dir,
+            &[library],
+            "x86_64",
+            true,
+        )
+        .unwrap();
+        assert_eq!(archives.len(), 1);
+        assert_eq!(
+            archives[0].archive_path,
+            caches_dir.join(
+                "minecraft-natives/05359f3aa50d36352815fc662ea73e1c00d22170.jar"
+            )
         );
     }
 
