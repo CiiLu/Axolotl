@@ -635,6 +635,22 @@ fn resolve_instance_path(base_path: &Path, instance_folder: &str) -> PathBuf {
     }
 }
 
+fn split_generic_game_dir_and_version(
+    path: &str,
+) -> (PathBuf, Option<PathBuf>) {
+    let path_buf = PathBuf::from(path);
+    if let Some(versions_dir) = path_buf.parent()
+        && versions_dir
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.eq_ignore_ascii_case("versions"))
+        && let Some(game_dir) = versions_dir.parent()
+    {
+        return (game_dir.to_path_buf(), Some(path_buf));
+    }
+    (path_buf, None)
+}
+
 fn resolve_axolotl_source(base_path: &Path, instance_folder: &str) -> PathBuf {
     if base_path.join("axolotl_config.json").is_file() {
         base_path.to_path_buf()
@@ -830,30 +846,18 @@ async fn import_via_launcher(
         }
         ImportLauncherType::PCL2 | ImportLauncherType::PCL2CE => {
             if let Some(path) = instance_path {
-                let path_buf = PathBuf::from(&path);
-                if path_buf.starts_with(base_path.join("versions")) {
-                    generic::import_generic(
-                        base_path.clone(),
-                        instance_id,
-                        reporter.clone(),
-                        details,
-                        *symlink,
-                        overrides,
-                        Some(path_buf),
-                    )
-                    .await
-                } else {
-                    generic::import_generic(
-                        path_buf,
-                        instance_id,
-                        reporter.clone(),
-                        details,
-                        *symlink,
-                        overrides,
-                        None,
-                    )
-                    .await
-                }
+                let (game_dir, version_path) =
+                    split_generic_game_dir_and_version(path);
+                generic::import_generic(
+                    game_dir,
+                    instance_id,
+                    reporter.clone(),
+                    details,
+                    *symlink,
+                    overrides,
+                    version_path,
+                )
+                .await
             } else {
                 import_configured_instance(job, details, |name| {
                     pcl::get_pcl_instance_path(name)
@@ -864,30 +868,18 @@ async fn import_via_launcher(
         }
         ImportLauncherType::HMCL => {
             if let Some(path) = instance_path {
-                let path_buf = PathBuf::from(&path);
-                if path_buf.starts_with(base_path.join("versions")) {
-                    generic::import_generic(
-                        base_path.clone(),
-                        instance_id,
-                        reporter.clone(),
-                        details,
-                        *symlink,
-                        overrides,
-                        Some(path_buf),
-                    )
-                    .await
-                } else {
-                    generic::import_generic(
-                        path_buf,
-                        instance_id,
-                        reporter.clone(),
-                        details,
-                        *symlink,
-                        overrides,
-                        None,
-                    )
-                    .await
-                }
+                let (game_dir, version_path) =
+                    split_generic_game_dir_and_version(path);
+                generic::import_generic(
+                    game_dir,
+                    instance_id,
+                    reporter.clone(),
+                    details,
+                    *symlink,
+                    overrides,
+                    version_path,
+                )
+                .await
             } else {
                 import_configured_instance(job, details, |name| {
                     hmcl::get_instance_path(base_path, name)

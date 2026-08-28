@@ -20,6 +20,7 @@ import {
 } from '@modrinth/ui'
 import { computed, type ComputedRef, nextTick, ref } from 'vue'
 import type { Router } from 'vue-router'
+import { join } from '@tauri-apps/api/path'
 
 import {
 	classifyDroppedItem,
@@ -793,7 +794,7 @@ export function useDropImport(options: DropImportOptions) {
 					const tempDir = await extractZipToTemp(basePath)
 					launcherZipTempDir.value = tempDir
 					scanBasePath = classification!.innerBase
-						? `${tempDir}/${classification!.innerBase}`
+						? await join(tempDir, classification!.innerBase)
 						: tempDir
 					dropDebug('handleDropConfirm: extracted launcher zip', {
 						tempDir,
@@ -1732,7 +1733,7 @@ export function useDropImport(options: DropImportOptions) {
 				const tempDir = await extractZipToTemp(rawBasePath)
 				batchTempDirs.value.push(tempDir)
 				const innerBase = (resolved as { innerBase?: string }).innerBase
-				scanBasePath = innerBase ? `${tempDir}/${innerBase}` : tempDir
+				scanBasePath = innerBase ? await join(tempDir, innerBase) : tempDir
 			} catch (error) {
 				item.scanState = 'error'
 				item.reason = error instanceof Error ? error.message : String(error)
