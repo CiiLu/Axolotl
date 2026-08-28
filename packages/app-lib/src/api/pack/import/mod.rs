@@ -619,7 +619,16 @@ async fn collect_child_instances(
     }
 }
 
+fn strip_instance_name_prefix(instance_folder: &str) -> &str {
+    instance_folder
+        .split_once(':')
+        .map(|(_, rest)| rest)
+        .filter(|rest| !rest.is_empty())
+        .unwrap_or(instance_folder)
+}
+
 fn resolve_instance_path(base_path: &Path, instance_folder: &str) -> PathBuf {
+    let instance_folder = strip_instance_name_prefix(instance_folder);
     if let Some(rest) = instance_folder.strip_prefix("versions/") {
         return base_path.join("versions").join(rest);
     }

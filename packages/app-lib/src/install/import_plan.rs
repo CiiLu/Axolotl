@@ -368,12 +368,22 @@ fn snapshot_for(
     }
 }
 
+fn strip_instance_name_prefix(instance_folder: &str) -> &str {
+    instance_folder
+        .split_once(':')
+        .map(|(_, rest)| rest)
+        .filter(|rest| !rest.is_empty())
+        .unwrap_or(instance_folder)
+}
+
 fn resolve_source(request: &ImportPlanRequest) -> PathBuf {
     if let Some(instance_path) = &request.instance_path {
         return PathBuf::from(instance_path);
     }
 
-    if let Some(rest) = request.instance_folder.strip_prefix("versions/") {
+    let instance_folder = strip_instance_name_prefix(&request.instance_folder);
+
+    if let Some(rest) = instance_folder.strip_prefix("versions/") {
         return request.base_path.join("versions").join(rest);
     }
 
@@ -382,7 +392,7 @@ fn resolve_source(request: &ImportPlanRequest) -> PathBuf {
         .file_name()
         .map(|name| name.to_string_lossy().to_string())
         .as_deref()
-        == Some(request.instance_folder.as_str())
+        == Some(instance_folder)
     {
         return request.base_path.clone();
     }
@@ -391,17 +401,17 @@ fn resolve_source(request: &ImportPlanRequest) -> PathBuf {
         crate::api::pack::import::ImportLauncherType::Curseforge => request
             .base_path
             .join("Instances")
-            .join(&request.instance_folder),
+            .join(instance_folder),
         crate::api::pack::import::ImportLauncherType::GDLauncher => request
             .base_path
             .join("instances")
-            .join(&request.instance_folder),
+            .join(instance_folder),
         crate::api::pack::import::ImportLauncherType::Axolotl
             if request.base_path.join("axolotl_config.json").is_file() =>
         {
             request.base_path.clone()
         }
-        _ => request.base_path.join(&request.instance_folder),
+        _ => request.base_path.join(instance_folder),
     }
 }
 
