@@ -900,32 +900,32 @@ async fn import_via_launcher(
             .await
         }
         ImportLauncherType::Generic => {
-            // In compatible mode, instance_path is the version directory
-            // (e.g. .minecraft/versions/1.12.2) and the game directory is
-            // base_path itself.  Don't call resolve_instance_path because it
-            // would create a spurious base_path/instance_folder path.
-            let version_path = job.instance_path.as_ref().map(PathBuf::from);
-            let path = if version_path.is_some() {
-                base_path.clone()
+            if let Some(version_path) = job.instance_path.as_ref() {
+                let (game_dir, version_dir) =
+                    split_generic_game_dir_and_version(version_path);
+                generic::import_generic(
+                    game_dir,
+                    instance_id,
+                    reporter.clone(),
+                    details,
+                    *symlink,
+                    overrides,
+                    version_dir,
+                )
+                .await
             } else {
-                resolve_instance_path(base_path, instance_folder)
-            };
-            tracing::debug!(
-                "Generic import: path={} version_path={:?} symlink={}",
-                path.display(),
-                version_path,
-                *symlink
-            );
-            generic::import_generic(
-                path,
-                instance_id,
-                reporter.clone(),
-                details,
-                *symlink,
-                overrides,
-                version_path,
-            )
-            .await
+                let path = resolve_instance_path(base_path, instance_folder);
+                generic::import_generic(
+                    path,
+                    instance_id,
+                    reporter.clone(),
+                    details,
+                    *symlink,
+                    overrides,
+                    None,
+                )
+                .await
+            }
         }
         ImportLauncherType::Unknown => {
             unreachable!("handled by import_instance_inner")
