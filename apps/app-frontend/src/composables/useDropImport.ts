@@ -12,12 +12,7 @@ import type {
 	ClassificationResult,
 	SymlinkMethodChoice,
 } from '@modrinth/ui'
-import {
-	useDebugLogger,
-	useGlobalDrop,
-	useInstanceContext,
-	useVIntl,
-} from '@modrinth/ui'
+import { useDebugLogger, useGlobalDrop, useInstanceContext, useVIntl } from '@modrinth/ui'
 import { computed, type ComputedRef, nextTick, ref } from 'vue'
 import type { Router } from 'vue-router'
 import { join } from '@tauri-apps/api/path'
@@ -926,8 +921,10 @@ export function useDropImport(options: DropImportOptions) {
 			dropDebug('handleDropConfirm: data pack requires a world target', {
 				filePath,
 			})
-		pendingInstall.value = { type, filePath, innerBase }
-		dataPackWorldModal.value?.show(isInInstance.value ? (instanceId.value ?? undefined) : undefined)
+			pendingInstall.value = { type, filePath, innerBase }
+			dataPackWorldModal.value?.show(
+				isInInstance.value ? (instanceId.value ?? undefined) : undefined,
+			)
 			return
 		}
 
