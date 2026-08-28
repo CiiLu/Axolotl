@@ -1924,8 +1924,15 @@ pub async fn download_libraries(
         io::create_dir_all(st.directories.libraries_dir()),
         io::create_dir_all(st.directories.version_natives_dir(version))
     }?;
-    let libraries_for_download =
-        deduplicate_native_downloads(libraries, java_arch, minecraft_updated);
+    let mut libraries_for_download: Vec<_> = libraries
+        .iter()
+        .filter(|library| library.natives.is_none())
+        .collect();
+    libraries_for_download.extend(native_libraries_to_download(
+        libraries,
+        java_arch,
+        minecraft_updated,
+    )?);
     let num_files = libraries_for_download.len();
     loading_try_for_each_concurrent(
 		stream::iter(libraries_for_download).map(Ok::<&Library, crate::Error>),
@@ -2232,52 +2239,53 @@ pub async fn download_libraries(
     Ok(())
 }
 
-fn deduplicate_native_downloads<'a>(
+fn native_libraries_to_download<'a>(
     libraries: &'a [Library],
     java_arch: &str,
     minecraft_updated: bool,
-) -> Vec<&'a Library> {
-    let mut native_hashes = HashSet::new();
-    libraries
-        .iter()
-        .filter(|library| {
-            if let Some(rules) = &library.rules
-                && !parse_rules(
-                    rules,
-                    java_arch,
-                    &QuickPlayType::None,
-                    minecraft_updated,
-                )
-            {
-                return true;
-            }
-            if !library.downloadable {
-                return true;
-            }
-            let Some((os_key, classifiers)) =
-                library.natives_os_key_and_classifiers(java_arch)
-            else {
-                return true;
-            };
-            let parsed_key =
-                os_key.replace("${arch}", crate::util::platform::ARCH_WIDTH);
-            let Some(native) = classifiers.get(&parsed_key) else {
-                return true;
-            };
-            if native.sha1.is_empty() {
-                return true;
-            }
-            let first = native_hashes.insert(native.sha1.clone());
-            if !first {
-                tracing::debug!(
-                    "Skipped duplicate native archive {} ({})",
-                    library.name,
-                    native.sha1
-                );
-            }
-            first
-        })
-        .collect()
+) -> crate::Result<Vec<&'a Library>> {
+    let mut identities = HashSet::new();
+    let mut result = Vec::new();
+    for library in libraries {
+        if library.natives.is_none() || !library.downloadable {
+            continue;
+        }
+        if let Some(rules) = &library.rules
+            && !parse_rules(
+                rules,
+                java_arch,
+                &QuickPlayType::None,
+                minecraft_updated,
+            )
+        {
+            continue;
+        }
+        let Some(classifier) = library_native_classifier(library, java_arch)
+        else {
+            continue;
+        };
+        let identity = library
+            .downloads
+            .as_ref()
+            .and_then(|downloads| downloads.classifiers.as_ref())
+            .and_then(|classifiers| classifiers.get(&classifier))
+            .filter(|download| !download.sha1.is_empty())
+            .map_or_else(
+                || classified_library_artifact_path(&library.name, &classifier),
+                |download| Ok(download.sha1.clone()),
+            )?;
+        if identities.insert(identity.clone()) {
+            result.push(library);
+        } else {
+            tracing::debug!(
+                library = %library.name,
+                classifier,
+                identity,
+                "Skipped duplicate native archive download"
+            );
+        }
+    }
+    Ok(result)
 }
 
 #[tracing::instrument(skip_all)]
@@ -2354,7 +2362,7 @@ pub async fn download_log_config(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::launcher::natives::prepare_native_libraries as ensure_native_libraries_extracted;
+    use crate::launcher::natives::prepare_native_libraries as prepare_test_natives;
 
     fn urls(values: &[&str]) -> Option<Vec<String>> {
         Some(values.iter().map(|value| (*value).to_string()).collect())
@@ -2715,7 +2723,7 @@ mod tests {
         );
 
         let libraries = [modern_native_library("deadbeef")];
-        ensure_native_libraries_extracted(
+        prepare_test_natives(
             &natives_root,
             &libraries_dir,
             &caches_dir,
@@ -2739,7 +2747,7 @@ mod tests {
 
         // Same-length corruption must be repaired on later launches.
         std::fs::write(natives_dir.join("lwjgl.dll"), b"tampered").unwrap();
-        ensure_native_libraries_extracted(
+        prepare_test_natives(
             &natives_root,
             &libraries_dir,
             &caches_dir,
@@ -2779,7 +2787,7 @@ mod tests {
         std::fs::write(natives_dir.join("b.dll"), b"").unwrap();
 
         let libraries = [modern_native_library("deadbeef")];
-        ensure_native_libraries_extracted(
+        prepare_test_natives(
             &natives_root,
             &libraries_dir,
             &caches_dir,
@@ -2816,7 +2824,7 @@ mod tests {
         );
 
         let libraries = [modern_native_library("deadbeef")];
-        ensure_native_libraries_extracted(
+        prepare_test_natives(
             &natives_root,
             &libraries_dir,
             &caches_dir,
@@ -2842,7 +2850,7 @@ mod tests {
         let caches_dir = directory.path().join("caches");
 
         let libraries = [modern_native_library("nonexistent")];
-        let error = ensure_native_libraries_extracted(
+        let error = prepare_test_natives(
             &natives_root,
             &libraries_dir,
             &caches_dir,
@@ -2873,7 +2881,7 @@ mod tests {
             .unwrap();
 
         let libraries = [modern_native_library("nonexistent")];
-        let error = ensure_native_libraries_extracted(
+        let error = prepare_test_natives(
             &natives_root,
             &libraries_dir,
             &caches_dir,
@@ -2905,7 +2913,7 @@ mod tests {
         write_native_archive(&archive, &[("lwjgl.dll", b"from-libraries")]);
 
         let libraries = [modern_native_library("deadbeef")];
-        ensure_native_libraries_extracted(
+        prepare_test_natives(
             &natives_root,
             &libraries_dir,
             &caches_dir,
@@ -2945,7 +2953,7 @@ mod tests {
             }
         }))
         .unwrap();
-        ensure_native_libraries_extracted(
+        prepare_test_natives(
             &natives_root,
             &libraries_dir,
             &caches_dir,
@@ -2977,7 +2985,7 @@ mod tests {
             "name": "net.sf.jopt-simple:jopt-simple:4.5"
         }))
         .unwrap();
-        ensure_native_libraries_extracted(
+        prepare_test_natives(
             &natives_root,
             &libraries_dir,
             &caches_dir,
