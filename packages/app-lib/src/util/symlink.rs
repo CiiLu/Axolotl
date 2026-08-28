@@ -194,6 +194,7 @@ fn create_link_elevated_blocking(
     target: &Path,
     link: &Path,
 ) -> std::io::Result<()> {
+    use std::os::windows::process::CommandExt;
     use std::process::Command;
     use std::os::windows::process::CommandExt;
 
