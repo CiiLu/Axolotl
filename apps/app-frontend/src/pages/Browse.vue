@@ -260,6 +260,9 @@ function resolveInitialContentSource(): BrowseContentSource {
 }
 
 const contentSource = ref<BrowseContentSource>(resolveInitialContentSource())
+const sourceBeforeWorldMapBrowse = ref<BrowseContentSource>(
+	isWorldMapBrowse.value ? getLastBrowseContentSource() ?? 'all' : contentSource.value,
+)
 if (isWorldMapBrowse.value) {
 	contentSource.value = 'curseforge'
 }
@@ -2623,7 +2626,8 @@ const searchState = useBrowseSearch({
 		wid: effectiveServerWorldId.value || undefined,
 		ai: instanceHideInstalled.value ? 'true' : undefined,
 		shi: serverHideInstalled.value ? 'true' : undefined,
-		source: contentSource.value === 'all' ? undefined : contentSource.value,
+		source:
+			isWorldMapBrowse.value || contentSource.value === 'all' ? undefined : contentSource.value,
 	}),
 	initialSearchResponse: browseReturnSnapshot?.state.searchResponse,
 	displayMode,
@@ -2845,17 +2849,21 @@ watch(contentSource, async (source) => {
 	await searchState.refreshSearch()
 })
 
-watch(projectType, async (type) => {
+watch(projectType, async (type, previousType) => {
+	if (type === WORLD_BROWSE_PROJECT_TYPE) {
+		sourceBeforeWorldMapBrowse.value = contentSource.value
+		contentSource.value = 'curseforge'
+		return
+	}
+	if (previousType === WORLD_BROWSE_PROJECT_TYPE) {
+		contentSource.value = sourceBeforeWorldMapBrowse.value
+	}
 	if (
 		type !== 'mod' &&
 		(contentSource.value === 'mcarchive' || contentSource.value === 'planet_minecraft')
 	) {
 		contentSource.value = 'all'
 		setLastBrowseContentSource('all')
-	}
-	if (type === WORLD_BROWSE_PROJECT_TYPE && contentSource.value !== 'curseforge') {
-		contentSource.value = 'curseforge'
-		return
 	}
 	if (contentSource.value === 'curseforge' || contentSource.value === 'all') {
 		await ensureCurseForgeCategories(type).catch(handleError)

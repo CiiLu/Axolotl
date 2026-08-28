@@ -57,6 +57,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			],
 			fixed: [
 				{
+					'en-US':
+						'Fixed the Discover page source selection changing to CurseForge after browsing maps.',
+					'zh-CN': '修复浏览地图后“发现内容”页的来源选择被切换为 CurseForge 的问题。',
+				},
+				{
 					'en-US': 'Fixed the right sidebar remaining collapsed after leaving the Settings page.',
 					'zh-CN': '修复从设置页面返回其他页面后右侧边栏仍保持收起的问题。',
 				},
