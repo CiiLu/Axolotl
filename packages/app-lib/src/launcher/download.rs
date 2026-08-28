@@ -2348,17 +2348,13 @@ fn local_native_archive_path(
         .and_then(|downloads| downloads.classifiers.as_ref())
         && let Some(native) = classifiers.get(classifier)
     {
-        return Ok(
-            caches_dir
-                .join("minecraft-natives")
-                .join(format!("{}.jar", native.sha1)),
-        );
+        return Ok(caches_dir
+            .join("minecraft-natives")
+            .join(format!("{}.jar", native.sha1)));
     }
 
-    Ok(libraries_dir.join(classified_library_artifact_path(
-        &library.name,
-        classifier,
-    )?))
+    Ok(libraries_dir
+        .join(classified_library_artifact_path(&library.name, classifier)?))
 }
 
 /// Lists the file entries of a native archive, rejecting names that would
@@ -2421,11 +2417,7 @@ fn restore_native_entries(
                 natives_dir.display()
             ))
         })?
-        .join(format!(
-            ".tmp-natives-{}-{}",
-            version,
-            std::process::id()
-        ));
+        .join(format!(".tmp-natives-{}-{}", version, std::process::id()));
     if temporary_dir.exists() {
         std::fs::remove_dir_all(&temporary_dir)?;
     }
@@ -2440,14 +2432,13 @@ fn restore_native_entries(
             ))
         })?;
         for (name, _) in missing {
-            let mut entry =
-                archive.by_name(name).map_err(|error| {
-                    crate::ErrorKind::LauncherError(format!(
-                        "Failed to read {} from native library archive {}: {error}",
-                        name,
-                        archive_path.display()
-                    ))
-                })?;
+            let mut entry = archive.by_name(name).map_err(|error| {
+                crate::ErrorKind::LauncherError(format!(
+                    "Failed to read {} from native library archive {}: {error}",
+                    name,
+                    archive_path.display()
+                ))
+            })?;
             if entry.is_dir() {
                 continue;
             }
@@ -2499,8 +2490,8 @@ fn move_native_entries(
         }
         match std::fs::rename(&source, &target) {
             Ok(()) => {}
-            Err(error)
-                if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+            }
             Err(error) => {
                 return Err(crate::ErrorKind::LauncherError(format!(
                     "Failed to restore native library entry {}: {error}",
@@ -2958,9 +2949,7 @@ mod tests {
         let options = zip::write::SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Stored);
         for (name, contents) in entries {
-            writer
-                .start_file(*name, options.clone())
-                .unwrap();
+            writer.start_file(*name, options.clone()).unwrap();
             writer.write_all(contents).unwrap();
         }
         writer.finish().unwrap();
@@ -2993,10 +2982,7 @@ mod tests {
         std::fs::create_dir_all(cache.parent().unwrap()).unwrap();
         write_native_archive(
             &cache,
-            &[
-                ("lwjgl.dll", b"native-binary"),
-                ("sub/inner.dll", b"inner"),
-            ],
+            &[("lwjgl.dll", b"native-binary"), ("sub/inner.dll", b"inner")],
         );
 
         let libraries = [modern_native_library("deadbeef")];
@@ -3084,10 +3070,7 @@ mod tests {
             std::fs::read(natives_dir.join("b.dll")).unwrap(),
             b"repaired"
         );
-        assert_eq!(
-            std::fs::read(natives_dir.join("c.txt")).unwrap(),
-            b"added"
-        );
+        assert_eq!(std::fs::read(natives_dir.join("c.txt")).unwrap(), b"added");
     }
 
     #[tokio::test]
@@ -3117,10 +3100,7 @@ mod tests {
         .unwrap();
 
         let natives_dir = natives_root.join("1.16.5");
-        assert_eq!(
-            std::fs::read(natives_dir.join("ok.dll")).unwrap(),
-            b"fine"
-        );
+        assert_eq!(std::fs::read(natives_dir.join("ok.dll")).unwrap(), b"fine");
         assert!(!natives_root.join("evil.dll").exists());
         assert!(!directory.path().join("evil.dll").exists());
     }
@@ -3182,9 +3162,7 @@ mod tests {
 
         assert_eq!(
             std::fs::read(
-                natives_root
-                    .join("1.6.4-9.11.1.1345")
-                    .join("lwjgl.dll")
+                natives_root.join("1.6.4-9.11.1.1345").join("lwjgl.dll")
             )
             .unwrap(),
             b"legacy-binary"
