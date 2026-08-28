@@ -1924,11 +1924,11 @@ pub async fn download_libraries(
         io::create_dir_all(st.directories.libraries_dir()),
         io::create_dir_all(st.directories.version_natives_dir(version))
     }?;
-    let libraries =
+    let libraries_for_download =
         deduplicate_native_downloads(libraries, java_arch, minecraft_updated);
-    let num_files = libraries.len();
+    let num_files = libraries_for_download.len();
     loading_try_for_each_concurrent(
-		stream::iter(libraries).map(Ok::<&Library, crate::Error>),
+		stream::iter(libraries_for_download).map(Ok::<&Library, crate::Error>),
 		crate::util::download::task_concurrency_limit(&st).map(|limit| limit.saturating_mul(2)),
         loading_bar,
         loading_amount,
@@ -1972,7 +1972,7 @@ pub async fn download_libraries(
                     .as_ref()
                     .and_then(|downloads| downloads.classifiers.as_ref())
                     .and_then(|classifiers| classifiers.get(&classifier));
-                let native_archive_path = if let Some(native) = native {
+                let _native_archive_path = if let Some(native) = native {
                     let path = st
                         .directories
                         .caches_dir()
@@ -2086,26 +2086,7 @@ pub async fn download_libraries(
                     path
                 };
 
-                let native_target = st.directories.version_natives_dir(version);
-                let library_name = library.name.clone();
-                tokio::task::spawn_blocking(move || {
-                    let file = std::fs::File::open(&native_archive_path)?;
-                    let mut archive = zip::ZipArchive::new(file).map_err(
-                        |error| {
-                            crate::ErrorKind::LauncherError(format!(
-                                "Failed to open native library archive {library_name}: {error}",
-                            ))
-                        },
-                    )?;
-                    archive.extract(native_target).map_err(|error| {
-                        crate::ErrorKind::LauncherError(format!(
-                            "Failed to extract native library {library_name}: {error}",
-                        ))
-                    })?;
-                    Ok::<_, crate::Error>(())
-                })
-                .await??;
-                tracing::debug!("Loaded native {}", &library.name);
+                tracing::debug!("Downloaded native {}", &library.name);
             } else {
                 let artifact_path = d::get_path_from_artifact(&library.name)?;
                 let path = st.directories.libraries_dir().join(&artifact_path);
@@ -2236,310 +2217,18 @@ pub async fn download_libraries(
     )
     .await?;
 
+    crate::launcher::natives::prepare_native_libraries(
+        &st.directories.natives_dir(),
+        &st.directories.libraries_dir(),
+        &st.directories.caches_dir(),
+        libraries,
+        version,
+        java_arch,
+        minecraft_updated,
+    )
+    .await?;
+
     tracing::debug!("Done loading libraries!");
-    Ok(())
-}
-
-/// Ensures a version's extracted native libraries are present before launch.
-///
-/// This is deliberately conservative: it only creates entries that are
-/// missing (or zero bytes long) from locally available native archives, never
-/// overwrites existing content, never touches the network, and degrades to the
-/// regular launch error path when a repair is impossible. A missing archive is
-/// tolerated as long as the extracted natives directory already contains
-/// usable files — the archive is only needed for repairs, so its absence must
-/// not block an otherwise launchable game.
-pub(crate) async fn ensure_native_libraries_extracted(
-    natives_root: &Path,
-    libraries_dir: &Path,
-    caches_dir: &Path,
-    libraries: &[Library],
-    version: &str,
-    java_arch: &str,
-    minecraft_updated: bool,
-) -> crate::Result<()> {
-    let natives_dir = natives_root.join(version);
-    io::create_dir_all(&natives_dir).await?;
-
-    for library in libraries {
-        if let Some(rules) = &library.rules
-            && !parse_rules(
-                rules,
-                java_arch,
-                &QuickPlayType::None,
-                minecraft_updated,
-            )
-        {
-            continue;
-        }
-        if !library.downloadable || library.natives.is_none() {
-            continue;
-        }
-        let Some(classifier) = library_native_classifier(library, java_arch)
-        else {
-            continue;
-        };
-
-        let candidates = native_archive_candidates(
-            libraries_dir,
-            caches_dir,
-            library,
-            &classifier,
-        )?;
-
-        let Some(archive) =
-            candidates.iter().find(|candidate| candidate.is_file())
-        else {
-            if natives_dir_has_native_content(&natives_dir) {
-                tracing::warn!(
-                    library = %library.name,
-                    natives_dir = %natives_dir.display(),
-                    "Missing native library archive but extracted natives exist; skipping verification"
-                );
-                continue;
-            }
-            return Err(crate::ErrorKind::LauncherError(format!(
-                "Native library archive for {} is missing at {}; repair or reinstall the instance",
-                library.name,
-                candidates
-                    .iter()
-                    .map(|candidate| candidate.display().to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ))
-            .into());
-        };
-        let archive = archive.clone();
-
-        let expected = tokio::task::spawn_blocking({
-            let archive = archive.clone();
-            move || list_native_entries(&archive)
-        })
-        .await??;
-
-        let missing: Vec<(String, u64)> = expected
-            .into_iter()
-            .filter(|(name, _)| {
-                let Ok(metadata) = std::fs::metadata(natives_dir.join(name))
-                else {
-                    return true;
-                };
-                !metadata.is_file() || metadata.len() == 0
-            })
-            .collect();
-
-        if missing.is_empty() {
-            continue;
-        }
-
-        tokio::task::spawn_blocking({
-            let natives_dir = natives_dir.clone();
-            let archive = archive.clone();
-            let version = version.to_string();
-            move || {
-                restore_native_entries(
-                    &archive,
-                    &natives_dir,
-                    &missing,
-                    &version,
-                )
-            }
-        })
-        .await??;
-    }
-
-    Ok(())
-}
-
-/// Locates candidate local native archives for a library, in order of
-/// preference: the versioned cache entry used by modern metadata shapes
-/// first, then the classified artifact under the libraries directory used
-/// by legacy metadata shapes. The classified path doubles as a fallback when
-/// caches have been cleaned, so repairs use exactly the same files a fresh
-/// install would have extracted.
-fn native_archive_candidates(
-    libraries_dir: &Path,
-    caches_dir: &Path,
-    library: &Library,
-    classifier: &str,
-) -> crate::Result<Vec<PathBuf>> {
-    let mut candidates = Vec::new();
-    if let Some(classifiers) = library
-        .downloads
-        .as_ref()
-        .and_then(|downloads| downloads.classifiers.as_ref())
-        && let Some(native) = classifiers.get(classifier)
-    {
-        candidates.push(
-            caches_dir
-                .join("minecraft-natives")
-                .join(format!("{}.jar", native.sha1)),
-        );
-    }
-    candidates.push(
-        libraries_dir
-            .join(classified_library_artifact_path(&library.name, classifier)?),
-    );
-    Ok(candidates)
-}
-
-/// Whether the extracted natives directory contains at least one usable
-/// (regular, non-empty) file, indicating a prior successful extraction.
-fn natives_dir_has_native_content(natives_dir: &Path) -> bool {
-    std::fs::read_dir(natives_dir)
-        .map(|entries| {
-            entries.flatten().any(|entry| {
-                entry.file_type().is_ok_and(|file_type| file_type.is_file())
-                    && entry.metadata().is_ok_and(|metadata| metadata.len() > 0)
-            })
-        })
-        .unwrap_or(false)
-}
-
-/// Lists the file entries of a native archive, rejecting names that would
-/// escape the extraction target directory.
-fn list_native_entries(
-    archive_path: &Path,
-) -> crate::Result<Vec<(String, u64)>> {
-    let file = std::fs::File::open(archive_path)?;
-    let mut archive = zip::ZipArchive::new(file).map_err(|error| {
-        crate::ErrorKind::LauncherError(format!(
-            "Failed to open native library archive {}: {error}",
-            archive_path.display()
-        ))
-    })?;
-    let mut entries = Vec::new();
-    for index in 0..archive.len() {
-        let entry = archive.by_index(index).map_err(|error| {
-            crate::ErrorKind::LauncherError(format!(
-                "Failed to read native library archive {}: {error}",
-                archive_path.display()
-            ))
-        })?;
-        if entry.is_dir() {
-            continue;
-        }
-        let name = entry.name().to_string();
-        let path = Path::new(&name);
-        if path.is_absolute()
-            || path.components().any(|component| {
-                matches!(
-                    component,
-                    std::path::Component::ParentDir
-                        | std::path::Component::RootDir
-                        | std::path::Component::Prefix(_)
-                )
-            })
-        {
-            continue;
-        }
-        entries.push((name, entry.size()));
-    }
-    Ok(entries)
-}
-
-/// Restores the given native entries from an archive. Entries are written to
-/// a temporary directory first and renamed into place, so a concurrently
-/// running game that has natives mapped is never disturbed, and only missing
-/// or zero-byte placeholder files are touched.
-fn restore_native_entries(
-    archive_path: &Path,
-    natives_dir: &Path,
-    missing: &[(String, u64)],
-    version: &str,
-) -> crate::Result<()> {
-    let temporary_dir = natives_dir
-        .parent()
-        .ok_or_else(|| {
-            crate::ErrorKind::LauncherError(format!(
-                "Natives directory {} has no parent",
-                natives_dir.display()
-            ))
-        })?
-        .join(format!(".tmp-natives-{}-{}", version, std::process::id()));
-    if temporary_dir.exists() {
-        std::fs::remove_dir_all(&temporary_dir)?;
-    }
-    std::fs::create_dir_all(&temporary_dir)?;
-
-    let extraction_result = (|| -> crate::Result<()> {
-        let file = std::fs::File::open(archive_path)?;
-        let mut archive = zip::ZipArchive::new(file).map_err(|error| {
-            crate::ErrorKind::LauncherError(format!(
-                "Failed to open native library archive {}: {error}",
-                archive_path.display()
-            ))
-        })?;
-        for (name, _) in missing {
-            let mut entry = archive.by_name(name).map_err(|error| {
-                crate::ErrorKind::LauncherError(format!(
-                    "Failed to read {} from native library archive {}: {error}",
-                    name,
-                    archive_path.display()
-                ))
-            })?;
-            if entry.is_dir() {
-                continue;
-            }
-            let destination = temporary_dir.join(name);
-            if let Some(parent) = destination.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
-            let mut output = std::fs::File::create(&destination)?;
-            std::io::copy(&mut entry, &mut output)?;
-        }
-        Ok(())
-    })();
-
-    let move_result = if extraction_result.is_ok() {
-        move_native_entries(&temporary_dir, natives_dir, missing)
-    } else {
-        Ok(())
-    };
-    let _ = std::fs::remove_dir_all(&temporary_dir);
-
-    extraction_result?;
-    move_result?;
-    Ok(())
-}
-
-fn move_native_entries(
-    temporary_dir: &Path,
-    natives_dir: &Path,
-    missing: &[(String, u64)],
-) -> crate::Result<()> {
-    for (name, _) in missing {
-        let source = temporary_dir.join(name);
-        if !source.is_file() {
-            continue;
-        }
-        let target = natives_dir.join(name);
-        if let Ok(metadata) = std::fs::metadata(&target)
-            && metadata.is_file()
-            && metadata.len() == 0
-        {
-            let _ = std::fs::remove_file(&target);
-        }
-        if target.exists() {
-            // Another launch already restored this entry.
-            continue;
-        }
-        if let Some(parent) = target.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        match std::fs::rename(&source, &target) {
-            Ok(()) => {}
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-            }
-            Err(error) => {
-                return Err(crate::ErrorKind::LauncherError(format!(
-                    "Failed to restore native library entry {}: {error}",
-                    target.display()
-                ))
-                .into());
-            }
-        }
-    }
     Ok(())
 }
 
@@ -2665,6 +2354,7 @@ pub async fn download_log_config(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::launcher::natives::prepare_native_libraries as ensure_native_libraries_extracted;
 
     fn urls(values: &[&str]) -> Option<Vec<String>> {
         Some(values.iter().map(|value| (*value).to_string()).collect())
@@ -3047,7 +2737,7 @@ mod tests {
             b"inner"
         );
 
-        // Existing non-empty entries are never overwritten on later launches.
+        // Same-length corruption must be repaired on later launches.
         std::fs::write(natives_dir.join("lwjgl.dll"), b"tampered").unwrap();
         ensure_native_libraries_extracted(
             &natives_root,
@@ -3062,7 +2752,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             std::fs::read(natives_dir.join("lwjgl.dll")).unwrap(),
-            b"tampered"
+            b"native-binary"
         );
     }
 
@@ -3103,7 +2793,7 @@ mod tests {
 
         assert_eq!(
             std::fs::read(natives_dir.join("a.dll")).unwrap(),
-            b"custom"
+            b"from-archive"
         );
         assert_eq!(
             std::fs::read(natives_dir.join("b.dll")).unwrap(),
@@ -3163,11 +2853,15 @@ mod tests {
         )
         .await
         .unwrap_err();
-        assert!(error.to_string().contains("repair or reinstall"));
+        assert!(
+            error
+                .to_string()
+                .contains("Repair the instance while online")
+        );
     }
 
     #[tokio::test]
-    async fn missing_native_archive_with_extracted_natives_is_tolerated() {
+    async fn missing_native_archive_with_extracted_natives_is_rejected() {
         let directory = tempfile::tempdir().unwrap();
         let natives_root = directory.path().join("natives");
         let libraries_dir = directory.path().join("libraries");
@@ -3179,7 +2873,7 @@ mod tests {
             .unwrap();
 
         let libraries = [modern_native_library("nonexistent")];
-        ensure_native_libraries_extracted(
+        let error = ensure_native_libraries_extracted(
             &natives_root,
             &libraries_dir,
             &caches_dir,
@@ -3189,11 +2883,12 @@ mod tests {
             true,
         )
         .await
-        .unwrap();
+        .unwrap_err();
 
-        assert_eq!(
-            std::fs::read(natives_dir.join("lwjgl.dll")).unwrap(),
-            b"native-binary"
+        assert!(
+            error
+                .to_string()
+                .contains("Repair the instance while online")
         );
     }
 
