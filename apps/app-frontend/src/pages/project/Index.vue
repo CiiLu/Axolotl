@@ -210,6 +210,7 @@
 								{{ installButtonLabel }}
 							</button>
 						</ButtonStyled>
+						<!-- 开服功能暂有问题，隐藏该按钮
 						<Transition name="start-server">
 							<ButtonStyled
 								v-if="serverCapableModpack"
@@ -227,6 +228,7 @@
 								</button>
 							</ButtonStyled>
 						</Transition>
+						-->
 						<ButtonStyled size="large" circular type="transparent">
 							<OverflowMenu
 								:tooltip="`More options`"

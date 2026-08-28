@@ -702,8 +702,11 @@ mod tests {
                 "option {option} must appear exactly once, got: {parsed:?}"
             );
         }
-        assert!(parsed
-            .contains(&"cpw.mods.fml.common.launcher.FMLTweaker".to_string()));
+        assert!(
+            parsed.contains(
+                &"cpw.mods.fml.common.launcher.FMLTweaker".to_string()
+            )
+        );
 
         // Legacy-only options still pass through unchanged.
         let parsed = get_minecraft_arguments(
@@ -771,14 +774,9 @@ mod tests {
         ];
 
         // Neither main artifact exists on disk; both must be tolerated.
-        let class_paths = get_class_paths(
-            directory.path(),
-            &libraries,
-            &[],
-            "x86_64",
-            true,
-        )
-        .unwrap();
+        let class_paths =
+            get_class_paths(directory.path(), &libraries, &[], "x86_64", true)
+                .unwrap();
         assert!(class_paths.contains("lwjgl-platform-2.9.0.jar"));
         assert!(class_paths.contains("lwjgl-platform-3.2.1.jar"));
 

@@ -28,7 +28,6 @@ import {
 import { check_symlink_capability, list } from '@/helpers/instance'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata.js'
 import type { InstanceLoader } from '@/helpers/types'
-import { useTheming } from '@/store/state'
 
 const symlinkMessages = defineMessages({
 	unsupportedTitle: {
@@ -94,7 +93,6 @@ export function setupCreationModal(
 	const { formatMessage } = useVIntl()
 	const { handleError } = notificationManager
 	const router = useRouter()
-	const themeStore = useTheming()
 
 	const installationModal =
 		useTemplateRef<ComponentExposed<typeof CreationFlowModal>>('installationModal')
@@ -134,32 +132,21 @@ export function setupCreationModal(
 		name: string,
 		iconUrl?: string,
 	) {
-		await install_create_modpack_instance({
-			type: 'fromVersionId',
-			project_id: projectId,
-			version_id: versionId,
-			title: name,
-			icon_url: iconUrl,
-		}).catch(handleError)
+		await install_create_modpack_instance(
+			{
+				type: 'fromVersionId',
+				project_id: projectId,
+				version_id: versionId,
+				title: name,
+				icon_url: iconUrl,
+			},
+			{ name },
+		).catch(handleError)
 		trackEvent('InstanceCreate', { source: 'CreationModalModpack' })
 	}
 
 	async function handleCreate(config: CreationFlowContextValue) {
 		try {
-			if (config.modpackSelection.value) {
-				const { projectId, versionId, name, iconUrl } = config.modpackSelection.value
-
-				const instances = await list().catch(handleError)
-				const existingInstance = instances?.find((i) => i.link?.project_id === projectId)
-
-				if (existingInstance && !themeStore.getFeatureFlag('skip_non_essential_warnings')) {
-					pendingModpackCreation.value = { projectId, versionId, name, iconUrl }
-					installationModal.value?.hide()
-					modpackAlreadyInstalledModal.value?.show(existingInstance.name, existingInstance.id)
-					return
-				}
-			}
-
 			installationModal.value?.hide()
 
 			if (config.isImportMode.value) {

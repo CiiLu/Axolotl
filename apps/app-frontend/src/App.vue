@@ -84,6 +84,7 @@ import InstallToPlayModal from '@/components/ui/modal/InstallToPlayModal.vue'
 import InstanceIconPickerModal from '@/components/ui/modal/InstanceIconPickerModal.vue'
 import JavaDownloadConfirmationModal from '@/components/ui/modal/JavaDownloadConfirmationModal.vue'
 import ModpackAlreadyInstalledModal from '@/components/ui/modal/ModpackAlreadyInstalledModal.vue'
+import ModpackInstallModal from '@/components/ui/modal/ModpackInstallModal.vue'
 import PrivacyConsentModal from '@/components/ui/modal/PrivacyConsentModal.vue'
 import SurveyAnnouncementModal from '@/components/ui/modal/SurveyAnnouncementModal.vue'
 import UpdateToPlayModal from '@/components/ui/modal/UpdateToPlayModal.vue'
@@ -203,13 +204,6 @@ const APP_SIDEBAR_WIDTH = 300
 const credentials = ref()
 const sidebarToggled = ref(getSidebarExpanded())
 
-function collapseSidebar() {
-	if (!sidebarToggled.value) return
-
-	sidebarToggled.value = false
-	setSidebarExpanded(false)
-}
-
 function toggleSidebar() {
 	sidebarToggled.value = !sidebarToggled.value
 	setSidebarExpanded(sidebarToggled.value)
@@ -218,7 +212,10 @@ function toggleSidebar() {
 const forceSidebar = computed(
 	() => route.path.startsWith('/browse') || route.path.startsWith('/project'),
 )
-const sidebarVisible = computed(() => sidebarToggled.value || forceSidebar.value)
+const forceSidebarHidden = computed(() => route.path === '/settings')
+const sidebarVisible = computed(
+	() => !forceSidebarHidden.value && (sidebarToggled.value || forceSidebar.value),
+)
 const customBackgroundStyle = computed(() => {
 	// A custom image would sit between the desktop and the UI, defeating the
 	// transparent window entirely, so the two are mutually exclusive.
@@ -1296,14 +1293,6 @@ watch(offline, (isOffline) => {
 watch(
 	() => route.path,
 	(path) => {
-		if (path === '/settings') collapseSidebar()
-	},
-	{ immediate: true },
-)
-
-watch(
-	() => route.path,
-	(path) => {
 		if (
 			path.startsWith('/instance/') &&
 			onboardingSettings.value?.onboarded &&
@@ -1346,10 +1335,9 @@ const {
 	handleCancel: handleContentInstallCancel,
 	setContentInstallModal,
 	setContentInstallPreviewModal,
-	setModpackAlreadyInstalledModal: setContentInstallModpackAlreadyInstalledModal,
-	handleModpackDuplicateCreateAnyway: handleContentInstallModpackDuplicateCreateAnyway,
-	handleModpackDuplicateGoToInstance: handleContentInstallModpackDuplicateGoToInstance,
-	handleModpackDuplicateCancel,
+	setModpackInstallModal: setContentInstallModpackInstallModal,
+	handleModpackInstall: handleContentInstallModpackInstall,
+	handleModpackInstallCancel: handleContentInstallModpackInstallCancel,
 	setCurseForgeManualDownloadsModal: setContentInstallCurseForgeManualDownloadsModal,
 	handleCurseForgeManualDownloadsImported: handleContentInstallCurseForgeManualDownloadsImported,
 	setIncompatibilityWarningModal: setContentIncompatibilityWarningModal,
@@ -1376,7 +1364,9 @@ const {
 const modInstallModal = ref()
 const contentInstallPreviewModal = ref<InstanceType<typeof ContentInstallPreviewModal> | null>(null)
 const modpackAlreadyInstalledModal = ref()
-const contentInstallModpackAlreadyInstalledModal = ref()
+const contentInstallModpackInstallModal = ref<InstanceType<typeof ModpackInstallModal> | null>(null)
+const handleContentInstallModpackDuplicateGoToInstance = (instanceId: string) =>
+	router.push(`/instance/${encodeURIComponent(instanceId)}`)
 const contentInstallCurseForgeManualDownloadsModal = ref()
 const addServerToInstanceModal = ref()
 const incompatibilityWarningModal = ref()
@@ -1544,7 +1534,7 @@ onMounted(() => {
 	setContentInstallModal(modInstallModal.value)
 	setContentInstallPreviewModal(contentInstallPreviewModal.value)
 	contentSelection.setPreviewModal(contentInstallPreviewModal.value)
-	setContentInstallModpackAlreadyInstalledModal(contentInstallModpackAlreadyInstalledModal.value)
+	setContentInstallModpackInstallModal(contentInstallModpackInstallModal.value!)
 	setContentInstallCurseForgeManualDownloadsModal(
 		contentInstallCurseForgeManualDownloadsModal.value,
 	)
@@ -2302,7 +2292,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			class="app-sidebar mt-px shrink-0 flex flex-col border-0 border-l-[1px] border-[--brand-gradient-border] border-solid"
 		>
 			<button
-				v-if="!forceSidebar"
+				v-if="!forceSidebar && !forceSidebarHidden"
 				v-tooltip.left="
 					sidebarToggled
 						? formatMessage(messages.collapseSidebar)
@@ -2383,7 +2373,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		ref="modpackAlreadyInstalledModal"
 		@create-anyway="handleModpackDuplicateCreateAnyway"
 		@go-to-instance="handleModpackDuplicateGoToInstance"
-		@cancel="handleModpackDuplicateCancel"
 	/>
 	<AddServerToInstanceModal
 		ref="addServerToInstanceModal"
@@ -2407,10 +2396,10 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		@cancel="handleIncompatibilityWarningCancel"
 		@search-compat="handleDropInstallSearchCompat"
 	/>
-	<ModpackAlreadyInstalledModal
-		ref="contentInstallModpackAlreadyInstalledModal"
-		@create-anyway="handleContentInstallModpackDuplicateCreateAnyway"
-		@go-to-instance="handleContentInstallModpackDuplicateGoToInstance"
+	<ModpackInstallModal
+		ref="contentInstallModpackInstallModal"
+		@install="handleContentInstallModpackInstall"
+		@cancel="handleContentInstallModpackInstallCancel"
 	/>
 	<CurseForgeManualDownloadsModal
 		ref="contentInstallCurseForgeManualDownloadsModal"

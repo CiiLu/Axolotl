@@ -33,6 +33,24 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.9.2',
+		version: '1.9.2',
+		publishedAt: '2026-08-28',
+		title: {
+			'en-US': 'Axolotl Launcher 1.9.2',
+			'zh-CN': 'Axolotl Launcher 1.9.2',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US':
+						'Fixed the Skin editor failing to open in macOS builds when its embedded editor resources were rejected with a 403 error.',
+					'zh-CN': '修复 macOS 构建中皮肤编辑器的嵌入资源被 403 拒绝，导致无法打开的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.9.1',
 		version: '1.9.1',
 		publishedAt: '2026-08-27',
@@ -41,7 +59,30 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.9.1',
 		},
 		changes: {
+			added: [
+				{
+					'en-US':
+						'Added a modpack installation confirmation dialog for Modrinth and CurseForge, with version selection and a custom instance name.',
+					'zh-CN': 'Modrinth 与 CurseForge 整合包安装新增确认弹窗，可选择版本并自定义实例名称。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						'Modpack installation now shows existing installs and the collision-safe instance folder name before creating a separate instance.',
+					'zh-CN': '安装整合包前现在会显示已有安装状态及避免重名冲突后的实例文件夹名称，并可创建独立实例。',
+				},
+			],
 			fixed: [
+				{
+					'en-US':
+						'Fixed the Discover page source selection changing to CurseForge after browsing maps.',
+					'zh-CN': '修复浏览地图后“发现内容”页的来源选择被切换为 CurseForge 的问题。',
+				},
+				{
+					'en-US': 'Fixed the right sidebar remaining collapsed after leaving the Settings page.',
+					'zh-CN': '修复从设置页面返回其他页面后右侧边栏仍保持收起的问题。',
+				},
 				{
 					'en-US':
 						'Fixed CurseForge showing no content under Discover when no search query is entered — browsing CurseForge now loads content again.',
