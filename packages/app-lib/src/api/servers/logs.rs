@@ -1,8 +1,11 @@
 //! Console output buffering and streaming for servers.
 
-use tokio::io::{AsyncBufReadExt, BufReader};
+use std::path::PathBuf;
+use tokio::io::{AsyncBufReadExt, AsyncSeekExt, BufReader};
+use tokio::fs::File;
 
 use crate::Result;
+use crate::api::servers::lifecycle::is_server_running;
 use crate::event::emit::emit_server;
 use crate::event::{ExitReason, ServerPayloadType};
 use crate::state::{clear_log_buffer, push_log_line};
@@ -55,6 +58,67 @@ pub(super) async fn stream_server_output(
                     }
                 }
             }
+        }
+    }
+}
+
+/// Streams the server's `logs/latest.log` file into the console buffer. The
+/// Minecraft/Fabric log4j console output is frequently not delivered through
+/// the process stdout pipe (it goes to the log file instead), so tailing this
+/// file is the authoritative, lossless source of the server's own logs. Lines
+/// already present in the buffer (e.g. delivered via the stdout/stderr pipes)
+/// are skipped to avoid duplicates.
+pub(super) async fn tail_server_log_file(server_id: String, dir: PathBuf) {
+    let log_path = dir.join("logs").join("latest.log");
+    let mut reader = loop {
+        if !is_server_running(&server_id) {
+            return;
+        }
+        match File::open(&log_path).await {
+            Ok(file) => break BufReader::new(file),
+            // The file only appears once the server starts logging; poll until then.
+            Err(_) => {
+                tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+            }
+        }
+    };
+
+    let mut line = String::new();
+    loop {
+        if !is_server_running(&server_id) {
+            return;
+        }
+        line.clear();
+        match reader.read_line(&mut line).await {
+            Ok(0) => {
+                // Caught up. Detect log rotation (file replaced/truncated) and
+                // otherwise wait for more output to be appended.
+                if let Ok(meta) = tokio::fs::metadata(&log_path).await {
+                    if let Ok(pos) = reader.stream_position().await {
+                        if meta.len() < pos {
+                            if let Ok(file) = File::open(&log_path).await {
+                                reader = BufReader::new(file);
+                            }
+                        }
+                    }
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            }
+            Ok(_) => {
+                let trimmed = line.trim_end_matches(['\r', '\n']);
+                let cleaned = strip_ansi(trimmed);
+                let already_present = crate::state::get_log_buffer(&server_id).contains(&cleaned);
+                if !cleaned.is_empty() && !already_present {
+                    push_log_line(&server_id, cleaned.clone());
+                    emit_server(
+                        &server_id,
+                        ServerPayloadType::Log { line: cleaned },
+                    )
+                    .await
+                    .ok();
+                }
+            }
+            Err(_) => break,
         }
     }
 }

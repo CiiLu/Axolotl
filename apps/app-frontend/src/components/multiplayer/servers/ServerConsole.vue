@@ -6,7 +6,7 @@ import {
 	provideConsoleManager,
 	useVIntl,
 } from '@modrinth/ui'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { hydrateLog, type ServerView, useServers } from '@/composables/useServers'
 import { servers } from '@/helpers/servers'
@@ -32,23 +32,60 @@ const consoleState = createConsoleState()
 const loading = ref(true)
 const hasLogs = computed(() => consoleState.output.value.length > 0)
 let consumedLines = 0
+// Guards the live length-watcher from double-appending while we rebuild the
+// console from the buffer during (re)hydration. Without it, the async
+// hydrate fetch and the streamed `logLines` updates race, dropping or
+// duplicating the earliest startup lines.
+let hydrating = false
 
 async function hydrateAndDisplay() {
-	await hydrateLog(props.server.id)
-	const buffer = logLines[props.server.id] ?? []
-	if (buffer.length > 0) await consoleState.addLegacyLog(buffer.join('\n'))
-	consumedLines = buffer.length
+	hydrating = true
+	try {
+		await hydrateLog(props.server.id)
+		const buffer = logLines[props.server.id] ?? []
+		if (buffer.length > 0) await consoleState.addLegacyLog(buffer.join('\n'))
+		consumedLines = buffer.length
+	} finally {
+		hydrating = false
+	}
+}
+
+// The per-line `server` events can drop during heavy bursts, so we
+// periodically reconcile the displayed log against the lossless backend
+// buffer. This guarantees the console always shows the complete history,
+// including the server's startup and command responses that arrived in a
+// single fast burst.
+let syncTimer: ReturnType<typeof setInterval> | null = null
+function startSync() {
+	stopSync()
+	syncTimer = setInterval(() => {
+		if (hydrating) return
+		if (!props.server.running) {
+			stopSync()
+			return
+		}
+		void hydrateLog(props.server.id)
+	}, 1000)
+}
+function stopSync() {
+	if (syncTimer) {
+		clearInterval(syncTimer)
+		syncTimer = null
+	}
 }
 
 onMounted(async () => {
 	await hydrateAndDisplay()
 	loading.value = false
+	startSync()
 })
+
+onUnmounted(stopSync)
 
 watch(
 	() => (logLines[props.server.id] ?? []).length,
 	(count) => {
-		if (loading.value) return
+		if (loading.value || hydrating) return
 		const lines = logLines[props.server.id] ?? []
 		if (count < consumedLines) {
 			consoleState.clear()
@@ -69,9 +106,12 @@ async function handleSendCommand(command: string) {
 }
 
 // Starting a server always resets the console to a clean slate and resumes
-// bottom-following. The logLines replacement in startServer usually triggers
-// the length watcher above, but resetting here too makes the refresh
-// deterministic instead of relying on that indirect detection.
+// bottom-following. The displayed `consoleState` is cleared here, but the
+// shared `logLines` buffer is intentionally preserved: the global listener may
+// have already streamed the earliest startup lines, and discarding them (or
+// letting the async hydrate overwrite them) is what made the launch appear to
+// have "no startup info". We rebuild the view from whatever `logLines` already
+// holds, then continue following new lines.
 const consoleLayout = ref<InstanceType<typeof ConsolePageLayout> | null>(null)
 watch(
 	() => props.server.running,
@@ -79,7 +119,6 @@ watch(
 		if (!running || previousRunning) return
 		consoleState.clear()
 		consumedLines = 0
-		logLines[props.server.id] = []
 		await hydrateAndDisplay()
 		consoleLayout.value?.scrollToBottom()
 	},
