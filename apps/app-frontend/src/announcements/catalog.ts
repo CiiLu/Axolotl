@@ -57,6 +57,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			],
 			fixed: [
 				{
+					'en-US': 'Fixed the right sidebar remaining collapsed after leaving the Settings page.',
+					'zh-CN': '修复从设置页面返回其他页面后右侧边栏仍保持收起的问题。',
+				},
+				{
 					'en-US':
 						'Fixed CurseForge showing no content under Discover when no search query is entered — browsing CurseForge now loads content again.',
 					'zh-CN':

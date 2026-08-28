@@ -204,13 +204,6 @@ const APP_SIDEBAR_WIDTH = 300
 const credentials = ref()
 const sidebarToggled = ref(getSidebarExpanded())
 
-function collapseSidebar() {
-	if (!sidebarToggled.value) return
-
-	sidebarToggled.value = false
-	setSidebarExpanded(false)
-}
-
 function toggleSidebar() {
 	sidebarToggled.value = !sidebarToggled.value
 	setSidebarExpanded(sidebarToggled.value)
@@ -219,7 +212,10 @@ function toggleSidebar() {
 const forceSidebar = computed(
 	() => route.path.startsWith('/browse') || route.path.startsWith('/project'),
 )
-const sidebarVisible = computed(() => sidebarToggled.value || forceSidebar.value)
+const forceSidebarHidden = computed(() => route.path === '/settings')
+const sidebarVisible = computed(
+	() => !forceSidebarHidden.value && (sidebarToggled.value || forceSidebar.value),
+)
 const customBackgroundStyle = computed(() => {
 	// A custom image would sit between the desktop and the UI, defeating the
 	// transparent window entirely, so the two are mutually exclusive.
@@ -1297,14 +1293,6 @@ watch(offline, (isOffline) => {
 watch(
 	() => route.path,
 	(path) => {
-		if (path === '/settings') collapseSidebar()
-	},
-	{ immediate: true },
-)
-
-watch(
-	() => route.path,
-	(path) => {
 		if (
 			path.startsWith('/instance/') &&
 			onboardingSettings.value?.onboarded &&
@@ -2304,7 +2292,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			class="app-sidebar mt-px shrink-0 flex flex-col border-0 border-l-[1px] border-[--brand-gradient-border] border-solid"
 		>
 			<button
-				v-if="!forceSidebar"
+				v-if="!forceSidebar && !forceSidebarHidden"
 				v-tooltip.left="
 					sidebarToggled
 						? formatMessage(messages.collapseSidebar)
