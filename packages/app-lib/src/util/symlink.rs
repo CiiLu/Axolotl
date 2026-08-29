@@ -196,7 +196,6 @@ fn create_link_elevated_blocking(
 ) -> std::io::Result<()> {
     use std::os::windows::process::CommandExt;
     use std::process::Command;
-    use std::os::windows::process::CommandExt;
 
     let result_file = std::env::temp_dir()
         .join(format!("axolotl-link-result-{}.json", uuid::Uuid::new_v4()));
