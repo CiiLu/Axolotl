@@ -147,6 +147,12 @@ async fn start_inner(
 
     clear_log_buffer(server_id);
 
+    // Start each run from a clean log file. Minecraft's log4j appender appends
+    // to logs/latest.log across launches, so without truncating it the file
+    // tailer would replay the previous run's history into the fresh buffer on
+    // every restart.
+    let _ = std::fs::remove_file(dir.join("logs").join("latest.log"));
+
     // Surface every startup step in the console. A loader's first launch (e.g.
     // Fabric downloading the Minecraft server) can stay silent for a long time,
     // so these lines stop the console from looking frozen.

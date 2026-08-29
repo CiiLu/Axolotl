@@ -119,6 +119,10 @@ watch(
 		if (!running || previousRunning) return
 		consoleState.clear()
 		consumedLines = 0
+		// Drop the previous run's lines from the shared buffer too; the backend
+		// cleared its own buffer at launch, so without this the old history
+		// would be rehydrated into the fresh console on every restart.
+		logLines[props.server.id] = []
 		await hydrateAndDisplay()
 		consoleLayout.value?.scrollToBottom()
 	},
