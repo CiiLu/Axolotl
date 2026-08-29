@@ -590,6 +590,18 @@ export function useDropImport(options: DropImportOptions) {
 		})
 
 		if (choice === 'compatible') {
+			const single = scanResults?.[0]?.instances[0]
+			if (!single?.versionPath) {
+				currentImportContext.value = null
+				dropDebug('handleCompatibleModeConfirm: missing versionPath', {
+					instanceName,
+				})
+				addNotification({
+					title: formatMessage(messages.dropNoInstances),
+					type: 'error',
+				})
+				return
+			}
 			selectedInstances.value = [
 				{
 					launcherType,
@@ -597,7 +609,7 @@ export function useDropImport(options: DropImportOptions) {
 					name: versionName,
 					path: gameDir,
 					compatibleMode: true,
-					versionPath: `${gameDir}/versions/${versionName}`,
+					versionPath: single.versionPath,
 				},
 			]
 			const cap = await check_symlink_capability()
@@ -609,6 +621,7 @@ export function useDropImport(options: DropImportOptions) {
 						launcherType,
 						basePath: gameDir,
 						compatibleMode: true,
+						versionPath: single.versionPath,
 					},
 				],
 				symlinkCapable: cap,
@@ -759,6 +772,8 @@ export function useDropImport(options: DropImportOptions) {
 							path: single.compatibleMode ? (single.versionPath ?? single.path) : single.path,
 							launcherType: 'Generic',
 							basePath: single.compatibleMode ? single.path : dropFilePath.value,
+							compatibleMode: single.compatibleMode,
+							versionPath: single.versionPath,
 						},
 					],
 					symlinkCapable: cap,
@@ -866,6 +881,8 @@ export function useDropImport(options: DropImportOptions) {
 							path: single.compatibleMode ? (single.versionPath ?? single.path) : single.path,
 							launcherType,
 							basePath: single.compatibleMode ? single.path : scanBasePath,
+							compatibleMode: single.compatibleMode,
+							versionPath: single.versionPath,
 						},
 					],
 					symlinkCapable: cap,
@@ -1379,6 +1396,8 @@ export function useDropImport(options: DropImportOptions) {
 				path: i.path,
 				launcherType: i.launcherType,
 				basePath: i.basePath || i.path,
+				compatibleMode: i.compatibleMode,
+				versionPath: i.versionPath,
 			})),
 			symlinkCapable: cap,
 		})

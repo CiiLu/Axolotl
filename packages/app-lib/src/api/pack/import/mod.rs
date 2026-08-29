@@ -619,35 +619,10 @@ async fn collect_child_instances(
     }
 }
 
-fn strip_instance_name_prefix(instance_folder: &str) -> &str {
-    instance_folder
-        .split_once(':')
-        .map(|(_, rest)| rest)
-        .filter(|rest| !rest.is_empty())
-        .unwrap_or(instance_folder)
-}
-
-fn resolve_instance_path(base_path: &Path, instance_folder: &str) -> PathBuf {
-    let instance_folder = strip_instance_name_prefix(instance_folder);
-    if let Some(rest) = instance_folder.strip_prefix("versions/") {
-        return base_path.join("versions").join(rest);
-    }
-    if base_path
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .as_deref()
-        == Some(instance_folder)
-    {
-        base_path.to_path_buf()
-    } else {
-        base_path.join(instance_folder)
-    }
-}
-
 fn split_generic_game_dir_and_version(
-    path: &str,
+    path: &Path,
 ) -> (PathBuf, Option<PathBuf>) {
-    let path_buf = PathBuf::from(path);
+    let path_buf = path.to_path_buf();
     if let Some(versions_dir) = path_buf.parent()
         && versions_dir
             .file_name()
@@ -660,26 +635,13 @@ fn split_generic_game_dir_and_version(
     (path_buf, None)
 }
 
-fn resolve_axolotl_source(base_path: &Path, instance_folder: &str) -> PathBuf {
-    if base_path.join("axolotl_config.json").is_file() {
-        base_path.to_path_buf()
-    } else {
-        base_path.join(instance_folder)
-    }
-}
-
-fn split_config_name(name: &str) -> (&str, &str) {
-    name.split_once(':').unwrap_or((name, ""))
-}
-
 /// Everything needed to import one instance, grouped so launcher-specific
 /// importers don't need to thread a dozen parameters through every call.
 struct ImportJob {
     instance_id: String,
     base_path: PathBuf,
     instance_folder: String,
-    /// Pre-resolved path from frontend scanning (PCL2/PCL2CE only).
-    instance_path: Option<String>,
+    instance_path: PathBuf,
     reporter: InstallProgressReporter,
     symlink: bool,
     overrides: ImportOverrides,
@@ -692,38 +654,6 @@ pub(crate) struct ImportOverrides {
     pub loader_version: Option<String>,
 }
 
-/// Imports an instance from a generic folder with config name resolution.
-async fn import_configured_instance(
-    job: &ImportJob,
-    details: InstallPhaseDetails,
-    get_game_dir: impl FnOnce(&str) -> Option<String>,
-) -> crate::Result<()> {
-    let (config_name, rest) = split_config_name(&job.instance_folder);
-    let game_dir =
-        get_game_dir(config_name)
-            .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                let local = job.base_path.join(config_name);
-                if local.is_dir() {
-                    local
-                } else {
-                    job.base_path.clone()
-                }
-            });
-    let target = if rest.is_empty() { config_name } else { rest };
-    let path = resolve_instance_path(&game_dir, target);
-    generic::import_generic(
-        path,
-        &job.instance_id,
-        job.reporter.clone(),
-        details,
-        job.symlink,
-        &job.overrides,
-        None,
-    )
-    .await
-}
-
 pub(crate) async fn import_instance_with_reporter(
     instance_id: &str,
     launcher_type: ImportLauncherType,
@@ -734,6 +664,18 @@ pub(crate) async fn import_instance_with_reporter(
     reporter: InstallProgressReporter,
     symlink: bool,
 ) -> crate::Result<()> {
+    let instance_path = PathBuf::from(instance_path.ok_or_else(|| {
+        crate::ErrorKind::InputError(
+            "Import source path is required".to_string(),
+        )
+    })?);
+    if !instance_path.is_dir() {
+        return Err(crate::ErrorKind::InputError(format!(
+            "Import source path does not exist: {}",
+            instance_path.display()
+        ))
+        .into());
+    }
     import_instance_inner(
         ImportJob {
             instance_id: instance_id.to_string(),
@@ -801,9 +743,9 @@ async fn import_via_launcher(
 
     match launcher_type {
         ImportLauncherType::MultiMC | ImportLauncherType::PrismLauncher => {
-            mmc::import_mmc(
-                base_path.clone(),       // path to base mmc folder
-                instance_folder.clone(), // instance folder in mmc_base_path
+            mmc::import_mmc_instance_dir(
+                instance_path.clone(),
+                Some(base_path.join("icons")),
                 instance_id,
                 reporter.clone(),
                 details,
@@ -812,9 +754,9 @@ async fn import_via_launcher(
             .await
         }
         ImportLauncherType::ATLauncher => {
-            atlauncher::import_atlauncher(
-                base_path.clone(),       // path to atlauncher folder
-                instance_folder.clone(), // instance folder in atlauncher
+            atlauncher::import_atlauncher_dir(
+                base_path.clone(),
+                instance_path.clone(),
                 instance_id,
                 reporter.clone(),
                 details,
@@ -823,15 +765,8 @@ async fn import_via_launcher(
             .await
         }
         ImportLauncherType::GDLauncher => {
-            let instance_dir = instance_path
-                .as_ref()
-                .map(PathBuf::from)
-                .filter(|path| path.is_dir())
-                .unwrap_or_else(|| {
-                    base_path.join("instances").join(instance_folder)
-                });
             gdlauncher::import_gdlauncher(
-                instance_dir,
+                instance_path.clone(),
                 instance_id,
                 reporter.clone(),
                 details,
@@ -840,15 +775,8 @@ async fn import_via_launcher(
             .await
         }
         ImportLauncherType::Curseforge => {
-            let instance_dir = instance_path
-                .as_ref()
-                .map(PathBuf::from)
-                .filter(|path| path.is_dir())
-                .unwrap_or_else(|| {
-                    base_path.join("Instances").join(instance_folder)
-                });
             curseforge::import_curseforge(
-                instance_dir,
+                instance_path.clone(),
                 instance_id,
                 reporter.clone(),
                 details,
@@ -868,58 +796,36 @@ async fn import_via_launcher(
             .await
         }
         ImportLauncherType::PCL2 | ImportLauncherType::PCL2CE => {
-            if let Some(path) = instance_path {
-                let (game_dir, version_path) =
-                    split_generic_game_dir_and_version(path);
-                generic::import_generic(
-                    game_dir,
-                    instance_id,
-                    reporter.clone(),
-                    details,
-                    *symlink,
-                    overrides,
-                    version_path,
-                )
-                .await
-            } else {
-                import_configured_instance(job, details, |name| {
-                    pcl::get_pcl_instance_path(name)
-                        .or_else(|| pcl::get_pclce_instance_path(name))
-                })
-                .await
-            }
+            let (game_dir, version_path) =
+                split_generic_game_dir_and_version(instance_path);
+            generic::import_generic(
+                game_dir,
+                instance_id,
+                reporter.clone(),
+                details,
+                *symlink,
+                overrides,
+                version_path,
+            )
+            .await
         }
         ImportLauncherType::HMCL => {
-            if let Some(path) = instance_path {
-                let (game_dir, version_path) =
-                    split_generic_game_dir_and_version(path);
-                generic::import_generic(
-                    game_dir,
-                    instance_id,
-                    reporter.clone(),
-                    details,
-                    *symlink,
-                    overrides,
-                    version_path,
-                )
-                .await
-            } else {
-                import_configured_instance(job, details, |name| {
-                    hmcl::get_instance_path(base_path, name)
-                })
-                .await
-            }
+            let (game_dir, version_path) =
+                split_generic_game_dir_and_version(instance_path);
+            generic::import_generic(
+                game_dir,
+                instance_id,
+                reporter.clone(),
+                details,
+                *symlink,
+                overrides,
+                version_path,
+            )
+            .await
         }
         ImportLauncherType::Axolotl => {
-            let path = instance_path
-                .as_ref()
-                .map(PathBuf::from)
-                .filter(|path| path.is_dir())
-                .unwrap_or_else(|| {
-                    resolve_axolotl_source(base_path, instance_folder)
-                });
             axolotl::import_axolotl(
-                path,
+                instance_path.clone(),
                 instance_id,
                 reporter.clone(),
                 details,
@@ -929,32 +835,18 @@ async fn import_via_launcher(
             .await
         }
         ImportLauncherType::Generic => {
-            if let Some(version_path) = job.instance_path.as_ref() {
-                let (game_dir, version_dir) =
-                    split_generic_game_dir_and_version(version_path);
-                generic::import_generic(
-                    game_dir,
-                    instance_id,
-                    reporter.clone(),
-                    details,
-                    *symlink,
-                    overrides,
-                    version_dir,
-                )
-                .await
-            } else {
-                let path = resolve_instance_path(base_path, instance_folder);
-                generic::import_generic(
-                    path,
-                    instance_id,
-                    reporter.clone(),
-                    details,
-                    *symlink,
-                    overrides,
-                    None,
-                )
-                .await
-            }
+            let (game_dir, version_dir) =
+                split_generic_game_dir_and_version(instance_path);
+            generic::import_generic(
+                game_dir,
+                instance_id,
+                reporter.clone(),
+                details,
+                *symlink,
+                overrides,
+                version_dir,
+            )
+            .await
         }
         ImportLauncherType::Unknown => {
             unreachable!("handled by import_instance_inner")
@@ -965,36 +857,21 @@ async fn import_via_launcher(
 /// Tries to identify an unknown launcher folder by probing each known
 /// launcher type, then dispatches the matching import.
 async fn import_unknown_launcher(job: ImportJob) -> crate::Result<()> {
-    let types = [
-        ImportLauncherType::PCL2,
-        ImportLauncherType::PCL2CE,
-        ImportLauncherType::HMCL,
-        ImportLauncherType::MultiMC,
-        ImportLauncherType::PrismLauncher,
-        ImportLauncherType::ATLauncher,
-        ImportLauncherType::GDLauncher,
-        ImportLauncherType::Curseforge,
-        ImportLauncherType::ModrinthApp,
-    ];
-    for lt in types {
-        if let Ok(instances) =
-            Box::pin(get_importable_instances(lt, job.base_path.clone())).await
-            && instances.iter().any(|i| i.name == job.instance_folder)
-        {
-            let details = InstallPhaseDetails::Import {
-                launcher_type: lt,
-                instance_folder: job.instance_folder.clone(),
-            };
-            let mut job = job;
-            // Unknown type — let the specific branch resolve the path.
-            job.instance_path = None;
-            return import_via_launcher(lt, &job, details).await;
-        }
-    }
-    Err(crate::ErrorKind::InputError(
-        "Could not determine launcher type for the given path".to_string(),
+    let (game_dir, version_path) =
+        split_generic_game_dir_and_version(&job.instance_path);
+    generic::import_generic(
+        game_dir,
+        &job.instance_id,
+        job.reporter.clone(),
+        InstallPhaseDetails::Import {
+            launcher_type: ImportLauncherType::Unknown,
+            instance_folder: job.instance_folder,
+        },
+        job.symlink,
+        &job.overrides,
+        version_path,
     )
-    .into())
+    .await
 }
 
 /// Returns the default path for the given launcher type
