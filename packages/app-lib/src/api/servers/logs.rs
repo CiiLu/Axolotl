@@ -36,6 +36,15 @@ pub(super) async fn stream_server_output(
                 if cleaned.is_empty() {
                     continue;
                 }
+                // The server also echoes its log4j output (timestamped lines) to
+                // stdout/stderr in a console format that duplicates every line
+                // already delivered losslessly by `tail_server_log_file` from
+                // `logs/latest.log`. Drop those here so the file tail stays the
+                // single source of truth; only non-logged process output
+                // (bootstrap, patcher progress, JVM warnings) is streamed.
+                if is_timestamped_log_line(&cleaned) {
+                    continue;
+                }
                 push_log_line(&server_id, cleaned.clone());
                 emit_server(
                     &server_id,
@@ -132,6 +141,23 @@ fn is_jna_macos_assertion(line: &str) -> bool {
         && line.contains("dispatch.c")
 }
 
+/// Detects a server log4j line by its leading `[HH:MM:SS]` timestamp, covering
+/// both console (`[HH:MM:SS INFO]:`) and file (`[HH:MM:SS] [Thread/INFO]:`)
+/// formats. Used to suppress the process-pipe echo of server logs so they are
+/// not duplicated by `tail_server_log_file`.
+fn is_timestamped_log_line(line: &str) -> bool {
+    let b = line.as_bytes();
+    b.first() == Some(&b'[')
+        && b.get(1).map_or(false, |c| c.is_ascii_digit())
+        && b.get(2).map_or(false, |c| c.is_ascii_digit())
+        && b.get(3) == Some(&b':')
+        && b.get(4).map_or(false, |c| c.is_ascii_digit())
+        && b.get(5).map_or(false, |c| c.is_ascii_digit())
+        && b.get(6) == Some(&b':')
+        && b.get(7).map_or(false, |c| c.is_ascii_digit())
+        && b.get(8).map_or(false, |c| c.is_ascii_digit())
+}
+
 /// How many lines at the end of a server's output are inspected when
 /// classifying why it exited.
 const EXIT_ANALYSIS_TAIL_LINES: usize = 50;
@@ -214,6 +240,23 @@ mod tests {
         assert_eq!(strip_ansi("\u{1b}]0;Server console\u{1b}\\done"), "done");
         assert_eq!(strip_ansi("plain text stays"), "plain text stays");
         assert_eq!(strip_ansi("h\u{e9}llo \u{1b}[31mred"), "h\u{e9}llo red");
+    }
+
+    #[test]
+    fn detects_timestamped_log_lines() {
+        // Console format (no thread) — duplicated by Paper's stdout echo.
+        assert!(is_timestamped_log_line("[11:13:49 INFO]: [bootstrap] Running Java 25"));
+        // File format (with thread) — authoritative source from latest.log.
+        assert!(is_timestamped_log_line("[11:13:49] [ServerMain/INFO]: [bootstrap] Running"));
+        assert!(is_timestamped_log_line("[11:13:49] [Server thread/INFO]: Stopped IO worker!"));
+        // Non-logged process output must NOT be suppressed.
+        assert!(!is_timestamped_log_line("Downloading mojang_26.2.jar"));
+        assert!(!is_timestamped_log_line("Applying patches"));
+        assert!(!is_timestamped_log_line("Starting org.bukkit.craftbukkit.Main"));
+        assert!(!is_timestamped_log_line("WARNING: A terminally deprecated method in sun.misc.Unsafe"));
+        assert!(!is_timestamped_log_line(
+            "2026-08-29T03:13:49.279070900Z ServerMain WARN Advanced terminal features",
+        ));
     }
 
     #[test]
