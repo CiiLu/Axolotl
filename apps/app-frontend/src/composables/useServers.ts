@@ -66,10 +66,17 @@ async function ensureListener() {
 }
 
 export async function hydrateLog(serverId: string) {
-	if (logLines[serverId]?.length) return
 	try {
 		const buffer = await servers.getLogBuffer(serverId)
-		if (buffer.length > 0) logLines[serverId] = [...buffer]
+		// The backend log buffer is the authoritative, lossless source: the
+		// per-line `server` events can be dropped in bursts (e.g. the server's
+		// startup or a `help` dump), but every line is still persisted there.
+		// Reconcile by appending only the lines we haven't displayed yet rather
+		// than blindly replacing, so live events and this catch-up stay in sync.
+		const current = (logLines[serverId] ??= [])
+		if (buffer.length > current.length) {
+			for (const line of buffer.slice(current.length)) current.push(line)
+		}
 	} catch {
 		// Server may not have logs yet
 	}
