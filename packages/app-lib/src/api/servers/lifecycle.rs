@@ -16,7 +16,9 @@ use crate::state::{clear_log_buffer, get_log_buffer, push_log_line};
 use crate::util::io::IOError;
 use crate::{ErrorKind, Result};
 
-use super::logs::{analyze_exit_reason, stream_server_output, tail_server_log_file};
+use super::logs::{
+    analyze_exit_reason, stream_server_output, tail_server_log_file,
+};
 use super::manifest::{
     read_manifest, resolve_jar_name, server_path, write_manifest,
 };
@@ -156,10 +158,11 @@ async fn start_inner(
     // Surface every startup step in the console. A loader's first launch (e.g.
     // Fabric downloading the Minecraft server) can stay silent for a long time,
     // so these lines stop the console from looking frozen.
-    let loader_first_run = matches!(manifest.server_type.as_str(), "fabric" | "quilt")
-        && !dir
-            .join(format!("{}-server-launch.jar", manifest.server_type))
-            .exists();
+    let loader_first_run =
+        matches!(manifest.server_type.as_str(), "fabric" | "quilt")
+            && !dir
+                .join(format!("{}-server-launch.jar", manifest.server_type))
+                .exists();
 
     log_server_step(
         server_id,

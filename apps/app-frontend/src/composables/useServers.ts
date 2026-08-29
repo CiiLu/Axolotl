@@ -2,7 +2,12 @@ import { computeServerStatus, type ServerStatus } from '@modrinth/server'
 import { injectNotificationManager } from '@modrinth/ui'
 import { computed, reactive, ref } from 'vue'
 
-import { serverEventListener, type ServerExitReason, type ServerInfoData, servers } from '@/helpers/servers'
+import {
+	serverEventListener,
+	type ServerExitReason,
+	type ServerInfoData,
+	servers,
+} from '@/helpers/servers'
 
 const LOG_CAPACITY = 5000
 
