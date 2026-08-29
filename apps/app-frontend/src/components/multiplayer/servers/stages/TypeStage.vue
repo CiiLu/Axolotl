@@ -15,7 +15,7 @@ const { formatMessage } = useVIntl()
 const ctx = injectCreateServerFlow()
 
 const messages = defineMessages({
-	heading: { id: 'app.servers.wizard.type-heading', defaultMessage: 'Choose a server type' },
+	heading: { id: 'app.servers.wizard.type-heading', defaultMessage: 'Choose a server core' },
 	gameVersion: { id: 'app.servers.wizard.game-version', defaultMessage: 'Game version' },
 	loaderVersion: { id: 'app.servers.wizard.loader-version', defaultMessage: 'Loader version' },
 	showSnapshots: { id: 'app.servers.wizard.show-snapshots', defaultMessage: 'Show snapshots' },

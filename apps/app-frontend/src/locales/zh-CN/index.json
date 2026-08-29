@@ -6555,10 +6555,10 @@
     "message": "显示快照版本"
   },
   "app.servers.wizard.type-heading": {
-    "message": "选择服务端类型"
+    "message": "选择服务器核心"
   },
   "app.servers.wizard.type-title": {
-    "message": "服务端类型"
+    "message": "服务器类型"
   },
   "app.servers.type.vanilla": {
     "message": "原版"
