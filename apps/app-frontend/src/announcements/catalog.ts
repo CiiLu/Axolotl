@@ -52,6 +52,24 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed the path concatenation error when importing instances; the path is no longer constructed from the instance name.',
 					'zh-CN': '修复导入实例拼接路径错误，现在不再从实例名拼接路径。',
 				},
+				{
+					'en-US': 'Fix the cmd window appearing after launch.',
+					'zh-CN': '修复启动后显示cmd窗口。',
+				},
+				{
+					'en-US': 'Disable global text selection; keep only specific text selectable.',
+					'zh-CN': '全局文字禁止选择，仅保留部分文字可被选中。',
+				},
+				{
+					'en-US': 'Unify scrollbar position.',
+					'zh-CN': '统一滚动条位置',
+				},
+			],
+			added: [
+				{
+					'en-US': 'Added an Easter egg to the About page! It might be hard to find~',
+					'zh-CN': '关于页面新增彩蛋！可能较难发现哦~',
+				},
 			],
 		},
 	},
