@@ -1,9 +1,5 @@
 [files]
-exclude = [
-  "target/",
-  "**/node_modules/",
-  "apps/app-frontend/public/easteregg/games/game.html",
-]
+exclude = ["target/", "**/node_modules/"]
 
 # required since Tauri doesn't support TOML v1.1.0
 # and breaks on inline tables with newlines
