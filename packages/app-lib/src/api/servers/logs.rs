@@ -1,8 +1,8 @@
 //! Console output buffering and streaming for servers.
 
 use std::path::PathBuf;
-use tokio::io::{AsyncBufReadExt, AsyncSeekExt, BufReader};
 use tokio::fs::File;
+use tokio::io::{AsyncBufReadExt, AsyncSeekExt, BufReader};
 
 use crate::Result;
 use crate::api::servers::lifecycle::is_server_running;
@@ -108,21 +108,20 @@ pub(super) async fn tail_server_log_file(server_id: String, dir: PathBuf) {
             Ok(0) => {
                 // Caught up. Detect log rotation (file replaced/truncated) and
                 // otherwise wait for more output to be appended.
-                if let Ok(meta) = tokio::fs::metadata(&log_path).await {
-                    if let Ok(pos) = reader.stream_position().await {
-                        if meta.len() < pos {
-                            if let Ok(file) = File::open(&log_path).await {
-                                reader = BufReader::new(file);
-                            }
-                        }
-                    }
+                if let Ok(meta) = tokio::fs::metadata(&log_path).await
+                    && let Ok(pos) = reader.stream_position().await
+                    && meta.len() < pos
+                    && let Ok(file) = File::open(&log_path).await
+                {
+                    reader = BufReader::new(file);
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
             }
             Ok(_) => {
                 let trimmed = line.trim_end_matches(['\r', '\n']);
                 let cleaned = strip_ansi(trimmed);
-                let already_present = crate::state::get_log_buffer(&server_id).contains(&cleaned);
+                let already_present =
+                    crate::state::get_log_buffer(&server_id).contains(&cleaned);
                 if !cleaned.is_empty() && !already_present {
                     push_log_line(&server_id, cleaned.clone());
                     emit_server(
@@ -154,14 +153,14 @@ fn is_jna_macos_assertion(line: &str) -> bool {
 fn is_timestamped_log_line(line: &str) -> bool {
     let b = line.as_bytes();
     b.first() == Some(&b'[')
-        && b.get(1).map_or(false, |c| c.is_ascii_digit())
-        && b.get(2).map_or(false, |c| c.is_ascii_digit())
+        && b.get(1).is_some_and(|c| c.is_ascii_digit())
+        && b.get(2).is_some_and(|c| c.is_ascii_digit())
         && b.get(3) == Some(&b':')
-        && b.get(4).map_or(false, |c| c.is_ascii_digit())
-        && b.get(5).map_or(false, |c| c.is_ascii_digit())
+        && b.get(4).is_some_and(|c| c.is_ascii_digit())
+        && b.get(5).is_some_and(|c| c.is_ascii_digit())
         && b.get(6) == Some(&b':')
-        && b.get(7).map_or(false, |c| c.is_ascii_digit())
-        && b.get(8).map_or(false, |c| c.is_ascii_digit())
+        && b.get(7).is_some_and(|c| c.is_ascii_digit())
+        && b.get(8).is_some_and(|c| c.is_ascii_digit())
 }
 
 /// How many lines at the end of a server's output are inspected when
@@ -251,15 +250,25 @@ mod tests {
     #[test]
     fn detects_timestamped_log_lines() {
         // Console format (no thread) — duplicated by Paper's stdout echo.
-        assert!(is_timestamped_log_line("[11:13:49 INFO]: [bootstrap] Running Java 25"));
+        assert!(is_timestamped_log_line(
+            "[11:13:49 INFO]: [bootstrap] Running Java 25"
+        ));
         // File format (with thread) — authoritative source from latest.log.
-        assert!(is_timestamped_log_line("[11:13:49] [ServerMain/INFO]: [bootstrap] Running"));
-        assert!(is_timestamped_log_line("[11:13:49] [Server thread/INFO]: Stopped IO worker!"));
+        assert!(is_timestamped_log_line(
+            "[11:13:49] [ServerMain/INFO]: [bootstrap] Running"
+        ));
+        assert!(is_timestamped_log_line(
+            "[11:13:49] [Server thread/INFO]: Stopped IO worker!"
+        ));
         // Non-logged process output must NOT be suppressed.
         assert!(!is_timestamped_log_line("Downloading mojang_26.2.jar"));
         assert!(!is_timestamped_log_line("Applying patches"));
-        assert!(!is_timestamped_log_line("Starting org.bukkit.craftbukkit.Main"));
-        assert!(!is_timestamped_log_line("WARNING: A terminally deprecated method in sun.misc.Unsafe"));
+        assert!(!is_timestamped_log_line(
+            "Starting org.bukkit.craftbukkit.Main"
+        ));
+        assert!(!is_timestamped_log_line(
+            "WARNING: A terminally deprecated method in sun.misc.Unsafe"
+        ));
         assert!(!is_timestamped_log_line(
             "2026-08-29T03:13:49.279070900Z ServerMain WARN Advanced terminal features",
         ));
