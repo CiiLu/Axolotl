@@ -7739,6 +7739,9 @@
   "app.update-popup.download": {
     "message": "下载（{size}）"
   },
+  "app.update-popup.apt-update": {
+    "message": "更新"
+  },
   "app.update-popup.download-complete": {
     "message": "下载完成"
   },

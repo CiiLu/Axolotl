@@ -682,6 +682,8 @@ fn main() {
             enqueue_update_for_installation,
             remove_enqueued_update,
             set_restart_after_pending_update,
+            is_apt_linux,
+            install_apt_update,
             toggle_decorations,
             set_transparent_window_frame,
             show_window,
