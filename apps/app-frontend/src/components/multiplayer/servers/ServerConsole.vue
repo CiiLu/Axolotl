@@ -21,10 +21,6 @@ const messages = defineMessages({
 		id: 'app.servers.console.not-running',
 		defaultMessage: 'The server is not running',
 	},
-	commandEcho: {
-		id: 'app.servers.console.command-echo',
-		defaultMessage: '> {command}',
-	},
 })
 
 const { logLines, sendCommand } = useServers()
@@ -101,8 +97,9 @@ watch(
 )
 
 async function handleSendCommand(command: string) {
-	const sent = await sendCommand(props.server.id, command)
-	if (sent) void consoleState.addLegacyLog(formatMessage(messages.commandEcho, { command }))
+	// The server echoes the command into its own log (e.g. "> time set 0"),
+	// which the console already shows, so we don't echo it a second time here.
+	await sendCommand(props.server.id, command)
 }
 
 // Starting a server always resets the console to a clean slate and resumes

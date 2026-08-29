@@ -45,6 +45,12 @@ pub(super) async fn stream_server_output(
                 if is_timestamped_log_line(&cleaned) {
                     continue;
                 }
+                // The server echoes entered commands to its own log (e.g.
+                // "> time set 0"), which the file tailer already streams. Skip
+                // those here so they are not duplicated by the stdout pipe.
+                if cleaned.starts_with("> ") {
+                    continue;
+                }
                 push_log_line(&server_id, cleaned.clone());
                 emit_server(
                     &server_id,
