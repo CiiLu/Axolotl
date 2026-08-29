@@ -56,12 +56,15 @@ pub fn get_class_paths(
             if !library.include_in_classpath {
                 return false;
             }
-            let key = library
-                .name
-                .split(':')
-                .take(2)
-                .collect::<Vec<_>>()
-                .join(":");
+            // Modern Mojang manifests express native archives as separate
+            // classifier coordinates. A classifier must not displace the
+            // unclassified JAR that contains the Java classes.
+            let mut coordinates = library.name.split(':');
+            let group = coordinates.next().unwrap_or_default();
+            let artifact = coordinates.next().unwrap_or_default();
+            let _version = coordinates.next();
+            let classifier = coordinates.next().unwrap_or_default();
+            let key = format!("{group}:{artifact}:{classifier}");
             seen_artifacts.insert(key)
         })
         .collect::<Vec<_>>();
@@ -839,5 +842,35 @@ mod tests {
 
         assert!(class_paths.contains("lwjgl-3.2.2.jar"));
         assert!(!class_paths.contains("lwjgl-3.2.1.jar"));
+    }
+
+    #[test]
+    fn classpath_keeps_main_artifact_with_native_classifier() {
+        let directory = tempfile::tempdir().unwrap();
+        let main = directory
+            .path()
+            .join("org/lwjgl/lwjgl-glfw/3.3.3/lwjgl-glfw-3.3.3.jar");
+        let native = directory.path().join(
+            "org/lwjgl/lwjgl-glfw/3.3.3/lwjgl-glfw-3.3.3-natives-windows.jar",
+        );
+        std::fs::create_dir_all(main.parent().unwrap()).unwrap();
+        std::fs::write(&main, b"main").unwrap();
+        std::fs::write(&native, b"native").unwrap();
+
+        let libraries: Vec<Library> = [
+            "org.lwjgl:lwjgl-glfw:3.3.3",
+            "org.lwjgl:lwjgl-glfw:3.3.3:natives-windows",
+        ]
+        .into_iter()
+        .map(|name| {
+            serde_json::from_value(serde_json::json!({ "name": name })).unwrap()
+        })
+        .collect();
+        let class_paths =
+            get_class_paths(directory.path(), &libraries, &[], "x86_64", true)
+                .unwrap();
+
+        assert!(class_paths.contains("lwjgl-glfw-3.3.3.jar"));
+        assert!(class_paths.contains("lwjgl-glfw-3.3.3-natives-windows.jar"));
     }
 }
