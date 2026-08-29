@@ -93,6 +93,17 @@ const monogramStyles = computed<Record<string, string>>(() =>
 				@click="selectType(type.id)"
 			>
 				<span
+					v-if="SERVER_TYPE_META[type.id].icon"
+					class="flex size-7 shrink-0 items-center justify-center overflow-hidden"
+				>
+					<img
+						:src="SERVER_TYPE_META[type.id].icon"
+						:alt="serverTypeLabel(type)"
+						class="size-full object-contain"
+					/>
+				</span>
+				<span
+					v-else
 					class="flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold"
 					:style="{
 						color: SERVER_TYPE_META[type.id].colorVar,
