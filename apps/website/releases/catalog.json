@@ -2,6 +2,23 @@
   "updated_at": "2026-08-29T10:19:06.205Z",
   "announcements": [
     {
+      "id": "launcher-1.9.4",
+      "version": "1.9.4",
+      "publishedAt": "2026-08-29",
+      "title": {
+        "en-US": "Axolotl Launcher 1.9.4",
+        "zh-CN": "Axolotl Launcher 1.9.4"
+      },
+      "changes": {
+        "fixed": [
+          {
+            "en-US": "Fix the issue introduced in 1.9.2 where instances fail to start.",
+            "zh-CN": "修复从 1.9.2 引入的实例无法启动的问题。"
+          }
+        ]
+      }
+    },
+    {
       "id": "launcher-1.9.2",
       "version": "1.9.2",
       "publishedAt": "2026-08-29",
