@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { EyeIcon, RefreshCwIcon } from '@modrinth/assets'
+import { EyeIcon, RefreshCwIcon, XIcon } from '@modrinth/assets'
 import {
+	ButtonStyled,
 	Combobox,
 	defineMessages,
 	injectNotificationManager,
 	NewButton as Button,
+	NewModal,
 	useVIntl,
 } from '@modrinth/ui'
 import { getVersion } from '@tauri-apps/api/app'
@@ -13,7 +15,7 @@ import { inject, ref, watch } from 'vue'
 
 import UpdateAnnouncementHistory from '@/components/ui/announcement/UpdateAnnouncementHistory.vue'
 import { getUpdateChannel, setUpdateChannel, type UpdateChannel } from '@/helpers/settings.ts'
-import { isDev } from '@/helpers/utils.js'
+import { isDev, restartApp } from '@/helpers/utils.js'
 import { type AppUpdateCheckResult, checkForAppUpdate } from '@/providers/app-update.ts'
 
 import SettingsRow from './SettingsRow.vue'
@@ -28,6 +30,7 @@ const currentVersion = await getVersion()
 const isDevEnvironment = await isDev()
 const previewUpdateAnnouncement = inject<(version: string) => void>('previewUpdateAnnouncement')
 const isPortable = ref(false)
+const restartModal = ref<InstanceType<typeof NewModal>>()
 
 try {
 	isPortable.value = await invoke('is_portable_mode')
@@ -36,21 +39,21 @@ try {
 }
 
 const messages = defineMessages({
-		title: {
-			id: 'app.settings.updates.channel.title',
-			defaultMessage: 'Update channel',
-		},
-		description: {
-			id: 'app.settings.updates.channel.description',
-			defaultMessage: 'Choose which launcher versions Axolotl receives.',
-		},
-		release: {
-			id: 'app.settings.updates.channel.release',
-			defaultMessage: 'Release',
-		},
-		beta: {
-			id: 'app.settings.updates.channel.beta',
-			defaultMessage: 'Beta',
+	title: {
+		id: 'app.settings.updates.channel.title',
+		defaultMessage: 'Update channel',
+	},
+	description: {
+		id: 'app.settings.updates.channel.description',
+		defaultMessage: 'Choose which launcher versions Axolotl receives.',
+	},
+	release: {
+		id: 'app.settings.updates.channel.release',
+		defaultMessage: 'Release',
+	},
+	beta: {
+		id: 'app.settings.updates.channel.beta',
+		defaultMessage: 'Beta',
 	},
 	check: {
 		id: 'app.settings.updates.check',
@@ -93,6 +96,23 @@ const messages = defineMessages({
 		id: 'app.settings.updates.preview-announcement',
 		defaultMessage: 'Preview update announcement',
 	},
+	restartTitle: {
+		id: 'app.settings.updates.channel.restart-title',
+		defaultMessage: 'Restart required',
+	},
+	restartDescription: {
+		id: 'app.settings.updates.channel.restart-description',
+		defaultMessage:
+			'Restart Axolotl now to start using the new update channel, or restart manually later.',
+	},
+	restartNow: {
+		id: 'app.settings.updates.channel.restart-now',
+		defaultMessage: 'Restart now',
+	},
+	restartLater: {
+		id: 'app.settings.updates.channel.restart-later',
+		defaultMessage: 'Restart manually later',
+	},
 })
 
 const options: Array<{ value: UpdateChannel; label: string }> = [
@@ -111,10 +131,23 @@ const resultMessages: Record<AppUpdateCheckResult | 'failed' | 'portable', keyof
 	}
 
 watch(selectedChannel, async (channel) => {
-	await setUpdateChannel(channel)
-	await invoke('restart_app')
+	try {
+		await setUpdateChannel(channel)
+		restartModal.value?.show()
+	} catch (error) {
+		handleError(error)
+	}
 	checkResult.value = null
 })
+
+async function restartForChannelChange() {
+	restartModal.value?.hide()
+	try {
+		await restartApp()
+	} catch (error) {
+		handleError(error)
+	}
+}
 
 async function checkForUpdates() {
 	checking.value = true
@@ -185,6 +218,26 @@ async function checkForUpdates() {
 
 		<UpdateAnnouncementHistory :current-version="currentVersion" />
 	</div>
+
+	<NewModal ref="restartModal" :header="formatMessage(messages.restartTitle)" :closable="false">
+		<p class="m-0">{{ formatMessage(messages.restartDescription) }}</p>
+		<template #actions>
+			<div class="flex justify-end gap-2">
+				<ButtonStyled type="outlined">
+					<button type="button" @click="restartModal?.hide()">
+						<XIcon />
+						{{ formatMessage(messages.restartLater) }}
+					</button>
+				</ButtonStyled>
+				<ButtonStyled color="brand">
+					<button type="button" @click="restartForChannelChange">
+						<RefreshCwIcon />
+						{{ formatMessage(messages.restartNow) }}
+					</button>
+				</ButtonStyled>
+			</div>
+		</template>
+	</NewModal>
 </template>
 
 <style scoped>

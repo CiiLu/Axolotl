@@ -7289,6 +7289,18 @@
   "app.settings.updates.channel.release": {
     "message": "Release"
   },
+  "app.settings.updates.channel.restart-description": {
+    "message": "Restart Axolotl now to start using the new update channel, or restart manually later."
+  },
+  "app.settings.updates.channel.restart-later": {
+    "message": "Restart manually later"
+  },
+  "app.settings.updates.channel.restart-now": {
+    "message": "Restart now"
+  },
+  "app.settings.updates.channel.restart-title": {
+    "message": "Restart required"
+  },
   "app.settings.updates.channel.title": {
     "message": "Update channel"
   },
@@ -7308,7 +7320,7 @@
     "message": "Connect to the internet to check for updates."
   },
   "app.settings.updates.portable": {
-    "message": "Portable mode cannot update automatically. Please update manually from GitHub."
+    "message": "Portable mode cannot update automatically. Please download the latest version manually."
   },
   "app.settings.updates.preview-announcement": {
     "message": "Preview update announcement"
