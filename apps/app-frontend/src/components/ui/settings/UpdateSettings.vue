@@ -12,7 +12,7 @@ import {
 } from '@modrinth/ui'
 import { getVersion } from '@tauri-apps/api/app'
 import { invoke } from '@tauri-apps/api/core'
-import { inject, ref, watch } from 'vue'
+import { inject, nextTick, ref, watch } from 'vue'
 
 import UpdateAnnouncementHistory from '@/components/ui/announcement/UpdateAnnouncementHistory.vue'
 import {
@@ -43,6 +43,7 @@ const isPortable = ref(false)
 const restartModal = ref<InstanceType<typeof NewModal>>()
 const copyDatabaseModal = ref<InstanceType<typeof NewModal>>()
 const pendingChannel = ref<UpdateChannel | null>(null)
+let restoringChannelSelection = false
 
 try {
 	isPortable.value = await invoke('is_portable_mode')
@@ -183,17 +184,25 @@ const resultMessages: Record<AppUpdateCheckResult | 'failed' | 'portable', keyof
 	}
 
 watch(selectedChannel, async (channel, previousChannel) => {
+	if (restoringChannelSelection) return
+
 	if (channel === 'beta') updatePreferences.value.immediateUpdateFetch = true
 	if (channel === 'beta' && previousChannel === 'release') {
 		try {
 			if (!(await betaDatabaseExists())) {
 				pendingChannel.value = channel
+				restoringChannelSelection = true
 				selectedChannel.value = previousChannel
+				await nextTick()
+				restoringChannelSelection = false
 				copyDatabaseModal.value?.show()
 				return
 			}
 		} catch (error) {
+			restoringChannelSelection = true
 			selectedChannel.value = previousChannel
+			await nextTick()
+			restoringChannelSelection = false
 			handleError(error)
 			return
 		}
@@ -208,8 +217,10 @@ async function applyChannel(channel: UpdateChannel, copyDatabase = false) {
 		if (copyDatabase) await copyReleaseDatabaseToBeta()
 		await setUpdateChannel(channel)
 		restartModal.value?.show()
+		return true
 	} catch (error) {
 		handleError(error)
+		return false
 	}
 }
 
@@ -217,7 +228,12 @@ async function chooseBetaDatabase(copyDatabase: boolean) {
 	copyDatabaseModal.value?.hide()
 	const channel = pendingChannel.value
 	pendingChannel.value = null
-	if (channel) await applyChannel(channel, copyDatabase)
+	if (channel && (await applyChannel(channel, copyDatabase))) {
+		restoringChannelSelection = true
+		selectedChannel.value = channel
+		await nextTick()
+		restoringChannelSelection = false
+	}
 }
 
 async function restartForChannelChange() {
