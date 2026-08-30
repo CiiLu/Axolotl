@@ -11,11 +11,12 @@ if (!assetsDir || !tag || !outputPath) {
 }
 
 const version = tag.replace(/^v/, '')
+const ignoredFiles = new Set(['latest.json', 'release.json', path.basename(outputPath)])
 const files = fs
 	.readdirSync(assetsDir, { withFileTypes: true })
 	.filter((entry) => entry.isFile())
 	.map((entry) => entry.name)
-	.filter((filename) => filename !== 'latest.json')
+	.filter((filename) => !ignoredFiles.has(filename))
 	.sort()
 
 function updaterTargets(filename) {
