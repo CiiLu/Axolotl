@@ -9,7 +9,7 @@ directory = ".output/public"
 binding = "ASSETS"
 
 [vars]
-NUXT_PUBLIC_ADMIN_ORIGIN = "https://admin.axlmc.org"
+NUXT_PUBLIC_ADMIN_ORIGIN = "https://telemetry-api.axlmc.org"
 NUXT_PUBLIC_WORKER_HEALTH_URL = "https://telemetry.axlmc.org/health"
 NUXT_STORE_ERROR_CONTEXT = "true"
 
