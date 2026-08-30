@@ -39,7 +39,7 @@ function describe(filename) {
 		return { kind: 'installer', platform: 'windows', targetPlatforms: [], variant: 'native' }
 	}
 	if (filename.endsWith('_x64-setup.exe')) {
-		return { kind: 'installer', platform: 'windows', targetPlatforms: [], variant: 'native' }
+		return { kind: 'installer', platform: 'windows', targetPlatforms: [], variant: 'legacy' }
 	}
 	if (filename.endsWith('_x64_portable.zip')) {
 		return { kind: 'portable', platform: 'windows', targetPlatforms: [], variant: 'portable' }
@@ -89,6 +89,19 @@ const artifacts = files.map((filename) => {
 
 const primaryArtifacts = artifacts.filter((artifact) => artifact.kind !== 'signature')
 const artifactKeys = new Set()
+for (const artifact of artifacts.filter((candidate) => candidate.kind === 'signature')) {
+	const primary = primaryArtifacts.find(
+		(candidate) => candidate.filename === artifact.filename.slice(0, -'.sig'.length),
+	)
+	if (!primary) throw new Error(`Signature has no matching release artifact ${artifact.filename}`)
+	Object.assign(artifact, {
+		platform: primary.platform,
+		architecture: primary.architecture,
+		targetPlatforms: primary.targetPlatforms,
+		variant: primary.variant,
+	})
+}
+
 for (const artifact of primaryArtifacts) {
 	const signature = artifacts.find(
 		(candidate) =>
