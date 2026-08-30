@@ -32,6 +32,10 @@ const updateUrl = new URL(update.url)
 if (updateUrl.protocol !== 'https:' || !updateUrl.pathname.startsWith(`/dist/${version}/`)) {
 	throw new Error(`Unexpected Update Server updater URL: ${update.url}`)
 }
+const updateHead = await fetch(update.url, { method: 'HEAD' })
+if (!updateHead.ok) {
+	throw new Error(`Update Server updater artifact verification failed: ${update.url}`)
+}
 const downloads = await fetch(`${serverUrl}/api/downloads/${encodeURIComponent(version)}`)
 if (!downloads.ok) {
 	throw new Error(`Update Server download catalog verification failed: ${downloads.status}`)

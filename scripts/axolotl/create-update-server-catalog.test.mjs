@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict'
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'axolotl-update-catalog-'))
+const releasePath = path.join(directory, 'release.json')
 const output = path.join(directory, 'catalog.json')
 const files = [
 	'Axolotl.Launcher-1.9.5-beta.1-1.aarch64.rpm',
@@ -24,6 +26,8 @@ const files = [
 	'Axolotl.Launcher_1.9.5-beta.1_arm64.deb',
 	'Axolotl.Launcher_1.9.5-beta.1_arm64.deb.sig',
 	'Axolotl.Launcher_1.9.5-beta.1_universal.dmg',
+	'Axolotl.Launcher_1.9.5-beta.1_x64-setup.exe',
+	'Axolotl.Launcher_1.9.5-beta.1_x64-setup.exe.sig',
 	'Axolotl.Launcher_1.9.5-beta.1_x64-setup.nsis.zip',
 	'Axolotl.Launcher_1.9.5-beta.1_x64-setup.nsis.zip.sig',
 	'Axolotl.Launcher_universal.app.tar.gz',
@@ -36,10 +40,20 @@ const files = [
 ]
 
 try {
-	for (const filename of files) fs.writeFileSync(path.join(directory, filename), filename)
+	fs.writeFileSync(
+		releasePath,
+		JSON.stringify({
+			assets: files.map((name, index) => ({
+				name,
+				size: index + 1,
+				digest: `sha256:${crypto.createHash('sha256').update(name).digest('hex')}`,
+				browser_download_url: `https://github.com/Mystic-Stars/Axolotl/releases/download/v1.9.5-beta.1/${name}`,
+			})),
+		}),
+	)
 	const result = spawnSync(
 		process.execPath,
-		['scripts/axolotl/create-update-server-catalog.mjs', directory, 'v1.9.5-beta.1', output],
+		['scripts/axolotl/create-update-server-catalog.mjs', releasePath, 'v1.9.5-beta.1', output],
 		{ cwd: path.resolve(import.meta.dirname, '..', '..'), encoding: 'utf8' },
 	)
 	assert.equal(result.status, 0, result.stderr)

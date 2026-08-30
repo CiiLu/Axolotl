@@ -306,28 +306,32 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload "${GITHUB_REF_NAME}" release-check/latest.json --clobber
 
-      - name: Download complete release assets for Update Server
+      - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release download "${GITHUB_REF_NAME}" --dir update-server-assets
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+            gh release edit "${GITHUB_REF_NAME}" --draft=false --prerelease
+          else
+            gh release edit "${GITHUB_REF_NAME}" --draft=false --latest
+          fi
 
       - name: Build Update Server artifact catalog
         run: |
           node scripts/axolotl/create-update-server-catalog.mjs \
-            update-server-assets \
+            release-check/release.json \
             "${GITHUB_REF_NAME}" \
-            update-server-assets/catalog.json
+            release-check/update-server-catalog.json
           node scripts/axolotl/create-update-server-catalog.test.mjs
 
-      - name: Publish artifacts to Update Server
+      - name: Notify Update Server to publish release assets
         env:
           UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
-          UPDATE_SERVER_UPLOAD_TOKEN: ${{ secrets.UPDATE_SERVER_UPLOAD_TOKEN }}
           UPDATE_SERVER_WEBHOOK_SECRET: ${{ secrets.UPDATE_SERVER_WEBHOOK_SECRET }}
           UPDATE_SERVER_FORCE_UPDATE: 'false'
         run: |
           node scripts/axolotl/publish-update-server.mjs \
-            update-server-assets/catalog.json \
+            release-check/update-server-catalog.json \
             release-check/release.json \
             "${GITHUB_REF_NAME}"
 
@@ -355,16 +359,6 @@ jobs:
           else
             git commit -m "chore(website): update download metadata to ${GITHUB_REF_NAME} [skip ci]"
             git push origin main
-          fi
-
-      - name: Publish release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
-            gh release edit "${GITHUB_REF_NAME}" --draft=false --prerelease
-          else
-            gh release edit "${GITHUB_REF_NAME}" --draft=false --latest
           fi
 
       - name: Mirror published release to CNB

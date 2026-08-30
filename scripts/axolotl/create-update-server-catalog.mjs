@@ -1,23 +1,17 @@
-import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
-const [assetsDir, tag, outputPath] = process.argv.slice(2)
+const [releasePath, tag, outputPath] = process.argv.slice(2)
 
-if (!assetsDir || !tag || !outputPath) {
+if (!releasePath || !tag || !outputPath) {
 	throw new Error(
-		'Usage: node create-update-server-catalog.mjs <assets-dir> <version-tag> <output.json>',
+		'Usage: node create-update-server-catalog.mjs <release.json> <version-tag> <output.json>',
 	)
 }
 
 const version = tag.replace(/^v/, '')
-const ignoredFiles = new Set(['latest.json', 'release.json', path.basename(outputPath)])
-const files = fs
-	.readdirSync(assetsDir, { withFileTypes: true })
-	.filter((entry) => entry.isFile())
-	.map((entry) => entry.name)
-	.filter((filename) => !ignoredFiles.has(filename))
-	.sort()
+const release = JSON.parse(fs.readFileSync(releasePath, 'utf8'))
+if (!Array.isArray(release.assets)) throw new Error('Release metadata does not contain an assets array')
 
 function updaterTargets(filename) {
 	if (filename.endsWith('_universal.app.tar.gz')) return ['darwin-aarch64', 'darwin-x86_64']
@@ -49,12 +43,7 @@ function describe(filename) {
 		return { kind: 'installer', platform: 'macos', targetPlatforms: [], variant: 'dmg' }
 	}
 	if (filename.endsWith('.AppImage')) {
-		return {
-			kind: 'installer',
-			platform: 'linux',
-			targetPlatforms: [],
-			variant: 'appimage',
-		}
+		return { kind: 'installer', platform: 'linux', targetPlatforms: [], variant: 'appimage' }
 	}
 	if (filename.endsWith('.deb')) {
 		return { kind: 'installer', platform: 'linux', targetPlatforms: [], variant: 'deb' }
@@ -72,25 +61,27 @@ function architecture(filename) {
 	return null
 }
 
-function sha256(filePath) {
-	return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex')
+function digest(asset) {
+	if (typeof asset.digest !== 'string' || !asset.digest.startsWith('sha256:')) {
+		throw new Error(`Release asset ${asset.name} has no SHA-256 digest`)
+	}
+	return asset.digest.slice('sha256:'.length)
 }
 
-const artifacts = files.map((filename) => {
-	const filePath = path.join(assetsDir, filename)
-	const descriptor = describe(filename)
-	return {
-		filename,
-		size: fs.statSync(filePath).size,
-		sha256: sha256(filePath),
-		architecture: architecture(filename),
-		...descriptor,
-	}
-})
+const assets = release.assets
+	.filter((asset) => asset.name !== 'latest.json')
+	.map((asset) => ({
+		filename: asset.name,
+		size: asset.size,
+		sha256: digest(asset),
+		downloadUrl: asset.browser_download_url ?? asset.url,
+		architecture: architecture(asset.name),
+		...describe(asset.name),
+	}))
 
-const primaryArtifacts = artifacts.filter((artifact) => artifact.kind !== 'signature')
+const primaryArtifacts = assets.filter((artifact) => artifact.kind !== 'signature')
 const artifactKeys = new Set()
-for (const artifact of artifacts.filter((candidate) => candidate.kind === 'signature')) {
+for (const artifact of assets.filter((candidate) => candidate.kind === 'signature')) {
 	const primary = primaryArtifacts.find(
 		(candidate) => candidate.filename === artifact.filename.slice(0, -'.sig'.length),
 	)
@@ -104,22 +95,19 @@ for (const artifact of artifacts.filter((candidate) => candidate.kind === 'signa
 }
 
 for (const artifact of primaryArtifacts) {
-	const signature = artifacts.find(
-		(candidate) =>
-			candidate.kind === 'signature' && candidate.filename === `${artifact.filename}.sig`,
+	const signature = assets.find(
+		(candidate) => candidate.kind === 'signature' && candidate.filename === `${artifact.filename}.sig`,
 	)
 	artifact.signatureFilename = signature?.filename ?? null
 	if (artifact.kind === 'updater' && !signature) {
 		throw new Error(`Missing Tauri updater signature for ${artifact.filename}`)
 	}
 	const key = [artifact.kind, artifact.platform, artifact.architecture, artifact.variant].join(':')
-	if (artifact.kind !== 'signature' && artifact.kind !== 'other' && artifactKeys.has(key)) {
-		throw new Error(`Duplicate release artifact classification ${key}`)
-	}
+	if (artifactKeys.has(key)) throw new Error(`Duplicate release artifact classification ${key}`)
 	artifactKeys.add(key)
 }
 
 fs.writeFileSync(
 	outputPath,
-	`${JSON.stringify({ version, artifacts: primaryArtifacts, files: artifacts }, null, 2)}\n`,
+	`${JSON.stringify({ version, artifacts: primaryArtifacts, files: assets }, null, 2)}\n`,
 )
