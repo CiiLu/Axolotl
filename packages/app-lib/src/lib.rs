@@ -30,7 +30,7 @@ pub use event::{
     emit::init_loading,
 };
 pub use logger::start_logger;
-pub use state::State;
+pub use state::{DirectoryInfo, State};
 pub use storage::*;
 pub use util::fetch::{DownloadReason, build_proxied_client};
 pub use util::file_lock::{LockingProcess, get_locking_processes};

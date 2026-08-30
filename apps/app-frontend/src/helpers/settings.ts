@@ -63,14 +63,13 @@ export type ProxyTestResult = {
 	message: string
 }
 
-const UPDATE_CHANNEL_STORAGE_KEY = 'axolotl-update-channel-v1'
-
-export function getUpdateChannel(): UpdateChannel {
-	return localStorage.getItem(UPDATE_CHANNEL_STORAGE_KEY) === 'beta' ? 'beta' : 'release'
+export async function getUpdateChannel(): Promise<UpdateChannel> {
+	const channel = await invoke<string>('get_update_channel')
+	return channel === 'beta' ? 'beta' : 'release'
 }
 
-export function setUpdateChannel(channel: UpdateChannel) {
-	localStorage.setItem(UPDATE_CHANNEL_STORAGE_KEY, channel)
+export async function setUpdateChannel(channel: UpdateChannel): Promise<void> {
+	await invoke('set_update_channel', { channel })
 }
 
 export type BrowseContentSource =

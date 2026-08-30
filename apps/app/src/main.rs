@@ -218,6 +218,75 @@ async fn initialize_state(app: tauri::AppHandle) -> api::Result<()> {
 }
 
 #[tauri::command]
+fn get_update_channel(app: tauri::AppHandle) -> api::Result<String> {
+    let settings_dir = theseus::DirectoryInfo::initial_settings_dir_path(
+        &app.config().identifier,
+    )
+    .ok_or_else(|| {
+        theseus::Error::from(theseus::ErrorKind::FSError(
+            "Could not find update channel settings directory".to_string(),
+        ))
+    })?;
+    let path = settings_dir.join("update-channel.json");
+    let channel = std::fs::read_to_string(path)
+        .ok()
+        .and_then(|contents| {
+            serde_json::from_str::<serde_json::Value>(&contents).ok()
+        })
+        .and_then(|value| {
+            value
+                .get("active_channel")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+        })
+        .unwrap_or_else(|| "release".to_string());
+
+    match channel.as_str() {
+        "release" | "beta" => Ok(channel),
+        _ => Err(theseus::Error::from(theseus::ErrorKind::FSError(
+            "Update channel settings are invalid".to_string(),
+        ))
+        .into()),
+    }
+}
+
+#[tauri::command]
+fn set_update_channel(
+    app: tauri::AppHandle,
+    channel: String,
+) -> api::Result<()> {
+    if !matches!(channel.as_str(), "release" | "beta") {
+        return Err(theseus::Error::from(theseus::ErrorKind::FSError(
+            "Invalid update channel".to_string(),
+        ))
+        .into());
+    }
+
+    let settings_dir = theseus::DirectoryInfo::initial_settings_dir_path(
+        &app.config().identifier,
+    )
+    .ok_or_else(|| {
+        theseus::Error::from(theseus::ErrorKind::FSError(
+            "Could not find update channel settings directory".to_string(),
+        ))
+    })?;
+    std::fs::create_dir_all(&settings_dir)?;
+    let path = settings_dir.join("update-channel.json");
+    let temporary_path = settings_dir.join("update-channel.json.tmp");
+    std::fs::write(
+        &temporary_path,
+        serde_json::to_vec(&serde_json::json!({ "active_channel": channel }))
+            .map_err(|error| {
+            theseus::Error::from(theseus::ErrorKind::OtherError(
+                error.to_string(),
+            ))
+        })?,
+    )?;
+    std::fs::rename(temporary_path, path)?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn set_discord_activity(activity: String) -> api::Result<()> {
     let state = State::get().await?;
     state
@@ -673,6 +742,8 @@ fn main() {
         .manage(PendingUpdateData::default())
         .invoke_handler(tauri::generate_handler![
             initialize_state,
+            get_update_channel,
+            set_update_channel,
             set_discord_activity,
             is_dev,
             portable::is_portable_mode,

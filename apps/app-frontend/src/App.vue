@@ -1808,7 +1808,7 @@ function showDelayedUpdatePopup() {
 let lastUpdateChannel = 'release'
 
 async function performUpdateCheck() {
-	const channel = getUpdateChannel()
+	const channel = await getUpdateChannel()
 	if (channel !== lastUpdateChannel) {
 		availableUpdate.value = null
 		updateSize.value = null

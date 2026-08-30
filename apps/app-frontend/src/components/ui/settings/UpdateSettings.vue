@@ -21,7 +21,7 @@ import SettingsSection from './SettingsSection.vue'
 
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
-const selectedChannel = ref<UpdateChannel>(getUpdateChannel())
+const selectedChannel = ref<UpdateChannel>(await getUpdateChannel())
 const checking = ref(false)
 const checkResult = ref<AppUpdateCheckResult | 'failed' | 'portable' | null>(null)
 const currentVersion = await getVersion()
@@ -110,8 +110,9 @@ const resultMessages: Record<AppUpdateCheckResult | 'failed' | 'portable', keyof
 		portable: 'portable',
 	}
 
-watch(selectedChannel, (channel) => {
-	setUpdateChannel(channel)
+watch(selectedChannel, async (channel) => {
+	await setUpdateChannel(channel)
+	await invoke('restart_app')
 	checkResult.value = null
 })
 
