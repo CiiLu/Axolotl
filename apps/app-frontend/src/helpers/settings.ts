@@ -42,7 +42,7 @@ Memorysettings {
 
 */
 
-export type UpdateSource = 'miawa' | 'cnb' | 'github'
+export type UpdateChannel = 'release' | 'beta'
 export type DownloadSourceMode =
 	| 'auto'
 	| 'official_only'
@@ -63,17 +63,14 @@ export type ProxyTestResult = {
 	message: string
 }
 
-const UPDATE_SOURCE_STORAGE_KEY = 'axolotl-update-source-v2'
+const UPDATE_CHANNEL_STORAGE_KEY = 'axolotl-update-channel-v1'
 
-export function getUpdateSource(): UpdateSource {
-	const value = localStorage.getItem(UPDATE_SOURCE_STORAGE_KEY)
-	if (value === 'cnb') return 'cnb'
-	if (value === 'github' || value === 'official') return 'github'
-	return 'miawa'
+export function getUpdateChannel(): UpdateChannel {
+	return localStorage.getItem(UPDATE_CHANNEL_STORAGE_KEY) === 'beta' ? 'beta' : 'release'
 }
 
-export function setUpdateSource(source: UpdateSource) {
-	localStorage.setItem(UPDATE_SOURCE_STORAGE_KEY, source)
+export function setUpdateChannel(channel: UpdateChannel) {
+	localStorage.setItem(UPDATE_CHANNEL_STORAGE_KEY, channel)
 }
 
 export type BrowseContentSource =

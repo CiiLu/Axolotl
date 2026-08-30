@@ -7280,29 +7280,29 @@
   "app.settings.updates.available": {
     "message": "An update is available."
   },
+  "app.settings.updates.channel.beta": {
+    "message": "Beta"
+  },
+  "app.settings.updates.channel.description": {
+    "message": "Choose which launcher versions Axolotl receives."
+  },
+  "app.settings.updates.channel.release": {
+    "message": "Release"
+  },
+  "app.settings.updates.channel.title": {
+    "message": "Update channel"
+  },
   "app.settings.updates.check": {
     "message": "Check for updates"
   },
   "app.settings.updates.checking": {
     "message": "Checking for updates…"
   },
-  "app.settings.updates.cnb": {
-    "message": "CNB"
-  },
-  "app.settings.updates.description": {
-    "message": "Choose where Axolotl checks for launcher updates."
-  },
   "app.settings.updates.disabled": {
     "message": "Updates are disabled in this build."
   },
   "app.settings.updates.failed": {
     "message": "Could not check for updates."
-  },
-  "app.settings.updates.github": {
-    "message": "GitHub"
-  },
-  "app.settings.updates.miawa": {
-    "message": "LemwoodMirror"
   },
   "app.settings.updates.offline": {
     "message": "Connect to the internet to check for updates."
@@ -7315,9 +7315,6 @@
   },
   "app.settings.updates.security": {
     "message": "Updates are installed only when their cryptographic signature is valid."
-  },
-  "app.settings.updates.title": {
-    "message": "Update source"
   },
   "app.settings.updates.up-to-date": {
     "message": "Axolotl is up to date."

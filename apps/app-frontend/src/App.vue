@@ -120,7 +120,7 @@ import {
 	get as getSettings,
 	getLastBrowseContentProjectType,
 	getPrivacySettings,
-	getUpdateSource,
+	getUpdateChannel,
 	isBrowseContentProjectType,
 	type PrivacySettings,
 	savePrivacySettings,
@@ -135,11 +135,11 @@ import {
 	exportErrorLogs,
 	getOS,
 	getUpdateSize,
+	installAptUpdate,
 	isAptLinux,
 	isDev,
 	isElevated,
 	isNetworkMetered,
-	installAptUpdate,
 	restartApp,
 	setRestartAfterPendingUpdate,
 } from '@/helpers/utils.js'
@@ -1805,20 +1805,20 @@ function showDelayedUpdatePopup() {
 	markAppUpdatePopupShown(update.version, stage)
 }
 
-let lastUpdateSource = 'cnb'
+let lastUpdateChannel = 'release'
 
 async function performUpdateCheck() {
-	const source = getUpdateSource()
-	if (source !== lastUpdateSource) {
+	const channel = getUpdateChannel()
+	if (channel !== lastUpdateChannel) {
 		availableUpdate.value = null
 		updateSize.value = null
 		appUpdateDownload.progress.value = 0
 		finishedDownloading.value = false
 		downloading.value = false
-		lastUpdateSource = source
+		lastUpdateChannel = channel
 	}
 
-	const update = await checkAppUpdate(source)
+	const update = await checkAppUpdate(channel)
 	if (!update) {
 		console.log('No update available')
 		return 'up-to-date'
@@ -1889,9 +1889,7 @@ async function downloadAvailableUpdate() {
 	return downloadUpdate(availableUpdate.value)
 }
 
-const UPDATE_SOURCE_ORDER = ['miawa', 'cnb', 'github']
-
-async function downloadUpdate(versionToDownload, source = getUpdateSource()) {
+async function downloadUpdate(versionToDownload) {
 	if (!versionToDownload) {
 		handleError(`Failed to download update: no version available`)
 		return
@@ -1906,7 +1904,7 @@ async function downloadUpdate(versionToDownload, source = getUpdateSource()) {
 		return
 	}
 
-	console.log(`Downloading update ${versionToDownload.version} from ${source}`)
+	console.log(`Downloading update ${versionToDownload.version} from Update Server`)
 	downloading.value = true
 
 	try {
@@ -1927,7 +1925,7 @@ async function downloadUpdate(versionToDownload, source = getUpdateSource()) {
 				unlistenUpdateDownload?.().then(() => {
 					unlistenUpdateDownload = null
 				})
-				retryUpdateFromNextSource(source, error)
+				handleError(error)
 			})
 		unlistenUpdateDownload = await subscribeToDownloadProgress(
 			appUpdateDownload,
@@ -1936,7 +1934,7 @@ async function downloadUpdate(versionToDownload, source = getUpdateSource()) {
 	} catch (error) {
 		downloading.value = false
 		appUpdateDownload.progress.value = 0
-		retryUpdateFromNextSource(source, error)
+		handleError(error)
 	}
 }
 
@@ -1961,36 +1959,6 @@ async function installAptUpdateForVersion(versionToDownload) {
 		downloading.value = false
 		handleError(error)
 	}
-}
-
-// Any download failure falls back to the next update source in line
-// (miawa → cnb → github): re-check there and download its installer, so a
-// broken mirror never strands users on an outdated build.
-async function retryUpdateFromNextSource(failedSource, originalError) {
-	const startIndex = UPDATE_SOURCE_ORDER.indexOf(failedSource)
-	const remaining = startIndex >= 0 ? UPDATE_SOURCE_ORDER.slice(startIndex + 1) : []
-
-	for (const next of remaining) {
-		console.warn(`Update download failed via ${failedSource}; retrying via ${next}`, originalError)
-		try {
-			const fallbackUpdate = await checkAppUpdate(next)
-			if (!fallbackUpdate) {
-				console.warn(`No update available via ${next}`)
-				continue
-			}
-			availableUpdate.value = fallbackUpdate
-			updateSize.value = null
-			getUpdateSize(fallbackUpdate.rid)
-				.then((size) => (updateSize.value = size))
-				.catch((error) => console.warn('Failed to fetch update size', error))
-			await downloadUpdate(fallbackUpdate, next)
-			return
-		} catch (error) {
-			console.warn(`Update check via ${next} failed`, error)
-		}
-	}
-
-	handleError(originalError)
 }
 
 async function installUpdate() {

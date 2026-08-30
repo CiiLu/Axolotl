@@ -14,6 +14,7 @@ use tokio::time::Instant;
 use url::Url;
 
 const UPDATE_SERVER_LATEST_URL: &str = "https://update.axlmc.org/latest";
+const UPDATE_SERVER_DIST_URL: &str = "https://update.axlmc.org/dist/";
 
 // Debian and derivatives update via the apt package manager. The whole
 // operation (repo setup script plus package install) runs as a single
@@ -44,30 +45,67 @@ pub struct PendingUpdateData(pub Mutex<Option<(Arc<Update>, Vec<u8>)>>);
 
 // ── Updater plugin helpers ───────────────────────────────────────
 
-fn update_endpoints(source: &str) -> Result<Vec<Url>> {
-    match source {
-        "github" | "official" | "cnb" | "miawa" => {
-            Ok(vec![Url::parse(UPDATE_SERVER_LATEST_URL).map_err(
-                |error| {
-                    theseus::Error::from(theseus::ErrorKind::OtherError(
-                        error.to_string(),
-                    ))
-                },
-            )?])
-        }
+fn update_channel(channel: &str) -> Result<&str> {
+    match channel {
+        "release" | "beta" => Ok(channel),
         _ => Err(theseus::Error::from(theseus::ErrorKind::OtherError(
-            format!("Unknown update source: {source}"),
+            format!("Unknown update channel: {channel}"),
         ))
         .into()),
     }
 }
 
+fn update_platform() -> Result<&'static str> {
+    match (std::env::consts::OS, std::env::consts::ARCH) {
+        ("windows", "x86_64") => Ok("windows-x86_64"),
+        ("linux", "x86_64") => Ok("linux-x86_64"),
+        ("linux", "aarch64") => Ok("linux-aarch64"),
+        ("macos", "x86_64") => Ok("darwin-x86_64"),
+        ("macos", "aarch64") => Ok("darwin-aarch64"),
+        (os, arch) => {
+            Err(theseus::Error::from(theseus::ErrorKind::OtherError(format!(
+                "Unsupported updater platform: {os}-{arch}"
+            )))
+            .into())
+        }
+    }
+}
+
+fn update_endpoint() -> Result<Url> {
+    Url::parse(UPDATE_SERVER_LATEST_URL).map_err(|error| {
+        theseus::Error::from(theseus::ErrorKind::OtherError(error.to_string()))
+            .into()
+    })
+}
+
+fn is_update_server_download(version: &str, download_url: &Url) -> bool {
+    download_url
+        .as_str()
+        .strip_prefix(UPDATE_SERVER_DIST_URL)
+        .is_some_and(|path| {
+            path.starts_with(version)
+                && path
+                    .strip_prefix(version)
+                    .is_some_and(|suffix| suffix.starts_with('/'))
+        })
+}
+
 /// Build the platform-updater with the given endpoints and run a check.
 async fn check_with_endpoints<R: Runtime>(
     webview: &Webview<R>,
-    endpoints: Vec<Url>,
+    channel: &str,
 ) -> Result<Option<Update>> {
-    let mut updater = webview.updater_builder().endpoints(endpoints)?;
+    let channel = update_channel(channel)?;
+    let platform = update_platform()?;
+    let current_version =
+        webview.app_handle().package_info().version.to_string();
+    let mut updater = webview
+        .updater_builder()
+        .endpoints(vec![update_endpoint()?])?
+        .header("Accept", "application/json")?
+        .header("X-Axolotl-Channel", channel)?
+        .header("X-Axolotl-Platform", platform)?
+        .header("X-Axolotl-Version", current_version)?;
 
     #[cfg(target_os = "windows")]
     {
@@ -102,14 +140,22 @@ async fn check_with_endpoints<R: Runtime>(
 /// Check the updater manifest through the configured Update Server endpoint.
 async fn check_with_updater<R: Runtime>(
     webview: &Webview<R>,
-    source: &str,
+    channel: &str,
 ) -> Result<Option<UpdateMetadata>> {
-    let endpoints = update_endpoints(source)?;
-    let Some(mut update) = check_with_endpoints(webview, endpoints).await?
-    else {
+    let Some(mut update) = check_with_endpoints(webview, channel).await? else {
         return Ok(None);
     };
     update.timeout = Some(UPDATE_DOWNLOAD_TIMEOUT);
+
+    if !is_update_server_download(&update.version, &update.download_url) {
+        return Err(theseus::Error::from(theseus::ErrorKind::OtherError(
+            format!(
+                "Update {} returned an untrusted download URL: {}",
+                update.version, update.download_url
+            ),
+        ))
+        .into());
+    }
 
     let metadata = UpdateMetadata {
         rid: webview.resources_table().add(update.clone()),
@@ -128,9 +174,9 @@ async fn check_with_updater<R: Runtime>(
 #[tauri::command]
 pub async fn check_app_update<R: Runtime>(
     webview: Webview<R>,
-    source: String,
+    channel: String,
 ) -> Result<Option<UpdateMetadata>> {
-    check_with_updater(&webview, &source).await
+    check_with_updater(&webview, &channel).await
 }
 
 // Reimplementation of Update::download mostly, minus the actual download part

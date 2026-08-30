@@ -12,7 +12,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { inject, ref, watch } from 'vue'
 
 import UpdateAnnouncementHistory from '@/components/ui/announcement/UpdateAnnouncementHistory.vue'
-import { getUpdateSource, setUpdateSource, type UpdateSource } from '@/helpers/settings.ts'
+import { getUpdateChannel, setUpdateChannel, type UpdateChannel } from '@/helpers/settings.ts'
 import { isDev } from '@/helpers/utils.js'
 import { type AppUpdateCheckResult, checkForAppUpdate } from '@/providers/app-update.ts'
 
@@ -21,7 +21,7 @@ import SettingsSection from './SettingsSection.vue'
 
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
-const selectedSource = ref<UpdateSource>(getUpdateSource())
+const selectedChannel = ref<UpdateChannel>(getUpdateChannel())
 const checking = ref(false)
 const checkResult = ref<AppUpdateCheckResult | 'failed' | 'portable' | null>(null)
 const currentVersion = await getVersion()
@@ -36,25 +36,21 @@ try {
 }
 
 const messages = defineMessages({
-	title: {
-		id: 'app.settings.updates.title',
-		defaultMessage: 'Update source',
-	},
-	description: {
-		id: 'app.settings.updates.description',
-		defaultMessage: 'Choose where Axolotl checks for launcher updates.',
-	},
-	miawa: {
-		id: 'app.settings.updates.miawa',
-		defaultMessage: 'LemwoodMirror',
-	},
-	cnb: {
-		id: 'app.settings.updates.cnb',
-		defaultMessage: 'CNB',
-	},
-	github: {
-		id: 'app.settings.updates.github',
-		defaultMessage: 'GitHub',
+		title: {
+			id: 'app.settings.updates.channel.title',
+			defaultMessage: 'Update channel',
+		},
+		description: {
+			id: 'app.settings.updates.channel.description',
+			defaultMessage: 'Choose which launcher versions Axolotl receives.',
+		},
+		release: {
+			id: 'app.settings.updates.channel.release',
+			defaultMessage: 'Release',
+		},
+		beta: {
+			id: 'app.settings.updates.channel.beta',
+			defaultMessage: 'Beta',
 	},
 	check: {
 		id: 'app.settings.updates.check',
@@ -87,7 +83,7 @@ const messages = defineMessages({
 	portable: {
 		id: 'app.settings.updates.portable',
 		defaultMessage:
-			'Portable mode cannot update automatically. Please update manually from GitHub.',
+			'Portable mode cannot update automatically. Please download the latest version manually.',
 	},
 	security: {
 		id: 'app.settings.updates.security',
@@ -99,10 +95,9 @@ const messages = defineMessages({
 	},
 })
 
-const options: Array<{ value: UpdateSource; label: string }> = [
-	{ value: 'miawa', label: formatMessage(messages.miawa) },
-	{ value: 'cnb', label: formatMessage(messages.cnb) },
-	{ value: 'github', label: formatMessage(messages.github) },
+const options: Array<{ value: UpdateChannel; label: string }> = [
+	{ value: 'release', label: formatMessage(messages.release) },
+	{ value: 'beta', label: formatMessage(messages.beta) },
 ]
 
 const resultMessages: Record<AppUpdateCheckResult | 'failed' | 'portable', keyof typeof messages> =
@@ -115,8 +110,8 @@ const resultMessages: Record<AppUpdateCheckResult | 'failed' | 'portable', keyof
 		portable: 'portable',
 	}
 
-watch(selectedSource, (source) => {
-	setUpdateSource(source)
+watch(selectedChannel, (channel) => {
+	setUpdateChannel(channel)
 	checkResult.value = null
 })
 
@@ -146,15 +141,15 @@ async function checkForUpdates() {
 		<SettingsSection>
 			<SettingsRow>
 				<template #label>
-					<span id="settings-target-updates-source" tabindex="-1">
+					<span id="settings-target-updates-channel" tabindex="-1">
 						{{ formatMessage(messages.title) }}
 					</span>
 				</template>
 				<template #description>{{ formatMessage(messages.description) }}</template>
 				<template #control>
 					<Combobox
-						id="update-source"
-						v-model="selectedSource"
+						id="update-channel"
+						v-model="selectedChannel"
 						:name="formatMessage(messages.title)"
 						:options="options"
 					/>
