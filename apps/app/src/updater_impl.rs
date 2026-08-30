@@ -14,7 +14,6 @@ use tokio::time::Instant;
 use url::Url;
 
 const UPDATE_SERVER_LATEST_URL: &str = "https://update.axlmc.org/latest";
-const UPDATE_SERVER_DIST_URL: &str = "https://update.axlmc.org/dist/";
 
 // Debian and derivatives update via the apt package manager. The whole
 // operation (repo setup script plus package install) runs as a single
@@ -78,18 +77,6 @@ fn update_endpoint() -> Result<Url> {
     })
 }
 
-fn is_update_server_download(version: &str, download_url: &Url) -> bool {
-    download_url
-        .as_str()
-        .strip_prefix(UPDATE_SERVER_DIST_URL)
-        .is_some_and(|path| {
-            path.starts_with(version)
-                && path
-                    .strip_prefix(version)
-                    .is_some_and(|suffix| suffix.starts_with('/'))
-        })
-}
-
 /// Build the platform-updater with the given endpoints and run a check.
 async fn check_with_endpoints<R: Runtime>(
     webview: &Webview<R>,
@@ -146,16 +133,6 @@ async fn check_with_updater<R: Runtime>(
         return Ok(None);
     };
     update.timeout = Some(UPDATE_DOWNLOAD_TIMEOUT);
-
-    if !is_update_server_download(&update.version, &update.download_url) {
-        return Err(theseus::Error::from(theseus::ErrorKind::OtherError(
-            format!(
-                "Update {} returned an untrusted download URL: {}",
-                update.version, update.download_url
-            ),
-        ))
-        .into());
-    }
 
     let metadata = UpdateMetadata {
         rid: webview.resources_table().add(update.clone()),
