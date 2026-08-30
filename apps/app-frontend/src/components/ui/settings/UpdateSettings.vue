@@ -118,6 +118,11 @@ const messages = defineMessages({
 		defaultMessage:
 			'Restart Axolotl now to start using the new update channel, or restart manually later.',
 	},
+	restartDevelopmentDescription: {
+		id: 'app.settings.updates.channel.restart-development-description',
+		defaultMessage:
+			'The new update channel will be used after you manually restart the development session.',
+	},
 	restartNow: {
 		id: 'app.settings.updates.channel.restart-now',
 		defaultMessage: 'Restart now',
@@ -350,7 +355,13 @@ async function checkForUpdates() {
 	</div>
 
 	<NewModal ref="restartModal" :header="formatMessage(messages.restartTitle)" :closable="false">
-		<p class="m-0">{{ formatMessage(messages.restartDescription) }}</p>
+		<p class="m-0">
+			{{
+				formatMessage(
+					isDevEnvironment ? messages.restartDevelopmentDescription : messages.restartDescription,
+				)
+			}}
+		</p>
 		<template #actions>
 			<div class="flex justify-end gap-2">
 				<ButtonStyled type="outlined">
@@ -359,7 +370,7 @@ async function checkForUpdates() {
 						{{ formatMessage(messages.restartLater) }}
 					</button>
 				</ButtonStyled>
-				<ButtonStyled color="brand">
+				<ButtonStyled v-if="!isDevEnvironment" color="brand">
 					<button type="button" @click="restartForChannelChange">
 						<RefreshCwIcon />
 						{{ formatMessage(messages.restartNow) }}

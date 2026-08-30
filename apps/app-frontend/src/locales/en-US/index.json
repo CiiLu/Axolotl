@@ -7301,6 +7301,9 @@
   "app.settings.updates.channel.restart-description": {
     "message": "Restart Axolotl now to start using the new update channel, or restart manually later."
   },
+  "app.settings.updates.channel.restart-development-description": {
+    "message": "The new update channel will be used after you manually restart the development session."
+  },
   "app.settings.updates.channel.restart-later": {
     "message": "Restart manually later"
   },
