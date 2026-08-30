@@ -30,6 +30,7 @@ pub use event::{
     emit::init_loading,
 };
 pub use logger::start_logger;
+pub use state::db::{beta_database_exists, copy_release_database_to_beta};
 pub use state::{DirectoryInfo, State};
 pub use storage::*;
 pub use util::fetch::{DownloadReason, build_proxied_client};

@@ -7283,6 +7283,15 @@
   "app.settings.updates.channel.beta": {
     "message": "Beta"
   },
+  "app.settings.updates.channel.copy-database": {
+    "message": "Copy database"
+  },
+  "app.settings.updates.channel.copy-database-description": {
+    "message": "Would you like to copy your Release database into the Beta channel? This cannot be undone automatically."
+  },
+  "app.settings.updates.channel.copy-database-title": {
+    "message": "Copy Release data to Beta?"
+  },
   "app.settings.updates.channel.description": {
     "message": "Choose which launcher versions Axolotl receives."
   },
@@ -7300,6 +7309,9 @@
   },
   "app.settings.updates.channel.restart-title": {
     "message": "Restart required"
+  },
+  "app.settings.updates.channel.start-empty": {
+    "message": "Start with empty database"
   },
   "app.settings.updates.channel.title": {
     "message": "Update channel"

@@ -287,6 +287,19 @@ fn set_update_channel(
 }
 
 #[tauri::command]
+async fn copy_release_database_to_beta(
+    app: tauri::AppHandle,
+) -> api::Result<()> {
+    theseus::copy_release_database_to_beta(&app.config().identifier).await?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn beta_database_exists(app: tauri::AppHandle) -> api::Result<bool> {
+    Ok(theseus::beta_database_exists(&app.config().identifier).await?)
+}
+
+#[tauri::command]
 async fn set_discord_activity(activity: String) -> api::Result<()> {
     let state = State::get().await?;
     state
@@ -744,6 +757,8 @@ fn main() {
             initialize_state,
             get_update_channel,
             set_update_channel,
+            copy_release_database_to_beta,
+            beta_database_exists,
             set_discord_activity,
             is_dev,
             portable::is_portable_mode,

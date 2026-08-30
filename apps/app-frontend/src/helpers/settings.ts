@@ -72,6 +72,14 @@ export async function setUpdateChannel(channel: UpdateChannel): Promise<void> {
 	await invoke('set_update_channel', { channel })
 }
 
+export async function copyReleaseDatabaseToBeta(): Promise<void> {
+	await invoke('copy_release_database_to_beta')
+}
+
+export async function betaDatabaseExists(): Promise<boolean> {
+	return await invoke('beta_database_exists')
+}
+
 export type BrowseContentSource =
 	| 'all'
 	| 'modrinth'

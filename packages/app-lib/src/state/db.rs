@@ -101,6 +101,62 @@ pub(crate) async fn connect(
     connect_app_db(&db_path).await
 }
 
+pub async fn copy_release_database_to_beta(
+    app_identifier: &str,
+) -> crate::Result<()> {
+    let settings_dir = DirectoryInfo::initial_settings_dir_path(app_identifier)
+        .ok_or(crate::ErrorKind::FSError(
+            "Could not find valid config dir".to_string(),
+        ))?;
+    let release_path = settings_dir.join("release").join(LEGACY_APP_DB_FILE);
+    if !release_path.try_exists()? {
+        return Err(crate::ErrorKind::FSError(
+            "The Release database does not exist".to_string(),
+        )
+        .into());
+    }
+
+    let beta_dir = settings_dir.join("beta");
+    crate::util::io::create_dir_all(&beta_dir).await?;
+    let beta_path = beta_dir.join(LEGACY_APP_DB_FILE);
+    if beta_path.try_exists()? {
+        return Err(crate::ErrorKind::FSError(
+            "The Beta database already exists".to_string(),
+        )
+        .into());
+    }
+
+    let release_pool = open_app_db_pool(&release_path).await?;
+    let escaped_path = beta_path.to_string_lossy().replace('\'', "''");
+    sqlx::query(&format!("VACUUM INTO '{escaped_path}'"))
+        .execute(&release_pool)
+        .await?;
+    release_pool.close().await;
+
+    if let Err(error) = open_app_db_pool(&beta_path).await {
+        let _ = tokio::fs::remove_file(&beta_path).await;
+        return Err(error);
+    }
+
+    tracing::info!(
+        source = %release_path.display(),
+        destination = %beta_path.display(),
+        "Copied the Release database into the Beta update channel"
+    );
+    Ok(())
+}
+
+pub async fn beta_database_exists(app_identifier: &str) -> crate::Result<bool> {
+    let settings_dir = DirectoryInfo::initial_settings_dir_path(app_identifier)
+        .ok_or(crate::ErrorKind::FSError(
+            "Could not find valid config dir".to_string(),
+        ))?;
+    Ok(settings_dir
+        .join("beta")
+        .join(LEGACY_APP_DB_FILE)
+        .try_exists()?)
+}
+
 async fn app_db_path(settings_dir: &Path) -> crate::Result<PathBuf> {
     let channel = read_update_channel(settings_dir).await?;
     Ok(settings_dir.join(channel).join(LEGACY_APP_DB_FILE))

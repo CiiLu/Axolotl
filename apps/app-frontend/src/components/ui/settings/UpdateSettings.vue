@@ -14,7 +14,13 @@ import { invoke } from '@tauri-apps/api/core'
 import { inject, ref, watch } from 'vue'
 
 import UpdateAnnouncementHistory from '@/components/ui/announcement/UpdateAnnouncementHistory.vue'
-import { getUpdateChannel, setUpdateChannel, type UpdateChannel } from '@/helpers/settings.ts'
+import {
+	betaDatabaseExists,
+	copyReleaseDatabaseToBeta,
+	getUpdateChannel,
+	setUpdateChannel,
+	type UpdateChannel,
+} from '@/helpers/settings.ts'
 import { isDev, restartApp } from '@/helpers/utils.js'
 import { type AppUpdateCheckResult, checkForAppUpdate } from '@/providers/app-update.ts'
 
@@ -31,6 +37,8 @@ const isDevEnvironment = await isDev()
 const previewUpdateAnnouncement = inject<(version: string) => void>('previewUpdateAnnouncement')
 const isPortable = ref(false)
 const restartModal = ref<InstanceType<typeof NewModal>>()
+const copyDatabaseModal = ref<InstanceType<typeof NewModal>>()
+const pendingChannel = ref<UpdateChannel | null>(null)
 
 try {
 	isPortable.value = await invoke('is_portable_mode')
@@ -113,6 +121,23 @@ const messages = defineMessages({
 		id: 'app.settings.updates.channel.restart-later',
 		defaultMessage: 'Restart manually later',
 	},
+	copyDatabaseTitle: {
+		id: 'app.settings.updates.channel.copy-database-title',
+		defaultMessage: 'Copy Release data to Beta?',
+	},
+	copyDatabaseDescription: {
+		id: 'app.settings.updates.channel.copy-database-description',
+		defaultMessage:
+			'Would you like to copy your Release database into the Beta channel? This cannot be undone automatically.',
+	},
+	copyDatabase: {
+		id: 'app.settings.updates.channel.copy-database',
+		defaultMessage: 'Copy database',
+	},
+	startEmpty: {
+		id: 'app.settings.updates.channel.start-empty',
+		defaultMessage: 'Start with empty database',
+	},
 })
 
 const options: Array<{ value: UpdateChannel; label: string }> = [
@@ -130,15 +155,42 @@ const resultMessages: Record<AppUpdateCheckResult | 'failed' | 'portable', keyof
 		portable: 'portable',
 	}
 
-watch(selectedChannel, async (channel) => {
+watch(selectedChannel, async (channel, previousChannel) => {
+	if (channel === 'beta' && previousChannel === 'release') {
+		try {
+			if (!(await betaDatabaseExists())) {
+				pendingChannel.value = channel
+				selectedChannel.value = previousChannel
+				copyDatabaseModal.value?.show()
+				return
+			}
+		} catch (error) {
+			selectedChannel.value = previousChannel
+			handleError(error)
+			return
+		}
+	}
+
+	await applyChannel(channel)
+	checkResult.value = null
+})
+
+async function applyChannel(channel: UpdateChannel, copyDatabase = false) {
 	try {
+		if (copyDatabase) await copyReleaseDatabaseToBeta()
 		await setUpdateChannel(channel)
 		restartModal.value?.show()
 	} catch (error) {
 		handleError(error)
 	}
-	checkResult.value = null
-})
+}
+
+async function chooseBetaDatabase(copyDatabase: boolean) {
+	copyDatabaseModal.value?.hide()
+	const channel = pendingChannel.value
+	pendingChannel.value = null
+	if (channel) await applyChannel(channel, copyDatabase)
+}
 
 async function restartForChannelChange() {
 	restartModal.value?.hide()
@@ -233,6 +285,30 @@ async function checkForUpdates() {
 					<button type="button" @click="restartForChannelChange">
 						<RefreshCwIcon />
 						{{ formatMessage(messages.restartNow) }}
+					</button>
+				</ButtonStyled>
+			</div>
+		</template>
+	</NewModal>
+
+	<NewModal
+		ref="copyDatabaseModal"
+		:header="formatMessage(messages.copyDatabaseTitle)"
+		:closable="false"
+	>
+		<p class="m-0">{{ formatMessage(messages.copyDatabaseDescription) }}</p>
+		<template #actions>
+			<div class="flex justify-end gap-2">
+				<ButtonStyled type="outlined">
+					<button type="button" @click="chooseBetaDatabase(false)">
+						<XIcon />
+						{{ formatMessage(messages.startEmpty) }}
+					</button>
+				</ButtonStyled>
+				<ButtonStyled color="brand">
+					<button type="button" @click="chooseBetaDatabase(true)">
+						<RefreshCwIcon />
+						{{ formatMessage(messages.copyDatabase) }}
 					</button>
 				</ButtonStyled>
 			</div>
