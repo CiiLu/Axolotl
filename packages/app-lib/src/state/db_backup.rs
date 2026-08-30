@@ -515,7 +515,20 @@ fn app_db_backup_dir_for(db_path: &Path) -> crate::Result<PathBuf> {
         ))
     })?;
 
-    Ok(base.join("Backups").join("app-db"))
+    let backup_dir = base.join("Backups").join("app-db");
+    match db_path
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str())
+    {
+        Some("beta") | Some("release") => Ok(backup_dir.join(
+            db_path
+                .parent()
+                .and_then(Path::file_name)
+                .expect("database channel directory has a name"),
+        )),
+        _ => Ok(backup_dir),
+    }
 }
 
 async fn has_user_tables(conn: &mut SqliteConnection) -> crate::Result<bool> {
