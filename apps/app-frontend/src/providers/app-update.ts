@@ -9,6 +9,7 @@ export interface AppUpdate {
 	version: string
 	currentVersion?: string
 	publishedAt?: string
+	forceUpdate?: boolean
 }
 
 interface UpdatePromptState {

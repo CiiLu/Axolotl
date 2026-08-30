@@ -1839,10 +1839,14 @@ async function performUpdateCheck() {
 	if (
 		channel === 'release' &&
 		!preferences.immediateUpdateFetch &&
-		Number.isFinite(publishedAt) &&
-		Date.now() < publishedAt + 24 * 60 * 60 * 1000
+		!update.forceUpdate &&
+		(!Number.isFinite(publishedAt) || Date.now() < publishedAt + 24 * 60 * 60 * 1000)
 	) {
-		console.log(`Update ${update.version} is waiting for the release delay.`)
+		console.warn(
+			Number.isFinite(publishedAt)
+				? `Update ${update.version} is waiting for the release delay.`
+				: `Update ${update.version} has no valid published_at timestamp.`,
+		)
 		return 'up-to-date'
 	}
 
@@ -1922,13 +1926,6 @@ async function downloadUpdate(versionToDownload) {
 	if (aptLinux.value) {
 		return installAptUpdateForVersion(versionToDownload)
 	}
-	try {
-		await backupAppDbForUpdate(versionToDownload.version)
-	} catch (error) {
-		handleError(error)
-		return
-	}
-
 	if (downloading.value || appUpdateDownload.progress.value !== 0) {
 		console.error(`Update ${versionToDownload.version} already downloading`)
 		return
@@ -2008,6 +2005,7 @@ async function installUpdate() {
 	}
 
 	try {
+		await backupAppDbForUpdate(availableUpdate.value?.version)
 		await setRestartAfterPendingUpdate(true)
 	} catch (e) {
 		restarting.value = false
