@@ -131,6 +131,7 @@ import { getSidebarExpanded, setSidebarExpanded } from '@/helpers/sidebar-state.
 import { get_opening_command, initialize_state, set_discord_activity } from '@/helpers/state'
 import {
 	areUpdatesEnabled,
+	backupAppDbForUpdate,
 	checkAppUpdate,
 	enqueueUpdateForInstallation,
 	exportErrorLogs,
@@ -1921,6 +1922,12 @@ async function downloadUpdate(versionToDownload) {
 	if (aptLinux.value) {
 		return installAptUpdateForVersion(versionToDownload)
 	}
+	try {
+		await backupAppDbForUpdate(versionToDownload.version)
+	} catch (error) {
+		handleError(error)
+		return
+	}
 
 	if (downloading.value || appUpdateDownload.progress.value !== 0) {
 		console.error(`Update ${versionToDownload.version} already downloading`)
@@ -1972,6 +1979,7 @@ async function installAptUpdateForVersion(versionToDownload) {
 	console.log(`Installing update ${versionToDownload.version} via apt`)
 	downloading.value = true
 	try {
+		await backupAppDbForUpdate(versionToDownload.version)
 		await installAptUpdate(versionToDownload.version)
 		downloading.value = false
 		finishedDownloading.value = true

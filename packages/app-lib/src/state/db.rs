@@ -157,6 +157,18 @@ pub async fn beta_database_exists(app_identifier: &str) -> crate::Result<bool> {
         .try_exists()?)
 }
 
+pub async fn backup_current_app_db_for_update(
+    app_identifier: &str,
+    target_version: &str,
+) -> crate::Result<PathBuf> {
+    let settings_dir = DirectoryInfo::initial_settings_dir_path(app_identifier)
+        .ok_or(crate::ErrorKind::FSError(
+            "Could not find valid config dir".to_string(),
+        ))?;
+    let db_path = app_db_path(&settings_dir).await?;
+    super::db_backup::backup_app_db_for_update(&db_path, target_version).await
+}
+
 async fn app_db_path(settings_dir: &Path) -> crate::Result<PathBuf> {
     let channel = read_update_channel(settings_dir).await?;
     Ok(settings_dir.join(channel).join(LEGACY_APP_DB_FILE))

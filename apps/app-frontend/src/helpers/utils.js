@@ -27,6 +27,10 @@ export async function enqueueUpdateForInstallation(updateRid) {
 	return await invoke('enqueue_update_for_installation', { rid: updateRid })
 }
 
+export async function backupAppDbForUpdate(version) {
+	return await invoke('backup_app_db_for_update', { version })
+}
+
 export async function removeEnqueuedUpdate() {
 	return await invoke('remove_enqueued_update')
 }

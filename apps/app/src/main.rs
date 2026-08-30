@@ -352,6 +352,19 @@ async fn beta_database_exists(app: tauri::AppHandle) -> api::Result<bool> {
 }
 
 #[tauri::command]
+async fn backup_app_db_for_update(
+    app: tauri::AppHandle,
+    version: String,
+) -> api::Result<()> {
+    theseus::backup_current_app_db_for_update(
+        &app.config().identifier,
+        &version,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn set_discord_activity(activity: String) -> api::Result<()> {
     let state = State::get().await?;
     state
@@ -813,6 +826,7 @@ fn main() {
             set_update_preferences,
             copy_release_database_to_beta,
             beta_database_exists,
+            backup_app_db_for_update,
             set_discord_activity,
             is_dev,
             portable::is_portable_mode,
