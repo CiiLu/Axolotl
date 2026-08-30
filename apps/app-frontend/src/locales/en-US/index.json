@@ -7328,8 +7328,23 @@
   "app.settings.updates.failed": {
     "message": "Could not check for updates."
   },
+  "app.settings.updates.immediate-fetch": {
+    "message": "Get updates as soon as they are available"
+  },
+  "app.settings.updates.immediate-fetch-description": {
+    "message": "Release updates wait 24 hours by default. Beta updates are always available immediately."
+  },
   "app.settings.updates.offline": {
     "message": "Connect to the internet to check for updates."
+  },
+  "app.settings.updates.pause": {
+    "message": "Pause updates"
+  },
+  "app.settings.updates.pause-description": {
+    "message": "Stop automatic update checks, downloads, and update notifications until you resume updates."
+  },
+  "app.settings.updates.paused": {
+    "message": "Updates are paused."
   },
   "app.settings.updates.portable": {
     "message": "Portable mode cannot update automatically. Please download the latest version manually."

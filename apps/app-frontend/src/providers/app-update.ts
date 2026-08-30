@@ -8,6 +8,7 @@ export interface AppUpdate {
 	rid: number
 	version: string
 	currentVersion?: string
+	publishedAt?: string
 }
 
 interface UpdatePromptState {
@@ -19,7 +20,7 @@ interface UpdatePromptState {
 }
 
 export type AppUpdatePromptStage = 'available' | 'downloaded'
-export type AppUpdateCheckResult = 'available' | 'up-to-date' | 'disabled' | 'offline'
+export type AppUpdateCheckResult = 'available' | 'up-to-date' | 'disabled' | 'offline' | 'paused'
 
 interface AppUpdateActions {
 	check?: () => Promise<AppUpdateCheckResult>
@@ -36,6 +37,7 @@ const restarting = ref(false)
 const availableUpdate = ref<AppUpdate | null>(null)
 const updateSize = ref<number | null>(null)
 const updatesEnabled = ref(true)
+const updatesPaused = ref(false)
 
 let actions: AppUpdateActions = {}
 
@@ -52,9 +54,13 @@ export const appUpdateState = {
 	availableUpdate,
 	updateSize,
 	updatesEnabled,
+	updatesPaused,
 	downloadProgress: computed(() => progress.value),
 	downloadPercent: computed(() => Math.trunc(progress.value * 100)),
-	isVisible: computed(() => !!availableUpdate.value && !restarting.value && updatesEnabled.value),
+	isVisible: computed(
+		() =>
+			!!availableUpdate.value && !restarting.value && updatesEnabled.value && !updatesPaused.value,
+	),
 }
 
 function readPromptState(): UpdatePromptState | null {

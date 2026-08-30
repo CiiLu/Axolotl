@@ -43,6 +43,10 @@ Memorysettings {
 */
 
 export type UpdateChannel = 'release' | 'beta'
+export type UpdatePreferences = {
+	immediateUpdateFetch: boolean
+	updatesPaused: boolean
+}
 export type DownloadSourceMode =
 	| 'auto'
 	| 'official_only'
@@ -78,6 +82,14 @@ export async function copyReleaseDatabaseToBeta(): Promise<void> {
 
 export async function betaDatabaseExists(): Promise<boolean> {
 	return await invoke('beta_database_exists')
+}
+
+export async function getUpdatePreferences(): Promise<UpdatePreferences> {
+	return await invoke('get_update_preferences')
+}
+
+export async function setUpdatePreferences(preferences: UpdatePreferences): Promise<void> {
+	await invoke('set_update_preferences', preferences)
 }
 
 export type BrowseContentSource =

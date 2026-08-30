@@ -121,6 +121,7 @@ import {
 	getLastBrowseContentProjectType,
 	getPrivacySettings,
 	getUpdateChannel,
+	getUpdatePreferences,
 	isBrowseContentProjectType,
 	type PrivacySettings,
 	savePrivacySettings,
@@ -416,6 +417,7 @@ const {
 	availableUpdate,
 	updateSize,
 	updatesEnabled,
+	updatesPaused,
 } = appUpdateState
 let delayedUpdatePopupTimeout = null
 
@@ -428,6 +430,11 @@ async function checkUpdates() {
 	}
 
 	updatesEnabled.value = true
+	updatesPaused.value = (await getUpdatePreferences()).updatesPaused
+	if (updatesPaused.value) {
+		setTimeout(checkUpdates, 5 * 60 * 1000)
+		return
+	}
 	if (!offline.value) {
 		await performUpdateCheck().catch((error) => {
 			console.warn('Failed to check for launcher updates', error)
@@ -1809,6 +1816,9 @@ let lastUpdateChannel = 'release'
 
 async function performUpdateCheck() {
 	const channel = await getUpdateChannel()
+	const preferences = await getUpdatePreferences()
+	updatesPaused.value = preferences.updatesPaused
+	if (updatesPaused.value) return 'paused'
 	if (channel !== lastUpdateChannel) {
 		availableUpdate.value = null
 		updateSize.value = null
@@ -1821,6 +1831,17 @@ async function performUpdateCheck() {
 	const update = await checkAppUpdate(channel)
 	if (!update) {
 		console.log('No update available')
+		return 'up-to-date'
+	}
+
+	const publishedAt = Date.parse(update.publishedAt ?? '')
+	if (
+		channel === 'release' &&
+		!preferences.immediateUpdateFetch &&
+		Number.isFinite(publishedAt) &&
+		Date.now() < publishedAt + 24 * 60 * 60 * 1000
+	) {
+		console.log(`Update ${update.version} is waiting for the release delay.`)
 		return 'up-to-date'
 	}
 
@@ -1878,6 +1899,8 @@ async function manualUpdateCheck() {
 	}
 
 	updatesEnabled.value = true
+	updatesPaused.value = (await getUpdatePreferences()).updatesPaused
+	if (updatesPaused.value) return 'paused'
 	if (offline.value) {
 		return 'offline'
 	}

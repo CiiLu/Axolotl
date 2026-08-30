@@ -36,6 +36,7 @@ pub struct UpdateMetadata {
     version: String,
     date: Option<String>,
     body: Option<String>,
+    published_at: Option<String>,
     raw_json: serde_json::Value,
 }
 
@@ -134,12 +135,18 @@ async fn check_with_updater<R: Runtime>(
     };
     update.timeout = Some(UPDATE_DOWNLOAD_TIMEOUT);
 
+    let published_at = update
+        .raw_json
+        .get("published_at")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned);
     let metadata = UpdateMetadata {
         rid: webview.resources_table().add(update.clone()),
         current_version: update.current_version.clone(),
         version: update.version.clone(),
         date: None,
         body: update.body.clone(),
+        published_at,
         raw_json: update.raw_json,
     };
 

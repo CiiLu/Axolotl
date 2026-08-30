@@ -7,6 +7,7 @@ import {
 	injectNotificationManager,
 	NewButton as Button,
 	NewModal,
+	Toggle,
 	useVIntl,
 } from '@modrinth/ui'
 import { getVersion } from '@tauri-apps/api/app'
@@ -18,6 +19,8 @@ import {
 	betaDatabaseExists,
 	copyReleaseDatabaseToBeta,
 	getUpdateChannel,
+	getUpdatePreferences,
+	setUpdatePreferences,
 	setUpdateChannel,
 	type UpdateChannel,
 } from '@/helpers/settings.ts'
@@ -30,6 +33,7 @@ import SettingsSection from './SettingsSection.vue'
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
 const selectedChannel = ref<UpdateChannel>(await getUpdateChannel())
+const updatePreferences = ref(await getUpdatePreferences())
 const checking = ref(false)
 const checkResult = ref<AppUpdateCheckResult | 'failed' | 'portable' | null>(null)
 const currentVersion = await getVersion()
@@ -121,6 +125,28 @@ const messages = defineMessages({
 		id: 'app.settings.updates.channel.restart-later',
 		defaultMessage: 'Restart manually later',
 	},
+	immediateFetch: {
+		id: 'app.settings.updates.immediate-fetch',
+		defaultMessage: 'Get updates as soon as they are available',
+	},
+	immediateFetchDescription: {
+		id: 'app.settings.updates.immediate-fetch-description',
+		defaultMessage:
+			'Release updates wait 24 hours by default. Beta updates are always available immediately.',
+	},
+	pause: {
+		id: 'app.settings.updates.pause',
+		defaultMessage: 'Pause updates',
+	},
+	pauseDescription: {
+		id: 'app.settings.updates.pause-description',
+		defaultMessage:
+			'Stop automatic update checks, downloads, and update notifications until you resume updates.',
+	},
+	paused: {
+		id: 'app.settings.updates.paused',
+		defaultMessage: 'Updates are paused.',
+	},
 	copyDatabaseTitle: {
 		id: 'app.settings.updates.channel.copy-database-title',
 		defaultMessage: 'Copy Release data to Beta?',
@@ -153,9 +179,11 @@ const resultMessages: Record<AppUpdateCheckResult | 'failed' | 'portable', keyof
 		offline: 'offline',
 		failed: 'failed',
 		portable: 'portable',
+		paused: 'paused',
 	}
 
 watch(selectedChannel, async (channel, previousChannel) => {
+	if (channel === 'beta') updatePreferences.value.immediateUpdateFetch = true
 	if (channel === 'beta' && previousChannel === 'release') {
 		try {
 			if (!(await betaDatabaseExists())) {
@@ -201,6 +229,14 @@ async function restartForChannelChange() {
 	}
 }
 
+async function saveUpdatePreferences() {
+	try {
+		await setUpdatePreferences(updatePreferences.value)
+	} catch (error) {
+		handleError(error)
+	}
+}
+
 async function checkForUpdates() {
 	checking.value = true
 	checkResult.value = null
@@ -238,6 +274,32 @@ async function checkForUpdates() {
 						v-model="selectedChannel"
 						:name="formatMessage(messages.title)"
 						:options="options"
+					/>
+				</template>
+			</SettingsRow>
+		</SettingsSection>
+
+		<SettingsSection>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.immediateFetch) }}</template>
+				<template #description>{{ formatMessage(messages.immediateFetchDescription) }}</template>
+				<template #control>
+					<Toggle
+						id="immediate-update-fetch"
+						v-model="updatePreferences.immediateUpdateFetch"
+						:disabled="selectedChannel === 'beta'"
+						@update:model-value="saveUpdatePreferences"
+					/>
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>{{ formatMessage(messages.pause) }}</template>
+				<template #description>{{ formatMessage(messages.pauseDescription) }}</template>
+				<template #control>
+					<Toggle
+						id="pause-updates"
+						v-model="updatePreferences.updatesPaused"
+						@update:model-value="saveUpdatePreferences"
 					/>
 				</template>
 			</SettingsRow>
