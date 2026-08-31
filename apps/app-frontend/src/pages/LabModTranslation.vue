@@ -50,7 +50,11 @@ const analyzeElapsed = computed(() => {
 
 const canStart = computed(
 	() =>
-		!!inputPath.value && !!providerId.value && !!modelId.value && starting.value && analyzing.value,
+		!!inputPath.value &&
+		!!providerId.value &&
+		!!modelId.value &&
+		!starting.value &&
+		!analyzing.value,
 )
 const startHint = computed(() => {
 	if (!inputPath.value) return formatMessage(messages.startHint)
