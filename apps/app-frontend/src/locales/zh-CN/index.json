@@ -32,6 +32,9 @@
   "app.action-bar.install.cache-repair.title": {
     "message": "项目元数据缓存异常"
   },
+  "app.action-bar.install.cancel": {
+	"message": "取消"
+  },
   "app.action-bar.install.copied-details": {
     "message": "已复制"
   },
@@ -10063,6 +10066,15 @@
   },
   "unknown-pack-warning-modal.warning.title": {
     "message": "未知文件警告"
+  },
+  "app.settings.about.easteregg.click-hint": {
+	"message": "点击以打开彩蛋小游戏"
+  },
+  "app.settings.about.easteregg.contributors-title": {
+	"message": "贡献者彩蛋"
+  },
+  "app.settings.about.easteregg.game-title": {
+	"message": "彩蛋小游戏"
   },
   "app.settings.about.game.best": {
     "message": "最高分：{score}"
