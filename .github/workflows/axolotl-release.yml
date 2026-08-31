@@ -316,6 +316,21 @@ jobs:
             gh release edit "${GITHUB_REF_NAME}" --draft=false --latest
           fi
 
+      - name: Refresh published GitHub release metadata
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release_id="$(
+            gh api "repos/${GITHUB_REPOSITORY}/releases" \
+              --paginate \
+              --jq ".[] | select(.tag_name == \"${GITHUB_REF_NAME}\") | .id"
+          )"
+          if [[ -z "$release_id" ]]; then
+            echo "Published release ${GITHUB_REF_NAME} was not found"
+            exit 1
+          fi
+          gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}" > release-check/release.json
+
       - name: Build Update Server artifact catalog
         run: |
           node scripts/axolotl/create-update-server-catalog.mjs \
