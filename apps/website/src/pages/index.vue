@@ -26,9 +26,9 @@ import OfflineModeIcon from '~/components/landing/OfflineModeIcon.vue'
 import ProjectsShowcase from '~/components/landing/ProjectsShowcase.vue'
 import WindowsLogo from '~/components/landing/WindowsLogo.vue'
 
-interface WebsiteReleaseMetadata {
-	tag_name: string
-	assets: string[]
+interface UpdateServerDownloadMetadata {
+	version: string
+	downloads: Array<{ filename: string; url: string }>
 }
 
 type OSType = 'Mac' | 'Windows' | 'Linux' | null
@@ -57,12 +57,9 @@ const resetHeroGlow = () => {
 }
 
 const { resolvedSource } = useDownloadSource()
-const MIAWA_DOWNLOAD_API = '/api/downloads/prepare'
-const CNB_RELEASE_BASE_URL = 'https://cnb.cool/axlmc/Axolotl/-/releases/download'
+const UPDATE_SERVER_BASE_URL = 'https://update.axlmc.org'
 const GITHUB_RELEASE_BASE_URL = 'https://github.com/Mystic-Stars/Axolotl/releases/download'
-const releaseApi = computed(() =>
-	resolvedSource.value === 'miawa' ? '/api/releases/miawa' : '/api/releases/latest',
-)
+const releaseApi = `${UPDATE_SERVER_BASE_URL}/api/downloads/latest?channel=release`
 
 const windowsLink = ref<string | null>(null)
 
@@ -76,37 +73,14 @@ const macLinks = reactive({
 	universal: null as string | null,
 })
 
-// 每次用户访问时从客户端请求最新发布元数据。元数据文件由发布 CI 写入仓库
-// main 分支（apps/website/releases/latest.json），经 CNB 镜像同步后由本站
-// Netlify Function（/api/releases/latest）实时转发——客户端直连 CNB 会被
-// CORS 拦截，整个链路不依赖 GitHub API。失败时进入降级状态，错误条提供
-// CNB / GitHub Releases 手动下载入口。
-// Miawa 源更新延迟，使用MiawaAPI获取最新版元数据
+// 使用 Update Server 的下载目录作为默认发布数据源；GitHub 保留为手动备用源。
 const { data: launcherRelease, status: launcherReleaseStatus } =
-	await useFetch<WebsiteReleaseMetadata>(releaseApi, {
-		server: false,
-		// 慢网络下 8 秒超时后进入降级状态，
-		// 避免按钮无限停留在"正在获取下载链接"。
-		timeout: 8000,
-		watch: [releaseApi],
-		getCachedData(key, nuxtApp) {
-			const cached = (nuxtApp.ssrContext?.cache as any)?.[key] || nuxtApp.payload.data[key]
-			if (!cached) return
-
-			const now = Date.now()
-			const cacheTime = cached._cacheTime || 0
-			const maxAge = 5 * 60 * 1000
-
-			if (now - cacheTime > maxAge) {
-				return null
-			}
-
-			return cached
-		},
-		transform(data) {
+	await useFetch<UpdateServerDownloadMetadata>(releaseApi, {
+		// Fetch at generate time so the static site does not depend on browser CORS.
+		transform(data: UpdateServerDownloadMetadata) {
 			return {
-				...data,
-				_cacheTime: Date.now(),
+				tag_name: `v${data.version}`,
+				assets: data.downloads.map((download) => download.filename),
 			}
 		},
 	})
@@ -246,13 +220,9 @@ watch(
 			)
 			if (!assetName) return null
 
-			if (resolvedSource.value === 'miawa') {
-				const filePath = `axolotl/${release.tag_name}/${assetName}`
-				return `${MIAWA_DOWNLOAD_API}?file_path=${encodeURIComponent(filePath)}`
-			}
-
-			if (resolvedSource.value === 'cnb') {
-				return `${CNB_RELEASE_BASE_URL}/${encodeURIComponent(release.tag_name)}/${encodeURIComponent(assetName)}`
+			if (resolvedSource.value === 'update-server') {
+				const version = release.tag_name.replace(/^v/, '')
+				return `${UPDATE_SERVER_BASE_URL}/dist/${encodeURIComponent(version)}/${encodeURIComponent(assetName)}`
 			}
 
 			return `${GITHUB_RELEASE_BASE_URL}/${encodeURIComponent(release.tag_name)}/${encodeURIComponent(assetName)}`
@@ -409,14 +379,6 @@ const messages = defineMessages({
 	manualDownloadFallback: {
 		id: 'axolotl-marketing.download.manual-fallback',
 		defaultMessage: 'Download manually from GitHub Releases',
-	},
-	cnbReleasesLink: {
-		id: 'axolotl-marketing.download.cnb-releases',
-		defaultMessage: 'CNB Releases (recommended in mainland China)',
-	},
-	lemwoodMirrorLink: {
-		id: 'axolotl-marketing.download.lemwood-mirror',
-		defaultMessage: 'lemwood Mirror (recommended in mainland China)',
 	},
 	moreDownloadOptions: {
 		id: 'app-marketing.hero.more-download-options',
@@ -622,7 +584,7 @@ const messages = defineMessages({
 	faqDownloadAnswer: {
 		id: 'axolotl-site.faq.download.answer',
 		defaultMessage:
-			'Use the download section on this official website. Automatic mode selects CNB for mainland China and GitHub elsewhere; you can change the source in website settings.',
+			'Use the download section on this official website. Automatic mode uses the Update Server, with GitHub available as a backup source.',
 	},
 	appScreenshotAlt: {
 		id: 'app-marketing.hero.app-screenshot-alt',
@@ -743,7 +705,7 @@ const structuredData = computed(() => ({
 			'@id': `${canonicalUrl}#software`,
 			name: 'Axolotl Launcher',
 			alternateName: ['美西螈启动器', 'AXL Launcher'],
-			sameAs: [githubUrl, 'https://cnb.cool/axlmc/Axolotl'],
+			sameAs: [githubUrl],
 			description: description.value,
 			url: canonicalUrl,
 			downloadUrl: `${canonicalUrl}#download`,
@@ -1176,12 +1138,6 @@ useHead(() => ({
 			<div v-if="downloadState === 'error'" class="download-error-banner" role="alert">
 				<span>{{ formatMessage(messages.downloadLinksFailed) }}</span>
 				<span class="download-error-links">
-					<a href="https://cnb.cool/axlmc/Axolotl/-/releases" target="_blank" rel="noopener">
-						{{ formatMessage(messages.cnbReleasesLink) }}
-					</a>
-					<a href="https://miawa.cn/files/axolotl" target="_blank" rel="noopener">
-						{{ formatMessage(messages.lemwoodMirrorLink) }}
-					</a>
 					<a
 						href="https://github.com/Mystic-Stars/Axolotl/releases/latest"
 						target="_blank"
