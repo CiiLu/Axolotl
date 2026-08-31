@@ -7292,6 +7292,9 @@
   "app.settings.updates.channel.beta": {
     "message": "Beta"
   },
+  "app.settings.updates.channel.beta-description": {
+    "message": "包含最新功能的新更新，但稳定性较低，更新频率更快。"
+  },
   "app.settings.updates.channel.copy-database": {
     "message": "复制数据库"
   },
@@ -7304,8 +7307,14 @@
   "app.settings.updates.channel.description": {
     "message": "选择 Axolotl 接收的启动器版本。"
   },
+  "app.settings.updates.channel.label": {
+    "message": "通道"
+  },
   "app.settings.updates.channel.release": {
     "message": "Release"
+  },
+  "app.settings.updates.channel.release-description": {
+    "message": "稳定且经过测试的新功能与修复，更新频率较慢。"
   },
   "app.settings.updates.channel.restart-description": {
     "message": "立即重启 Axolotl 以开始使用新的更新通道，或稍后手动重启。"
@@ -7331,11 +7340,23 @@
   "app.settings.updates.check": {
     "message": "检查更新"
   },
+  "app.settings.updates.check.title": {
+    "message": "检查更新"
+  },
   "app.settings.updates.checking": {
     "message": "正在检查更新……"
   },
   "app.settings.updates.cnb": {
     "message": "CNB 渠道"
+  },
+  "app.settings.updates.current-version": {
+    "message": "当前版本 {version}"
+  },
+  "app.settings.updates.latest-version": {
+    "message": "最新 {channel} 版本：{version}"
+  },
+  "app.settings.updates.latest-version-unavailable": {
+    "message": "最新版本暂不可用"
   },
   "app.settings.updates.description": {
     "message": "选择 Axolotl 检查启动器更新的渠道。"
@@ -7350,7 +7371,10 @@
     "message": "最新更新可用后立即获取"
   },
   "app.settings.updates.immediate-fetch-description": {
-    "message": "Release 更新默认等待 24 小时。Beta 更新始终立即可用。"
+    "message": "在推出最新的稳定更改、修复后，成为第一批获得这些更新的用户。"
+  },
+  "app.settings.updates.immediate-fetch.beta-description": {
+    "message": "Beta 更新始终立即可用。"
   },
   "app.settings.updates.github": {
     "message": "GitHub 渠道"
@@ -7372,6 +7396,9 @@
   },
   "app.settings.updates.portable": {
     "message": "便携模式无法自动更新，请手动下载最新版本。"
+  },
+  "app.settings.updates.preferences.title": {
+    "message": "更新行为"
   },
   "app.settings.updates.preview-announcement": {
     "message": "预览更新公告弹窗"

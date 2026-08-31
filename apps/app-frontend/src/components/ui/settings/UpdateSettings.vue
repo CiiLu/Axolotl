@@ -2,7 +2,6 @@
 import { EyeIcon, RefreshCwIcon, XIcon } from '@modrinth/assets'
 import {
 	ButtonStyled,
-	Combobox,
 	defineMessages,
 	injectNotificationManager,
 	NewButton as Button,
@@ -12,6 +11,7 @@ import {
 } from '@modrinth/ui'
 import { getVersion } from '@tauri-apps/api/app'
 import { invoke } from '@tauri-apps/api/core'
+import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { inject, nextTick, ref, watch } from 'vue'
 
 import UpdateAnnouncementHistory from '@/components/ui/announcement/UpdateAnnouncementHistory.vue'
@@ -20,8 +20,8 @@ import {
 	copyReleaseDatabaseToBeta,
 	getUpdateChannel,
 	getUpdatePreferences,
-	setUpdatePreferences,
 	setUpdateChannel,
+	setUpdatePreferences,
 	type UpdateChannel,
 } from '@/helpers/settings.ts'
 import { isDev, restartApp } from '@/helpers/utils.js'
@@ -37,6 +37,7 @@ const updatePreferences = ref(await getUpdatePreferences())
 const checking = ref(false)
 const checkResult = ref<AppUpdateCheckResult | 'failed' | 'portable' | null>(null)
 const currentVersion = await getVersion()
+const latestChannelVersions = ref<Partial<Record<UpdateChannel, string>>>({})
 const isDevEnvironment = await isDev()
 const previewUpdateAnnouncement = inject<(version: string) => void>('previewUpdateAnnouncement')
 const isPortable = ref(false)
@@ -56,17 +57,41 @@ const messages = defineMessages({
 		id: 'app.settings.updates.channel.title',
 		defaultMessage: 'Update channel',
 	},
+	preferencesTitle: {
+		id: 'app.settings.updates.preferences.title',
+		defaultMessage: 'Update behavior',
+	},
+	checkTitle: {
+		id: 'app.settings.updates.check.title',
+		defaultMessage: 'Check for updates',
+	},
 	description: {
 		id: 'app.settings.updates.channel.description',
 		defaultMessage: 'Choose which launcher versions Axolotl receives.',
+	},
+	channelLabel: {
+		id: 'app.settings.updates.channel.label',
+		defaultMessage: 'Channel',
 	},
 	release: {
 		id: 'app.settings.updates.channel.release',
 		defaultMessage: 'Release',
 	},
+	releaseDescription: {
+		id: 'app.settings.updates.channel.release-description',
+		defaultMessage: 'Stable, tested features and fixes. Updates arrive less often.',
+	},
 	beta: {
 		id: 'app.settings.updates.channel.beta',
 		defaultMessage: 'Beta',
+	},
+	betaDescription: {
+		id: 'app.settings.updates.channel.beta-description',
+		defaultMessage: 'New, less stable updates with the latest features. Updates arrive more often.',
+	},
+	betaImmediateFetch: {
+		id: 'app.settings.updates.immediate-fetch.beta-description',
+		defaultMessage: 'Beta updates are always available immediately.',
 	},
 	check: {
 		id: 'app.settings.updates.check',
@@ -105,6 +130,18 @@ const messages = defineMessages({
 		id: 'app.settings.updates.security',
 		defaultMessage: 'Updates are installed only when their cryptographic signature is valid.',
 	},
+	currentVersion: {
+		id: 'app.settings.updates.current-version',
+		defaultMessage: 'Current version {version}',
+	},
+	latestVersion: {
+		id: 'app.settings.updates.latest-version',
+		defaultMessage: 'Latest {channel} version: {version}',
+	},
+	latestVersionUnavailable: {
+		id: 'app.settings.updates.latest-version-unavailable',
+		defaultMessage: 'Latest version unavailable',
+	},
 	preview: {
 		id: 'app.settings.updates.preview-announcement',
 		defaultMessage: 'Preview update announcement',
@@ -138,7 +175,7 @@ const messages = defineMessages({
 	immediateFetchDescription: {
 		id: 'app.settings.updates.immediate-fetch-description',
 		defaultMessage:
-			'Release updates wait 24 hours by default. Beta updates are always available immediately.',
+			'After the latest stable changes and fixes are released, be among the first to receive them.',
 	},
 	pause: {
 		id: 'app.settings.updates.pause',
@@ -172,10 +209,23 @@ const messages = defineMessages({
 	},
 })
 
-const options: Array<{ value: UpdateChannel; label: string }> = [
-	{ value: 'release', label: formatMessage(messages.release) },
-	{ value: 'beta', label: formatMessage(messages.beta) },
-]
+async function loadLatestChannelVersions() {
+	const versions = await Promise.all(
+		(['release', 'beta'] as const).map(async (channel) => {
+			try {
+				const response = await tauriFetch(`https://update.axlmc.org/latest?channel=${channel}`)
+				if (!response.ok) return [channel, undefined] as const
+				const payload = (await response.json()) as { version?: string }
+				return [channel, payload.version] as const
+			} catch {
+				return [channel, undefined] as const
+			}
+		}),
+	)
+	latestChannelVersions.value = Object.fromEntries(versions.filter(([, version]) => version))
+}
+
+void loadLatestChannelVersions()
 
 const resultMessages: Record<AppUpdateCheckResult | 'failed' | 'portable', keyof typeof messages> =
 	{
@@ -281,29 +331,76 @@ async function checkForUpdates() {
 
 <template>
 	<div class="flex flex-col gap-6">
-		<SettingsSection>
-			<SettingsRow>
-				<template #label>
-					<span id="settings-target-updates-channel" tabindex="-1">
-						{{ formatMessage(messages.title) }}
-					</span>
-				</template>
-				<template #description>{{ formatMessage(messages.description) }}</template>
-				<template #control>
-					<Combobox
-						id="update-channel"
-						v-model="selectedChannel"
-						:name="formatMessage(messages.title)"
-						:options="options"
-					/>
-				</template>
-			</SettingsRow>
+		<SettingsSection :title="formatMessage(messages.title)">
+			<div class="update-channel-panel">
+				<p id="settings-target-updates-channel" class="m-0 text-sm leading-[1.45] text-secondary">
+					{{ formatMessage(messages.description) }}
+				</p>
+				<div
+					class="update-channel-options"
+					role="radiogroup"
+					:aria-label="formatMessage(messages.channelLabel)"
+				>
+					<button
+						type="button"
+						class="update-channel-card"
+						:class="{ 'update-channel-card-selected': selectedChannel === 'release' }"
+						role="radio"
+						:aria-checked="selectedChannel === 'release'"
+						@click="selectedChannel = 'release'"
+					>
+						<span class="update-channel-card-title">{{ formatMessage(messages.release) }}</span>
+						<span class="update-channel-card-description">
+							{{ formatMessage(messages.releaseDescription) }}
+						</span>
+						<span class="update-channel-card-version">
+							{{
+								latestChannelVersions.release
+									? formatMessage(messages.latestVersion, {
+											channel: formatMessage(messages.release),
+											version: latestChannelVersions.release,
+										})
+									: formatMessage(messages.latestVersionUnavailable)
+							}}
+						</span>
+					</button>
+					<button
+						type="button"
+						class="update-channel-card"
+						:class="{ 'update-channel-card-selected': selectedChannel === 'beta' }"
+						role="radio"
+						:aria-checked="selectedChannel === 'beta'"
+						@click="selectedChannel = 'beta'"
+					>
+						<span class="update-channel-card-title">{{ formatMessage(messages.beta) }}</span>
+						<span class="update-channel-card-description">
+							{{ formatMessage(messages.betaDescription) }}
+						</span>
+						<span class="update-channel-card-version">
+							{{
+								latestChannelVersions.beta
+									? formatMessage(messages.latestVersion, {
+											channel: formatMessage(messages.beta),
+											version: latestChannelVersions.beta,
+										})
+									: formatMessage(messages.latestVersionUnavailable)
+							}}
+						</span>
+					</button>
+				</div>
+			</div>
 		</SettingsSection>
 
-		<SettingsSection>
+		<SettingsSection :title="formatMessage(messages.preferencesTitle)">
 			<SettingsRow>
 				<template #label>{{ formatMessage(messages.immediateFetch) }}</template>
-				<template #description>{{ formatMessage(messages.immediateFetchDescription) }}</template>
+				<template #description>
+					{{
+						selectedChannel === 'beta'
+							? formatMessage(messages.betaImmediateFetch)
+							: formatMessage(messages.immediateFetchDescription)
+					}}
+				</template>
 				<template #control>
 					<Toggle
 						id="immediate-update-fetch"
@@ -326,8 +423,14 @@ async function checkForUpdates() {
 			</SettingsRow>
 		</SettingsSection>
 
-		<SettingsSection>
-			<div class="flex flex-col items-start gap-3 p-4">
+		<SettingsSection :title="formatMessage(messages.checkTitle)">
+			<div class="update-check-panel">
+				<div class="update-check-heading">
+					<p class="m-0 text-sm text-secondary">
+						{{ formatMessage(messages.currentVersion, { version: currentVersion }) }}
+					</p>
+					<p class="m-0 text-sm text-secondary">{{ formatMessage(messages.security) }}</p>
+				</div>
 				<div class="flex flex-wrap gap-2">
 					<Button type="colored" color="brand" :disabled="checking" @click="checkForUpdates">
 						<RefreshCwIcon :class="{ 'animate-spin': checking }" />
@@ -343,13 +446,16 @@ async function checkForUpdates() {
 						{{ formatMessage(messages.preview) }}
 					</Button>
 				</div>
-				<p v-if="checkResult" class="m-0 text-sm text-secondary" role="status">
+				<p
+					v-if="checkResult"
+					class="update-check-result"
+					:class="`update-check-result-${checkResult}`"
+					role="status"
+				>
 					{{ formatMessage(messages[resultMessages[checkResult]]) }}
 				</p>
 			</div>
 		</SettingsSection>
-
-		<p class="settings-note">{{ formatMessage(messages.security) }}</p>
 
 		<UpdateAnnouncementHistory :current-version="currentVersion" />
 	</div>
@@ -406,15 +512,118 @@ async function checkForUpdates() {
 </template>
 
 <style scoped>
-.settings-note {
-	margin: 0;
-	padding: var(--gap-md) var(--gap-lg);
-	border: 1px solid
-		var(--settings-card-border, color-mix(in srgb, var(--surface-4) 72%, transparent));
+.update-check-panel {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--gap-md);
+	padding: var(--gap-lg);
+}
+
+.update-channel-panel {
+	display: flex;
+	flex-direction: column;
+	gap: var(--gap-md);
+	padding: var(--gap-lg);
+}
+
+.update-channel-options {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: var(--gap-md);
+	width: 100%;
+}
+
+.update-channel-card {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	width: 100%;
+	min-width: 0;
+	gap: var(--gap-xs);
+	padding: var(--gap-md);
+	border: 1px solid var(--surface-4);
 	border-radius: var(--radius-md);
+	background: var(--surface-1);
+	color: var(--color-secondary);
+	text-align: left;
+	cursor: pointer;
+	transition:
+		border-color 150ms ease,
+		background-color 150ms ease,
+		color 150ms ease,
+		transform 150ms ease;
+}
+
+.update-channel-card:hover {
+	border-color: color-mix(in srgb, var(--color-brand) 55%, var(--surface-4));
 	background: var(--surface-2);
+}
+
+.update-channel-card:active {
+	transform: scale(0.98);
+}
+
+.update-channel-card:focus-visible {
+	outline: 2px solid var(--color-brand);
+	outline-offset: 2px;
+}
+
+.update-channel-card-selected {
+	border-color: var(--color-brand);
+	background: color-mix(in srgb, var(--color-brand) 12%, var(--surface-1));
+}
+
+.update-channel-card-title {
+	color: var(--color-contrast);
+	font-weight: 600;
+}
+
+.update-channel-card-description {
+	font-size: 0.875rem;
+	line-height: 1.4;
+}
+
+.update-channel-card-version {
+	grid-column: 2;
+	grid-row: 1 / span 2;
+	align-self: center;
 	color: var(--color-secondary);
 	font-size: 0.8125rem;
-	line-height: 1.5;
+	font-weight: 600;
+}
+
+.update-check-heading {
+	display: flex;
+	flex-direction: column;
+	gap: var(--gap-xs);
+}
+
+.update-check-result {
+	margin: 0;
+	padding: var(--gap-sm) var(--gap-md);
+	border: 1px solid var(--surface-4);
+	border-radius: var(--radius-sm);
+	background: var(--surface-1);
+	color: var(--color-secondary);
+	font-size: 0.875rem;
+	line-height: 1.4;
+}
+
+.update-check-result-available {
+	border-color: color-mix(in srgb, var(--color-brand) 45%, var(--surface-4));
+	color: var(--color-brand);
+}
+
+.update-check-result-failed,
+.update-check-result-offline {
+	border-color: color-mix(in srgb, var(--color-red) 45%, var(--surface-4));
+	color: var(--color-red);
+}
+
+.update-check-result-paused,
+.update-check-result-portable,
+.update-check-result-disabled {
+	border-color: color-mix(in srgb, var(--color-yellow) 45%, var(--surface-4));
+	color: var(--color-yellow);
 }
 </style>

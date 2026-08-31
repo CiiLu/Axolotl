@@ -32,6 +32,9 @@
   "app.action-bar.install.cache-repair.title": {
     "message": "Project metadata cache error"
   },
+  "app.action-bar.install.cancel": {
+    "message": "Cancel"
+  },
   "app.action-bar.install.copied-details": {
     "message": "Copied"
   },
@@ -5993,9 +5996,6 @@
   "app.servers.card.type": {
     "message": "{type} · {version}"
   },
-  "app.servers.console.command-echo": {
-    "message": "> {command}"
-  },
   "app.servers.console.not-running": {
     "message": "The server is not running"
   },
@@ -6540,7 +6540,7 @@
     "message": "Show snapshots"
   },
   "app.servers.wizard.type-heading": {
-    "message": "Choose a server type"
+    "message": "Choose a server core"
   },
   "app.servers.wizard.type-title": {
     "message": "Server type"
@@ -6577,6 +6577,15 @@
   },
   "app.settings.about.development-team": {
     "message": "Development team"
+  },
+  "app.settings.about.easteregg.click-hint": {
+    "message": "Click to open a hidden Mini Game"
+  },
+  "app.settings.about.easteregg.contributors-title": {
+    "message": "贡献者彩蛋"
+  },
+  "app.settings.about.easteregg.game-title": {
+    "message": "Mini Game"
   },
   "app.settings.about.game.best": {
     "message": "Best: {score}"
@@ -7283,6 +7292,9 @@
   "app.settings.updates.channel.beta": {
     "message": "Beta"
   },
+  "app.settings.updates.channel.beta-description": {
+    "message": "New, less stable updates with the latest features. Updates arrive more often."
+  },
   "app.settings.updates.channel.copy-database": {
     "message": "Copy database"
   },
@@ -7295,8 +7307,14 @@
   "app.settings.updates.channel.description": {
     "message": "Choose which launcher versions Axolotl receives."
   },
+  "app.settings.updates.channel.label": {
+    "message": "Channel"
+  },
   "app.settings.updates.channel.release": {
     "message": "Release"
+  },
+  "app.settings.updates.channel.release-description": {
+    "message": "Stable, tested features and fixes. Updates arrive less often."
   },
   "app.settings.updates.channel.restart-description": {
     "message": "Restart Axolotl now to start using the new update channel, or restart manually later."
@@ -7322,8 +7340,14 @@
   "app.settings.updates.check": {
     "message": "Check for updates"
   },
+  "app.settings.updates.check.title": {
+    "message": "Check for updates"
+  },
   "app.settings.updates.checking": {
     "message": "Checking for updates…"
+  },
+  "app.settings.updates.current-version": {
+    "message": "Current version {version}"
   },
   "app.settings.updates.disabled": {
     "message": "Updates are disabled in this build."
@@ -7335,7 +7359,16 @@
     "message": "Get updates as soon as they are available"
   },
   "app.settings.updates.immediate-fetch-description": {
-    "message": "Release updates wait 24 hours by default. Beta updates are always available immediately."
+    "message": "After the latest stable changes and fixes are released, be among the first to receive them."
+  },
+  "app.settings.updates.immediate-fetch.beta-description": {
+    "message": "Beta updates are always available immediately."
+  },
+  "app.settings.updates.latest-version": {
+    "message": "Latest {channel} version: {version}"
+  },
+  "app.settings.updates.latest-version-unavailable": {
+    "message": "Latest version unavailable"
   },
   "app.settings.updates.offline": {
     "message": "Connect to the internet to check for updates."
@@ -7351,6 +7384,9 @@
   },
   "app.settings.updates.portable": {
     "message": "Portable mode cannot update automatically. Please download the latest version manually."
+  },
+  "app.settings.updates.preferences.title": {
+    "message": "Update behavior"
   },
   "app.settings.updates.preview-announcement": {
     "message": "Preview update announcement"
@@ -7754,6 +7790,9 @@
   "app.update-announcement.version": {
     "message": "Version {version}"
   },
+  "app.update-popup.apt-update": {
+    "message": "Update"
+  },
   "app.update-popup.body.download-complete": {
     "message": "Axolotl Launcher v{version} has finished downloading. Reload to update now, or automatically when you close Axolotl Launcher."
   },
@@ -7768,9 +7807,6 @@
   },
   "app.update-popup.download": {
     "message": "Download ({size})"
-  },
-  "app.update-popup.apt-update": {
-    "message": "Update"
   },
   "app.update-popup.download-complete": {
     "message": "Download complete"

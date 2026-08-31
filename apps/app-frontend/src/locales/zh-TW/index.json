@@ -7070,6 +7070,9 @@
   "app.settings.updates.channel.beta": {
     "message": "Beta"
   },
+  "app.settings.updates.channel.beta-description": {
+    "message": "包含最新功能的新更新，但穩定性較低，更新頻率更快。"
+  },
   "app.settings.updates.channel.copy-database": {
     "message": "複製資料庫"
   },
@@ -7082,8 +7085,14 @@
   "app.settings.updates.channel.description": {
     "message": "選擇 Axolotl 接收的啟動器版本。"
   },
+  "app.settings.updates.channel.label": {
+    "message": "管道"
+  },
   "app.settings.updates.channel.release": {
     "message": "Release"
+  },
+  "app.settings.updates.channel.release-description": {
+    "message": "穩定且經過測試的新功能與修正，更新頻率較慢。"
   },
   "app.settings.updates.channel.restart-description": {
     "message": "立即重新啟動 Axolotl 以開始使用新的更新管道，或稍後手動重新啟動。"
@@ -7109,11 +7118,23 @@
   "app.settings.updates.check": {
     "message": "檢查更新"
   },
+  "app.settings.updates.check.title": {
+    "message": "檢查更新"
+  },
   "app.settings.updates.checking": {
     "message": "正在檢查更新..."
   },
   "app.settings.updates.cnb": {
     "message": "CNB 管道"
+  },
+  "app.settings.updates.current-version": {
+    "message": "目前版本 {version}"
+  },
+  "app.settings.updates.latest-version": {
+    "message": "最新 {channel} 版本：{version}"
+  },
+  "app.settings.updates.latest-version-unavailable": {
+    "message": "最新版本暫時無法取得"
   },
   "app.settings.updates.description": {
     "message": "選擇 Axolotl 檢查啟動器更新的管道。"
@@ -7128,7 +7149,10 @@
     "message": "最新更新可用後立即取得"
   },
   "app.settings.updates.immediate-fetch-description": {
-    "message": "Release 更新預設等待 24 小時。Beta 更新一律立即可用。"
+    "message": "推出最新的穩定變更與修正後，成為第一批取得這些更新的使用者。"
+  },
+  "app.settings.updates.immediate-fetch.beta-description": {
+    "message": "Beta 更新一律立即可用。"
   },
   "app.settings.updates.github": {
     "message": "GitHub 管道"
@@ -7147,6 +7171,9 @@
   },
   "app.settings.updates.portable": {
     "message": "便攜模式無法自動更新，請手動下載最新版本。"
+  },
+  "app.settings.updates.preferences.title": {
+    "message": "更新行為"
   },
   "app.settings.updates.preview-announcement": {
     "message": "預覽更新公告彈出視窗"
