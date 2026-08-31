@@ -33,6 +33,29 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.9.5-beta.2',
+		version: '1.9.5-beta.2',
+		publishedAt: '2026-08-31',
+		title: {
+			'en-US': 'Axolotl Launcher 1.9.5-beta.2',
+			'zh-CN': 'Axolotl Launcher 1.9.5-beta.2',
+		},
+		changes: {
+			"changed": [
+				{
+					"en-US": "Improved the software update mechanism and logic.",
+					"zh-CN": "优化软件更新机制与逻辑。"
+				}
+			],
+			"fixed": [
+				{
+					"en-US": "Fixed the issue where updating within the software would not update the version number, causing a loop of automatic updates.",
+					"zh-CN": "修复了在软件内更新不会更新版本号导致循环自动更新的问题。"
+				}
+			]
+		},
+	},
+	{
 		id: 'launcher-1.9.5-beta.1',
 		version: '1.9.5-beta.1',
 		publishedAt: '2026-08-30',
