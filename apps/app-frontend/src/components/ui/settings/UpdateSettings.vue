@@ -38,6 +38,7 @@ const checking = ref(false)
 const checkResult = ref<AppUpdateCheckResult | 'failed' | 'portable' | null>(null)
 const currentVersion = await getVersion()
 const latestChannelVersions = ref<Partial<Record<UpdateChannel, string>>>({})
+const latestChannelVersionsLoaded = ref(false)
 const isDevEnvironment = await isDev()
 const previewUpdateAnnouncement = inject<(version: string) => void>('previewUpdateAnnouncement')
 const isPortable = ref(false)
@@ -142,6 +143,10 @@ const messages = defineMessages({
 		id: 'app.settings.updates.latest-version-unavailable',
 		defaultMessage: 'Latest version unavailable',
 	},
+	latestVersionLoading: {
+		id: 'app.settings.updates.latest-version-loading',
+		defaultMessage: 'Fetching latest version…',
+	},
 	preview: {
 		id: 'app.settings.updates.preview-announcement',
 		defaultMessage: 'Preview update announcement',
@@ -223,6 +228,7 @@ async function loadLatestChannelVersions() {
 		}),
 	)
 	latestChannelVersions.value = Object.fromEntries(versions.filter(([, version]) => version))
+	latestChannelVersionsLoaded.value = true
 }
 
 void loadLatestChannelVersions()
@@ -355,12 +361,14 @@ async function checkForUpdates() {
 						</span>
 						<span class="update-channel-card-version">
 							{{
-								latestChannelVersions.release
-									? formatMessage(messages.latestVersion, {
-											channel: formatMessage(messages.release),
-											version: latestChannelVersions.release,
-										})
-									: formatMessage(messages.latestVersionUnavailable)
+								!latestChannelVersionsLoaded
+									? formatMessage(messages.latestVersionLoading)
+									: latestChannelVersions.release
+										? formatMessage(messages.latestVersion, {
+												channel: formatMessage(messages.release),
+												version: latestChannelVersions.release,
+											})
+										: formatMessage(messages.latestVersionUnavailable)
 							}}
 						</span>
 					</button>
@@ -378,12 +386,14 @@ async function checkForUpdates() {
 						</span>
 						<span class="update-channel-card-version">
 							{{
-								latestChannelVersions.beta
-									? formatMessage(messages.latestVersion, {
-											channel: formatMessage(messages.beta),
-											version: latestChannelVersions.beta,
-										})
-									: formatMessage(messages.latestVersionUnavailable)
+								!latestChannelVersionsLoaded
+									? formatMessage(messages.latestVersionLoading)
+									: latestChannelVersions.beta
+										? formatMessage(messages.latestVersion, {
+												channel: formatMessage(messages.beta),
+												version: latestChannelVersions.beta,
+											})
+										: formatMessage(messages.latestVersionUnavailable)
 							}}
 						</span>
 					</button>

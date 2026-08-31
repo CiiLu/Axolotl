@@ -7367,6 +7367,9 @@
   "app.settings.updates.latest-version": {
     "message": "Latest {channel} version: {version}"
   },
+  "app.settings.updates.latest-version-loading": {
+    "message": "Fetching latest version…"
+  },
   "app.settings.updates.latest-version-unavailable": {
     "message": "Latest version unavailable"
   },

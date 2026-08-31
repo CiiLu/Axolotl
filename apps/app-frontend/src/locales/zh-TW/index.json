@@ -7136,6 +7136,9 @@
   "app.settings.updates.latest-version-unavailable": {
     "message": "最新版本暫時無法取得"
   },
+  "app.settings.updates.latest-version-loading": {
+    "message": "正在取得"
+  },
   "app.settings.updates.description": {
     "message": "選擇 Axolotl 檢查啟動器更新的管道。"
   },
