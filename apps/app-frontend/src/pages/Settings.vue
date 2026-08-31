@@ -340,7 +340,7 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 					<p v-if="themeStore.devMode" class="m-0 mb-3 text-brand font-semibold">
 						{{ formatMessage(messages.developerModeEnabled) }}
 					</p>
-					<div class="flex items-center gap-3">
+					<div class="settings-footer-identity flex items-start gap-3">
 						<button
 							type="button"
 							class="m-0 flex size-9 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent p-0 transition-colors hover:bg-surface-3"
@@ -349,8 +349,8 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 						>
 							<img class="size-8 object-contain" src="@/assets/axolotl.png" alt="" />
 						</button>
-						<div class="min-w-0">
-							<p class="m-0 truncate">{{ AxolotlBrandConfig.productName }} {{ version }}</p>
+						<div class="settings-footer-version min-w-0">
+							<p class="m-0 break-words">{{ AxolotlBrandConfig.productName }} {{ version }}</p>
 							<p class="m-0 truncate">{{ platformName() }} {{ osVersion }}</p>
 						</div>
 					</div>
@@ -391,7 +391,7 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 	--settings-divider: color-mix(in srgb, var(--surface-4) 55%, transparent);
 	--settings-card-border: color-mix(in srgb, var(--surface-4) 72%, transparent);
 	display: grid;
-	grid-template-columns: minmax(14rem, 16rem) minmax(0, 1fr);
+	grid-template-columns: minmax(18rem, 20rem) minmax(0, 1fr);
 	min-height: 0;
 	overflow: hidden;
 }
@@ -508,6 +508,15 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 	flex-direction: column;
 	min-height: 0;
 	overflow: hidden;
+}
+
+.settings-footer-identity {
+	min-width: 0;
+}
+
+.settings-footer-version {
+	min-width: 0;
+	line-height: 1.4;
 }
 
 .settings-content-header {
