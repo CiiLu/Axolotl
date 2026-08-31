@@ -224,7 +224,7 @@ jobs:
           }
           gh release delete-asset "${{ github.ref_name }}" $modernInstallers[0].Name --yes
 
-          pnpm --filter @modrinth/app tauri build --config tauri-release.conf.json
+          pnpm --filter @modrinth/app tauri build --config tauri-release.conf.json --config tauri-native.conf.json
 
           $nativeInstallers = @(Get-ChildItem $outDir -Filter '*-setup.exe' -File)
           if ($nativeInstallers.Count -ne 1) {
