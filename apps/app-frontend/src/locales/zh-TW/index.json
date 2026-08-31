@@ -7077,7 +7077,7 @@
     "message": "複製資料庫"
   },
   "app.settings.updates.channel.copy-database-description": {
-    "message": "是否要將 Release 資料庫複製到 Beta 管道？此操作無法自動復原。"
+    "message": "為避免出現問題，Beta 版將使用獨立的資料儲存，以免影響正式版的正常運作。這看起來是你第一次使用 Beta 版，是否要將穩定版的資料複製到 Beta 版？此操作無法自動還原。"
   },
   "app.settings.updates.channel.copy-database-title": {
     "message": "將 Release 資料複製到 Beta？"

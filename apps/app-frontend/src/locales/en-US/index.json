@@ -7299,7 +7299,7 @@
     "message": "Copy database"
   },
   "app.settings.updates.channel.copy-database-description": {
-    "message": "Would you like to copy your Release database into the Beta channel? This cannot be undone automatically."
+    "message": "To prevent potential issues, the Beta version will use separate data storage so as not to affect the proper functioning of the official version. It seems this is your first time using the Beta version. Would you like to copy the data from the stable version to the Beta version? This action cannot be automatically undone."
   },
   "app.settings.updates.channel.copy-database-title": {
     "message": "Copy Release data to Beta?"

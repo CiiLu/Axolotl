@@ -7299,7 +7299,7 @@
     "message": "复制数据库"
   },
   "app.settings.updates.channel.copy-database-description": {
-    "message": "是否将 Release 数据库复制到 Beta 通道？此操作无法自动撤销。"
+    "message": "为防止出现问题，Beta 版将使用独立的数据存储，以免影响正式版的正确运行。这貌似是你第一次使用 Beta 版，是否要将稳定版的数据复制到 Beta 版？此操作无法自动还原。"
   },
   "app.settings.updates.channel.copy-database-title": {
     "message": "将 Release 数据复制到 Beta？"
