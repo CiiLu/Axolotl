@@ -89,16 +89,16 @@ jobs:
         include:
           - name: Linux x64
             runner: ubuntu-24.04
-            args: --config tauri-release.conf.json
+            args: --config tauri-release.conf.json --config tauri-updater.conf.json
           - name: Linux arm64
             runner: ubuntu-24.04-arm
-            args: --config tauri-release.conf.json
+            args: --config tauri-release.conf.json --config tauri-updater.conf.json
           - name: Windows x64
             runner: windows-2025
-            args: --config tauri-release.conf.json --config tauri-modern.conf.json
+            args: --config tauri-release.conf.json --config tauri-modern.conf.json --config tauri-updater.conf.json
           - name: macOS universal
             runner: macos-15
-            args: --target universal-apple-darwin --config tauri-release.conf.json
+            args: --target universal-apple-darwin --config tauri-release.conf.json --config tauri-updater.conf.json
     runs-on: ${{ matrix.runner }}
     env:
       SQLX_OFFLINE: true
