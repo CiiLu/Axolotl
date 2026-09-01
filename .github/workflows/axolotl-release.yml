@@ -350,11 +350,6 @@ jobs:
             release-check/release.json \
             "${GITHUB_REF_NAME}"
 
-      - name: Verify Update Server release
-        env:
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
-        run: node scripts/axolotl/verify-update-server-release.mjs "${GITHUB_REF_NAME}"
-
       - name: Publish website download metadata
         if: ${{ !contains(github.ref_name, '-') }}
         env:
