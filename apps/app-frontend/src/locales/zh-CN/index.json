@@ -4475,6 +4475,9 @@
   "app.lab.seed-map.copyright.visit-minecraft-search": {
     "message": "访问 MinecraftSearch"
   },
+  "app.lab.seed-map.depth": {
+    "message": "深度"
+  },
   "app.lab.seed-map.description": {
     "message": "在本地查看 Minecraft 种子的群系、结构和保存的标记。"
   },
@@ -4502,11 +4505,14 @@
   "app.lab.seed-map.edition.java-large-biomes": {
     "message": "Java 版：大型生物群系"
   },
-  "app.lab.seed-map.elevation": {
-    "message": "群系高度"
+  "app.lab.seed-map.elevation.deep-underground": {
+    "message": "深层地下"
   },
-  "app.lab.seed-map.elevation-locked": {
-    "message": "开启地形估算时自动采用估算的地表高度"
+  "app.lab.seed-map.elevation.shallow-underground": {
+    "message": "浅层地下"
+  },
+  "app.lab.seed-map.elevation.surface": {
+    "message": "地表"
   },
   "app.lab.seed-map.exit-fullscreen": {
     "message": "退出全屏"

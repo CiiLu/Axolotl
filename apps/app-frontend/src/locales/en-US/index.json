@@ -4421,6 +4421,9 @@
   "app.lab.seed-map.copyright.visit-minecraft-search": {
     "message": "Visit MinecraftSearch"
   },
+  "app.lab.seed-map.depth": {
+    "message": "Map depth"
+  },
   "app.lab.seed-map.description": {
     "message": "Explore a Minecraft seed locally with biomes, structures, and saved markers."
   },
@@ -4448,11 +4451,14 @@
   "app.lab.seed-map.edition.java-large-biomes": {
     "message": "Java: Large Biomes"
   },
-  "app.lab.seed-map.elevation": {
-    "message": "Surface"
+  "app.lab.seed-map.elevation.deep-underground": {
+    "message": "Deep underground"
   },
-  "app.lab.seed-map.elevation-locked": {
-    "message": "Follows the estimated surface while terrain estimation is on"
+  "app.lab.seed-map.elevation.shallow-underground": {
+    "message": "Underground"
+  },
+  "app.lab.seed-map.elevation.surface": {
+    "message": "Surface"
   },
   "app.lab.seed-map.exit-fullscreen": {
     "message": "Exit fullscreen"

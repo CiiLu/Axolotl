@@ -4361,11 +4361,14 @@
   "app.lab.seed-map.edition.java-large-biomes": {
     "message": "Java 版：大型生物群系"
   },
-  "app.lab.seed-map.elevation": {
-    "message": "群系高度"
+  "app.lab.seed-map.elevation.deep-underground": {
+    "message": "深層地下"
   },
-  "app.lab.seed-map.elevation-locked": {
-    "message": "開啟地形估算時自動採用估算的地表高度"
+  "app.lab.seed-map.elevation.shallow-underground": {
+    "message": "淺層地下"
+  },
+  "app.lab.seed-map.elevation.surface": {
+    "message": "地表"
   },
   "app.lab.seed-map.exit-fullscreen": {
     "message": "退出全螢幕"
