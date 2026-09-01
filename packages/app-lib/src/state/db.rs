@@ -177,7 +177,8 @@ pub async fn copy_database_between_channels(
         || source_channel == target_channel
     {
         return Err(crate::ErrorKind::InputError(
-            "Database channels must be different Release or Beta channels".to_string(),
+            "Database channels must be different Release or Beta channels"
+                .to_string(),
         )
         .into());
     }
@@ -194,7 +195,8 @@ pub async fn copy_database_between_channels(
         .into());
     }
 
-    let source_path = settings_dir.join(source_channel).join(LEGACY_APP_DB_FILE);
+    let source_path =
+        settings_dir.join(source_channel).join(LEGACY_APP_DB_FILE);
     let target_dir = settings_dir.join(target_channel);
     let target_path = target_dir.join(LEGACY_APP_DB_FILE);
     if !source_path.try_exists()? {
