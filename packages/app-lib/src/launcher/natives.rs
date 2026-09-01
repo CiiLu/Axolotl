@@ -573,6 +573,40 @@ mod tests {
         );
     }
 
+    #[test]
+    fn classifier_native_library_is_selected_for_preparation() {
+        let root = tempfile::tempdir().unwrap();
+        let library: Library = serde_json::from_value(serde_json::json!({
+            "name": "org.lwjgl:lwjgl:3.2.2:natives-windows",
+            "downloads": {
+                "artifact": {
+                    "sha1": "abc",
+                    "size": 1,
+                    "url": "https://example.com/native.jar"
+                }
+            }
+        }))
+        .unwrap();
+
+        let archives = resolve_native_archives(
+            &root.path().join("libraries"),
+            &root.path().join("caches"),
+            &[library],
+            "x86_64",
+            true,
+        )
+        .unwrap();
+
+        assert_eq!(archives.len(), 1);
+        assert_eq!(archives[0].classifier, "natives-windows");
+        assert_eq!(
+            archives[0].archive_path,
+            root.path().join(
+                "libraries/org/lwjgl/lwjgl/3.2.2/lwjgl-3.2.2-natives-windows.jar"
+            )
+        );
+    }
+
     #[tokio::test]
     async fn rejects_modern_archives_with_the_wrong_sha1() {
         let root = tempfile::tempdir().unwrap();
