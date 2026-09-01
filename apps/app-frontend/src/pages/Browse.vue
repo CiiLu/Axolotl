@@ -23,7 +23,6 @@ import type {
 	BrowseDisplayMode,
 	BrowseDisplayModeOption,
 	BrowseInstallContentType,
-	BrowseSearchResponse,
 	CardAction,
 	ProjectType,
 	Tags,
@@ -194,13 +193,6 @@ function rememberBrowseContentProjectType(type: ProjectType) {
 
 watch(projectType, rememberBrowseContentProjectType, { immediate: true })
 
-type BrowseReturnState = {
-	searchResponse: BrowseSearchResponse
-	originalProjectHits: BrowseSearchResponse['projectHits']
-	originalServerHits: BrowseSearchResponse['serverHits']
-	translationActive: boolean
-}
-
 const curseForgeClassIds: Partial<Record<ProjectType, number>> = {
 	mod: 6,
 	plugin: 5,
@@ -261,7 +253,7 @@ function resolveInitialContentSource(): BrowseContentSource {
 
 const contentSource = ref<BrowseContentSource>(resolveInitialContentSource())
 const sourceBeforeWorldMapBrowse = ref<BrowseContentSource>(
-	isWorldMapBrowse.value ? getLastBrowseContentSource() ?? 'all' : contentSource.value,
+	isWorldMapBrowse.value ? (getLastBrowseContentSource() ?? 'all') : contentSource.value,
 )
 if (isWorldMapBrowse.value) {
 	contentSource.value = 'curseforge'
@@ -1006,20 +998,10 @@ if (instance.value) {
 onBeforeRouteLeave((to) => {
 	if (isBrowseReturnSourcePath(to.path)) {
 		const viewport = document.querySelector<HTMLElement>('.app-viewport')
-		saveBrowseReturnSnapshot<BrowseReturnState>({
+		saveBrowseReturnSnapshot({
 			url: route.fullPath,
 			scrollTop: viewport?.scrollTop ?? 0,
-			state: {
-				searchResponse: {
-					projectHits: searchState.projectHits.value,
-					serverHits: searchState.serverHits.value,
-					total_hits: searchState.totalHits.value,
-					per_page: searchState.maxResults.value,
-				},
-				originalProjectHits: originalProjectHits.value,
-				originalServerHits: originalServerHits.value,
-				translationActive: translationActive.value,
-			},
+			state: {},
 		})
 	}
 
@@ -2592,7 +2574,7 @@ const lockedFilterMessages = computed(() => ({
 	),
 }))
 
-const browseReturnSnapshot = consumeBrowseReturnSnapshot<BrowseReturnState>(route.fullPath)
+const browseReturnSnapshot = consumeBrowseReturnSnapshot(route.fullPath)
 
 const displayMode = ref<BrowseDisplayMode>(getLastBrowseContentDisplayMode())
 
@@ -2629,7 +2611,6 @@ const searchState = useBrowseSearch({
 		source:
 			isWorldMapBrowse.value || contentSource.value === 'all' ? undefined : contentSource.value,
 	}),
-	initialSearchResponse: browseReturnSnapshot?.state.searchResponse,
 	displayMode,
 })
 
@@ -2730,12 +2711,6 @@ const {
 	toggle,
 	cancel: cancelTranslation,
 } = useTranslationToggle()
-
-if (browseReturnSnapshot) {
-	originalProjectHits.value = browseReturnSnapshot.state.originalProjectHits
-	originalServerHits.value = browseReturnSnapshot.state.originalServerHits
-	translationActive.value = browseReturnSnapshot.state.translationActive
-}
 
 // Keep a pristine copy when genuine search results arrive (project hits).
 watch(
@@ -2918,34 +2893,41 @@ watch(queuedServerInstallCount, (count) => {
 	}
 })
 
-if (!browseReturnSnapshot || contentSource.value === 'mcarchive') {
-	void searchState.refreshSearch()
-}
-
 type UnlistenFn = () => void
 
 let isUnmounted = false
 let unlistenInstances: UnlistenFn | null = null
+let pendingBrowseReturnScroll = browseReturnSnapshot !== null
+
+async function restoreBrowseReturnScroll() {
+	if (!browseReturnSnapshot) return
+
+	await nextTick()
+	await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+	if (isUnmounted) return
+	document.querySelector<HTMLElement>('.app-viewport')?.scrollTo({
+		top: browseReturnSnapshot.scrollTop,
+	})
+	completeBrowseReturnNavigation(route.fullPath)
+}
+
+watch(
+	searchState.loading,
+	(isLoading) => {
+		if (isLoading || !pendingBrowseReturnScroll) return
+
+		pendingBrowseReturnScroll = false
+		void restoreBrowseReturnScroll()
+	},
+	{ flush: 'post' },
+)
 
 onMounted(() => {
 	if (pendingRouteInstanceSwitch.value) {
 		instanceSelector.value?.requestSwitch(pendingRouteInstanceSwitch.value)
 		pendingRouteInstanceSwitch.value = null
 	}
-	if (browseReturnSnapshot) {
-		void nextTick().then(
-			() =>
-				new Promise<void>((resolve) => {
-					requestAnimationFrame(() => {
-						document.querySelector<HTMLElement>('.app-viewport')?.scrollTo({
-							top: browseReturnSnapshot.scrollTop,
-						})
-						completeBrowseReturnNavigation(route.fullPath)
-						resolve()
-					})
-				}),
-		)
-	}
+	void searchState.refreshSearch()
 
 	instance_listener(async (event: { event: string; instance_id: string }) => {
 		if (
@@ -2974,7 +2956,6 @@ onUnmounted(() => {
 })
 
 function getProjectBrowseQuery() {
-	if (!installContext.value) return undefined
 	return {
 		...route.query,
 		b: route.fullPath,
