@@ -4934,10 +4934,6 @@ async fn download_segment(
                 .map_err(|error| SegmentDownloadError::Fatal(error.into()))?;
             pending_progress += accepted as u64;
             speed.record_bytes(accepted as u64);
-            if pending_progress >= MIN_SEGMENT_SIZE {
-                let _ = progress.send(pending_progress);
-                pending_progress = 0;
-            }
             if completed {
                 break;
             }
@@ -4950,6 +4946,10 @@ async fn download_segment(
             break;
         }
         if attempt < SEGMENT_RETRY_ATTEMPTS {
+            writer
+                .flush()
+                .await
+                .map_err(|error| SegmentDownloadError::Fatal(error.into()))?;
             let downloaded_after_attempt = {
                 let state = range.state.lock();
                 state.downloaded

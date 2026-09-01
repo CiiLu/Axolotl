@@ -8,6 +8,18 @@ use tokio::io::{AsyncSeekExt, AsyncWriteExt, BufWriter, SeekFrom};
 
 const RANGE_WRITER_BUFFER_CAPACITY: usize = 256 * 1024;
 
+#[cfg(test)]
+struct RangeWriteTestProbe {
+    delay: std::time::Duration,
+    in_flight: std::sync::atomic::AtomicUsize,
+    max_in_flight: std::sync::atomic::AtomicUsize,
+}
+
+#[cfg(test)]
+static RANGE_WRITE_TEST_PROBE: std::sync::Mutex<
+    Option<Arc<RangeWriteTestProbe>>,
+> = std::sync::Mutex::new(None);
+
 /// A preallocated `.part` file. Writers open their own handle so a slow range
 /// never serializes unrelated ranges behind a file mutex.
 pub(crate) struct RangeOutput {
@@ -149,10 +161,31 @@ impl RangeWriter {
                 &self.path,
             ));
         }
-        self.file
-            .write_all(bytes)
-            .await
-            .map_err(|error| io::io_error_with_lock_info(error, &self.path))?;
+        #[cfg(test)]
+        let probe = RANGE_WRITE_TEST_PROBE.lock().unwrap().clone();
+        #[cfg(test)]
+        if let Some(probe) = &probe {
+            let in_flight = probe
+                .in_flight
+                .fetch_add(1, std::sync::atomic::Ordering::AcqRel)
+                + 1;
+            probe
+                .max_in_flight
+                .fetch_max(in_flight, std::sync::atomic::Ordering::AcqRel);
+            tokio::time::sleep(probe.delay).await;
+        }
+
+        let result =
+            self.file.write_all(bytes).await.map_err(|error| {
+                io::io_error_with_lock_info(error, &self.path)
+            });
+        #[cfg(test)]
+        if let Some(probe) = probe {
+            probe
+                .in_flight
+                .fetch_sub(1, std::sync::atomic::Ordering::AcqRel);
+        }
+        result?;
         self.offset += bytes.len() as u64;
         Ok(())
     }
@@ -168,6 +201,8 @@ impl RangeWriter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures::future::try_join_all;
+    use std::sync::atomic::Ordering;
 
     #[tokio::test]
     async fn writes_non_overlapping_ranges_with_independent_writers() {
@@ -225,5 +260,52 @@ mod tests {
         expected.extend(exact);
         expected.extend(large);
         assert_eq!(tokio::fs::read(path).await.unwrap(), expected);
+    }
+
+    #[tokio::test]
+    async fn concurrent_writers_preserve_all_ranges_and_overlap() {
+        let probe = Arc::new(RangeWriteTestProbe {
+            delay: std::time::Duration::from_millis(2),
+            in_flight: std::sync::atomic::AtomicUsize::new(0),
+            max_in_flight: std::sync::atomic::AtomicUsize::new(0),
+        });
+        *RANGE_WRITE_TEST_PROBE.lock().unwrap() = Some(Arc::clone(&probe));
+
+        for range_count in [2, 4, 8] {
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("ranged.part");
+            let range_length = 32 * 1024;
+            let expected = (0..range_length * range_count)
+                .map(|index| (index % 251) as u8)
+                .collect::<Vec<_>>();
+            let output = RangeOutput::create(&path, expected.len() as u64)
+                .await
+                .unwrap();
+            let writes = (0..range_count).map(|index| {
+                let output = Arc::clone(&output);
+                let start = index * range_length;
+                let bytes = expected[start..start + range_length].to_vec();
+                async move {
+                    let mut writer = output
+                        .open_range(start as u64, (start + range_length) as u64)
+                        .await?;
+                    let mut offset = 0;
+                    while offset < bytes.len() {
+                        let length = ((index * 521 + offset) % 4096 + 1)
+                            .min(bytes.len() - offset);
+                        writer
+                            .write_next(&bytes[offset..offset + length])
+                            .await?;
+                        offset += length;
+                    }
+                    writer.flush().await
+                }
+            });
+            try_join_all(writes).await.unwrap();
+            assert_eq!(tokio::fs::read(path).await.unwrap(), expected);
+        }
+        *RANGE_WRITE_TEST_PROBE.lock().unwrap() = None;
+
+        assert!(probe.max_in_flight.load(Ordering::Acquire) > 1);
     }
 }
