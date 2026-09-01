@@ -52,7 +52,7 @@ pub(crate) fn resolve_native_archives(
         {
             continue;
         }
-        if !library.downloadable || library.natives.is_none() {
+        if !library.downloadable || !download::is_native_library(library) {
             continue;
         }
         let Some(classifier) =
@@ -65,11 +65,9 @@ pub(crate) fn resolve_native_archives(
             .as_ref()
             .and_then(|downloads| downloads.classifiers.as_ref())
             .and_then(|classifiers| classifiers.get(&classifier));
-        let classified_path =
-            libraries_dir.join(download::classified_library_artifact_path(
-                &library.name,
-                &classifier,
-            )?);
+        let classified_path = libraries_dir.join(
+            download::native_library_artifact_path(library, &classifier)?,
+        );
         let (archive_path, sha1) = if let Some(native) = native {
             let cached = caches_dir
                 .join("minecraft-natives")

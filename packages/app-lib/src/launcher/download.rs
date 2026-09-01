@@ -620,10 +620,37 @@ pub(crate) fn local_native_library_path(
 ) -> crate::Result<PathBuf> {
     let artifact_path = match native.path.as_deref() {
         Some(path) => path.to_string(),
-        None => classified_library_artifact_path(&library.name, classifier)?,
+        None => native_library_artifact_path(library, classifier)?,
     };
 
     Ok(Path::new("libraries").join(artifact_path))
+}
+
+pub(crate) fn is_native_library(library: &Library) -> bool {
+    library.natives.is_some()
+        || library_classifier(&library.name)
+            .is_some_and(|classifier| classifier.starts_with("natives-"))
+}
+
+fn library_classifier(library_name: &str) -> Option<&str> {
+    let mut coordinates = library_name.split(':');
+    coordinates.next()?;
+    coordinates.next()?;
+    coordinates.next()?;
+    coordinates
+        .next()
+        .and_then(|classifier| classifier.split('@').next())
+}
+
+pub(crate) fn native_library_artifact_path(
+    library: &Library,
+    classifier: &str,
+) -> crate::Result<String> {
+    if library_classifier(&library.name).is_some() {
+        Ok(d::get_path_from_artifact(&library.name)?)
+    } else {
+        classified_library_artifact_path(&library.name, classifier)
+    }
 }
 
 pub(crate) fn classified_library_artifact_path(
@@ -653,6 +680,7 @@ pub(crate) fn library_native_classifier(
         .map(|classifier| {
             classifier.replace("${arch}", crate::util::platform::ARCH_WIDTH)
         })
+        .or_else(|| library_classifier(&library.name).map(str::to_owned))
 }
 
 pub(crate) fn local_client_path(game_version: &str) -> PathBuf {
@@ -857,7 +885,7 @@ fn missing_library_bytes(
             continue;
         }
 
-        if library.natives.is_some() {
+        if is_native_library(library) {
             if let Some(classifier) =
                 library_native_classifier(library, java_arch)
                 && let Some(native) = library
@@ -1926,7 +1954,7 @@ pub async fn download_libraries(
     }?;
     let mut libraries_for_download: Vec<_> = libraries
         .iter()
-        .filter(|library| library.natives.is_none())
+        .filter(|library| !is_native_library(library))
         .collect();
     libraries_for_download.extend(native_libraries_to_download(
         libraries,
@@ -1964,7 +1992,7 @@ pub async fn download_libraries(
                 return Ok(());
             }
 
-            if library.natives.is_some() {
+            if is_native_library(library) {
                 let Some(classifier) =
                     library_native_classifier(library, java_arch)
                 else {
@@ -2025,8 +2053,8 @@ pub async fn download_libraries(
                     }
                     path
                 } else {
-                    let artifact_path = classified_library_artifact_path(
-                        &library.name,
+                    let artifact_path = native_library_artifact_path(
+                        library,
                         &classifier,
                     )?;
                     let path =
@@ -2247,7 +2275,7 @@ fn native_libraries_to_download<'a>(
     let mut identities = HashSet::new();
     let mut result = Vec::new();
     for library in libraries {
-        if library.natives.is_none() || !library.downloadable {
+        if !is_native_library(library) || !library.downloadable {
             continue;
         }
         if let Some(rules) = &library.rules
@@ -2271,7 +2299,7 @@ fn native_libraries_to_download<'a>(
             .and_then(|classifiers| classifiers.get(&classifier))
             .filter(|download| !download.sha1.is_empty())
             .map_or_else(
-                || classified_library_artifact_path(&library.name, &classifier),
+                || native_library_artifact_path(library, &classifier),
                 |download| Ok(download.sha1.clone()),
             )?;
         if identities.insert(identity.clone()) {
@@ -2447,6 +2475,24 @@ mod tests {
             )
             .unwrap()[0],
             format!("https://maven.legacyfabric.net/{artifact_path}")
+        );
+    }
+
+    #[test]
+    fn forge_classifier_native_library_uses_its_declared_artifact_path() {
+        let library: Library = serde_json::from_value(serde_json::json!({
+            "name": "org.lwjgl:lwjgl:3.2.2:natives-windows"
+        }))
+        .unwrap();
+
+        assert!(is_native_library(&library));
+        assert_eq!(
+            library_native_classifier(&library, "x86_64"),
+            Some("natives-windows".to_string())
+        );
+        assert_eq!(
+            native_library_artifact_path(&library, "natives-windows").unwrap(),
+            "org/lwjgl/lwjgl/3.2.2/lwjgl-3.2.2-natives-windows.jar"
         );
     }
 
