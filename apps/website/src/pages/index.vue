@@ -14,6 +14,7 @@ import Accordion from '@modrinth/ui/src/components/base/Accordion.vue'
 import Avatar from '@modrinth/ui/src/components/base/Avatar.vue'
 import ButtonStyled from '@modrinth/ui/src/components/base/ButtonStyled.vue'
 import Checkbox from '@modrinth/ui/src/components/base/Checkbox.vue'
+import DropdownSelect from '@modrinth/ui/src/components/base/DropdownSelect.vue'
 import IntlFormatted from '@modrinth/ui/src/components/base/IntlFormatted.vue'
 import { defineMessages, useVIntl } from '@modrinth/ui/src/composables/i18n.ts'
 
@@ -32,6 +33,8 @@ interface UpdateServerDownloadMetadata {
 }
 
 type OSType = 'Mac' | 'Windows' | 'Linux' | null
+type ReleaseChannel = 'release' | 'beta'
+const releaseChannelOptions: ReleaseChannel[] = ['release', 'beta']
 
 const downloadWindows = ref<HTMLAnchorElement | null>(null)
 const downloadMac = ref<HTMLAnchorElement | null>(null)
@@ -59,7 +62,10 @@ const resetHeroGlow = () => {
 const { resolvedSource } = useDownloadSource()
 const UPDATE_SERVER_BASE_URL = 'https://update.axlmc.org'
 const GITHUB_RELEASE_BASE_URL = 'https://github.com/Mystic-Stars/Axolotl/releases/download'
-const releaseApi = `${UPDATE_SERVER_BASE_URL}/api/downloads/latest?channel=release`
+const releaseChannel = ref<ReleaseChannel>('release')
+const releaseApi = computed(
+	() => `${UPDATE_SERVER_BASE_URL}/api/downloads/latest?channel=${releaseChannel.value}`,
+)
 
 const windowsLink = ref<string | null>(null)
 
@@ -72,6 +78,14 @@ const linuxLinks = reactive({
 const macLinks = reactive({
 	universal: null as string | null,
 })
+
+const resetDownloadLinks = () => {
+	windowsLink.value = null
+	macLinks.universal = null
+	linuxLinks.appImage = null
+	linuxLinks.deb = null
+	linuxLinks.rpm = null
+}
 
 // 使用 Update Server 的下载目录作为默认发布数据源；GitHub 保留为手动备用源。
 const { data: launcherRelease, status: launcherReleaseStatus } =
@@ -101,6 +115,12 @@ const linkUnavailableLabel = computed(() =>
 		? formatMessage(messages.downloadLinksFailed)
 		: formatMessage(messages.fetchingDownloadLinks),
 )
+
+const latestVersion = computed(() => {
+	if (launcherReleaseStatus.value !== 'success') return null
+	const tagName = launcherRelease.value?.tag_name
+	return typeof tagName === 'string' ? tagName.replace(/^v/, '') : null
+})
 
 const platform = computed<string>(() => {
 	if (import.meta.server) {
@@ -215,15 +235,18 @@ const handleDownload = () => {
 }
 
 watch(
-	[launcherRelease, resolvedSource],
-	([release]) => {
+	[launcherRelease, resolvedSource, launcherReleaseStatus],
+	([release, source, status]) => {
+		resetDownloadLinks()
+		if (status !== 'success' || !release) return
+
 		const findAsset = (patterns: RegExp[]) => {
 			const assetName = release?.assets.find((name) =>
 				patterns.some((pattern) => pattern.test(name)),
 			)
 			if (!assetName) return null
 
-			if (resolvedSource.value === 'update-server') {
+			if (source === 'update-server') {
 				const version = release.tag_name.replace(/^v/, '')
 				return `${UPDATE_SERVER_BASE_URL}/dist/${encodeURIComponent(version)}/${encodeURIComponent(assetName)}`
 			}
@@ -382,6 +405,34 @@ const messages = defineMessages({
 	manualDownloadFallback: {
 		id: 'axolotl-marketing.download.manual-fallback',
 		defaultMessage: 'Download manually from GitHub Releases',
+	},
+	downloadChannelLatestVersion: {
+		id: 'app-marketing.download.channel-latest-version',
+		defaultMessage: 'Latest version: {version}',
+	},
+	downloadChannelFetchingVersion: {
+		id: 'app-marketing.download.channel-fetching-version',
+		defaultMessage: 'Fetching the latest version…',
+	},
+	downloadChannelVersionUnavailable: {
+		id: 'app-marketing.download.channel-version-unavailable',
+		defaultMessage: 'Version information is currently unavailable.',
+	},
+	downloadChannelLabel: {
+		id: 'app-marketing.download.channel-label',
+		defaultMessage: 'Version channel',
+	},
+	downloadChannelDescription: {
+		id: 'app-marketing.download.channel-description',
+		defaultMessage: 'Choose a stable release or try the latest beta build.',
+	},
+	downloadChannelRelease: {
+		id: 'app-marketing.download.channel-release',
+		defaultMessage: 'Release (stable)',
+	},
+	downloadChannelBeta: {
+		id: 'app-marketing.download.channel-beta',
+		defaultMessage: 'Beta (preview)',
 	},
 	moreDownloadOptions: {
 		id: 'app-marketing.hero.more-download-options',
@@ -1059,6 +1110,36 @@ useHead(() => ({
 				</div>
 				<div class="section-subheader-description">
 					{{ formatMessage(messages.downloadDescription) }}
+				</div>
+			</div>
+			<div class="download-channel-picker">
+				<label id="download-channel-label" for="download-channel">
+					{{ formatMessage(messages.downloadChannelLabel) }}
+				</label>
+				<DropdownSelect
+					id="download-channel"
+					v-model="releaseChannel"
+					:options="releaseChannelOptions"
+					name="download-channel"
+					:display-name="
+						(channel) =>
+							formatMessage(
+								channel === 'release'
+									? messages.downloadChannelRelease
+									: messages.downloadChannelBeta,
+							)
+					"
+					aria-labelledby="download-channel-label"
+					auto-placement
+				/>
+				<div class="download-channel-version" aria-live="polite">
+					<span v-if="latestVersion">
+						{{ formatMessage(messages.downloadChannelLatestVersion, { version: latestVersion }) }}
+					</span>
+					<span v-else-if="launcherReleaseStatus === 'error'">
+						{{ formatMessage(messages.downloadChannelVersionUnavailable) }}
+					</span>
+					<span v-else>{{ formatMessage(messages.downloadChannelFetchingVersion) }}</span>
 				</div>
 			</div>
 			<div class="download-section">
@@ -1793,6 +1874,40 @@ useHead(() => ({
 		.section-subheader-description {
 			color: var(--color-base);
 			margin: 0;
+		}
+	}
+
+	.download-channel-picker {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--gap-sm);
+		width: min(100%, 24rem);
+		margin: 0 auto var(--gap-xl);
+
+		label {
+			font-size: var(--font-size-sm);
+			font-weight: 700;
+			color: var(--color-contrast);
+		}
+
+		:deep(.animated-dropdown) {
+			width: min(20rem, 100%);
+		}
+
+		p {
+			margin: 0;
+			color: var(--color-secondary);
+			font-size: var(--font-size-sm);
+			text-align: center;
+		}
+
+		.download-channel-version {
+			min-height: 1.25rem;
+			color: var(--color-brand);
+			font-size: var(--font-size-sm);
+			font-weight: 700;
+			text-align: center;
 		}
 	}
 
