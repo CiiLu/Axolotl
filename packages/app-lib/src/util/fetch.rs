@@ -4659,6 +4659,15 @@ async fn download_segment(
         };
         let downloaded_before_attempt = requested_start - range.start;
         let requested_end = range.end();
+        let mut writer = output
+            .open_range(
+                requested_start,
+                requested_end.checked_add(1).ok_or_else(|| {
+                    SegmentDownloadError::Protocol("range end overflow")
+                })?,
+            )
+            .await
+            .map_err(|error| SegmentDownloadError::Fatal(error.into()))?;
         let response = tokio::time::timeout(
             FILE_TRANSFER_FIRST_BYTE_TIMEOUT,
             send_path_request_with_clients(
@@ -4833,16 +4842,10 @@ async fn download_segment(
                                         if read == 0 {
                                             break;
                                         }
-                                        let write_offset = range.start
-                                            + range.state.lock().downloaded;
                                         let (accepted, _) =
                                             range.accept_chunk(read);
-                                        output
-                                            .write_at(
-                                                write_offset,
-                                                &buffer[..accepted],
-                                                part_path,
-                                            )
+                                        writer
+                                            .write_next(&buffer[..accepted])
                                             .await
                                             .map_err(|error| {
                                                 SegmentDownloadError::Fatal(
@@ -4924,10 +4927,9 @@ async fn download_segment(
                     break;
                 }
             };
-            let write_offset = range.start + range.state.lock().downloaded;
             let (accepted, completed) = range.accept_chunk(chunk.len());
-            output
-                .write_at(write_offset, &chunk[..accepted], part_path)
+            writer
+                .write_next(&chunk[..accepted])
                 .await
                 .map_err(|error| SegmentDownloadError::Fatal(error.into()))?;
             pending_progress += accepted as u64;
@@ -4941,6 +4943,10 @@ async fn download_segment(
             }
         }
         if range.remaining() == 0 {
+            writer
+                .flush()
+                .await
+                .map_err(|error| SegmentDownloadError::Fatal(error.into()))?;
             break;
         }
         if attempt < SEGMENT_RETRY_ATTEMPTS {
@@ -5332,9 +5338,6 @@ async fn try_segmented_download(
     }
 
     record_install_download_stage(request, DownloadItemStatus::Writing).await;
-    if let Err(error) = output.flush(part_path).await {
-        return SegmentedDownloadOutcome::Fatal(error.into());
-    }
     if downloaded != size {
         let _ = remove_if_exists(part_path).await;
         return SegmentedDownloadOutcome::FallbackSingle {
