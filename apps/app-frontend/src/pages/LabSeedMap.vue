@@ -1293,12 +1293,17 @@ function drawOres(context: CanvasRenderingContext2D) {
 function drawSpawn(context: CanvasRenderingContext2D) {
 	if (spawn.value && workspace.dimension === 'overworld' && workspace.showSpawn) {
 		const point = worldToScreen(spawn.value.x, spawn.value.z)
+		const selected =
+			selection.value?.spawn === true &&
+			selection.value.x === spawn.value.x &&
+			selection.value.z === spawn.value.z
+		const size = selected ? 36 : 32
 		context.save()
 		if (spawnImage) {
 			context.shadowColor = 'rgba(0, 0, 0, 0.48)'
 			context.shadowBlur = 5
 			context.shadowOffsetY = 2
-			context.drawImage(spawnImage, point.x - 16, point.y - 16, 32, 32)
+			context.drawImage(spawnImage, point.x - size / 2, point.y - size / 2, size, size)
 		} else {
 			context.fillStyle = '#2E3138'
 			context.strokeStyle = '#FFFFFF'
@@ -1306,6 +1311,14 @@ function drawSpawn(context: CanvasRenderingContext2D) {
 			context.beginPath()
 			context.arc(point.x, point.y, 10, 0, Math.PI * 2)
 			context.fill()
+			context.stroke()
+		}
+		if (selected) {
+			context.shadowColor = 'transparent'
+			context.strokeStyle = '#FFFFFF'
+			context.lineWidth = 2
+			context.beginPath()
+			context.arc(point.x, point.y, size / 2 + 2, 0, Math.PI * 2)
 			context.stroke()
 		}
 		context.restore()
