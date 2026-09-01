@@ -4,7 +4,9 @@ use crate::util::io::{self, IOError};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::fs::{File, OpenOptions};
-use tokio::io::{AsyncSeekExt, AsyncWriteExt, SeekFrom};
+use tokio::io::{AsyncSeekExt, AsyncWriteExt, BufWriter, SeekFrom};
+
+const RANGE_WRITER_BUFFER_CAPACITY: usize = 256 * 1024;
 
 /// A preallocated `.part` file. Writers open their own handle so a slow range
 /// never serializes unrelated ranges behind a file mutex.
@@ -15,7 +17,7 @@ pub(crate) struct RangeOutput {
 
 /// An independent sequential writer for one half-open byte range.
 pub(crate) struct RangeWriter {
-    file: File,
+    file: BufWriter<File>,
     offset: u64,
     end_exclusive: u64,
     path: PathBuf,
@@ -77,7 +79,7 @@ impl RangeOutput {
             .await
             .map_err(|error| io::io_error_with_lock_info(error, &path))?;
         Ok(RangeWriter {
-            file,
+            file: BufWriter::with_capacity(RANGE_WRITER_BUFFER_CAPACITY, file),
             offset: start,
             end_exclusive,
             path,
@@ -85,6 +87,7 @@ impl RangeOutput {
     }
 
     /// Legacy adapter; not used by the concurrent range hot path.
+    #[allow(dead_code)]
     pub(crate) async fn write_at(
         &self,
         offset: u64,
@@ -101,10 +104,12 @@ impl RangeOutput {
             )
         })?;
         let mut writer = self.open_range(offset, end).await?;
-        writer.write_next(bytes).await
+        writer.write_next(bytes).await?;
+        writer.flush().await
     }
 
     /// Legacy adapter for callers that previously flushed the shared handle.
+    #[allow(dead_code)]
     pub(crate) async fn flush(&self, path: &Path) -> Result<(), IOError> {
         let mut file = io::retry_windows_sharing_violation(
             path,
@@ -122,6 +127,7 @@ impl RangeOutput {
 }
 
 impl RangeWriter {
+    #[cfg(test)]
     pub(crate) fn offset(&self) -> u64 {
         self.offset
     }
@@ -197,5 +203,27 @@ mod tests {
         let output = RangeOutput::create(&path, 8).await.unwrap();
         assert!(output.open_range(2, 2).await.is_err());
         assert!(output.open_range(7, 9).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn buffers_small_exact_and_large_writes() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("ranged.part");
+        let small = vec![1_u8; 1024];
+        let exact = vec![2_u8; RANGE_WRITER_BUFFER_CAPACITY];
+        let large = vec![3_u8; RANGE_WRITER_BUFFER_CAPACITY + 1];
+        let total = small.len() + exact.len() + large.len();
+        let output = RangeOutput::create(&path, total as u64).await.unwrap();
+        let mut writer = output.open_range(0, total as u64).await.unwrap();
+
+        writer.write_next(&small).await.unwrap();
+        writer.write_next(&exact).await.unwrap();
+        writer.write_next(&large).await.unwrap();
+        writer.flush().await.unwrap();
+
+        let mut expected = small;
+        expected.extend(exact);
+        expected.extend(large);
+        assert_eq!(tokio::fs::read(path).await.unwrap(), expected);
     }
 }
