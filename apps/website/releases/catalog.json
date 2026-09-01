@@ -2,6 +2,47 @@
   "updated_at": "2026-08-30T06:28:42.810Z",
   "announcements": [
     {
+      "id": "launcher-1.9.5-beta.4",
+      "version": "1.9.5-beta.4",
+      "publishedAt": "2026-09-01",
+      "title": {
+        "en-US": "Axolotl Launcher 1.9.5-beta.4",
+        "zh-CN": "Axolotl Launcher 1.9.5-beta.4"
+      },
+      "changes": {
+        "added": [
+          {
+            "en-US": "Added an option to select the main world biome height in the seed map.",
+            "zh-CN": "新增种子地图中选择主世界群系高度的选项。"
+          }
+        ],
+        "changed": [
+          {
+            "en-US": "Disable the corresponding buttons when database operations are unavailable.",
+            "zh-CN": "当数据库操作不可用时禁用相应按钮。"
+          }
+        ],
+        "fixed": [
+          {
+            "en-US": "Fix the distance issue on the seed map caused by floating point precision.",
+            "zh-CN": "修复种子地图因浮点数精度导致的距离问题。"
+          },
+          {
+            "en-US": "Fix the issue where map tiles rendered by the seed map are inconsistent at different zoom levels.",
+            "zh-CN": "修复种子地图在不同缩放下渲染的地图图块不一致的问题。"
+          },
+          {
+            "en-US": "Fix the issue where the spawn point marker on the seed map lacks focused highlighting.",
+            "zh-CN": "修复种子地图出生点标记无焦点突出显示的问题。"
+          },
+          {
+            "en-US": "Fixed the issue where the seed map could not open the biome selector in fullscreen mode.",
+            "zh-CN": "修复种子地图在全屏状态下无法打开群系选择器的问题。"
+          }
+        ]
+      }
+    },
+    {
       "id": "launcher-1.9.5-beta.3",
       "version": "1.9.5-beta.3",
       "publishedAt": "2026-09-01",
