@@ -1462,12 +1462,17 @@ pub fn build_proxied_client(
         .expect("proxied client configuration should be valid")
 }
 
-pub async fn configured_client() -> crate::Result<reqwest::Client> {
-    let proxy = crate::State::get().await?.proxy_config().await?;
+pub(crate) fn build_configured_client(
+    proxy: &crate::util::proxy::ProxyConfig,
+) -> crate::Result<reqwest::Client> {
     proxy
         .apply(reqwest_client_builder())?
         .build()
         .map_err(Into::into)
+}
+
+pub async fn configured_client() -> crate::Result<reqwest::Client> {
+    Ok(crate::State::get().await?.configured_http_client())
 }
 
 fn http1_file_reqwest_client_builder() -> reqwest::ClientBuilder {
