@@ -1135,9 +1135,9 @@ fn is_official_version_manifest_url(url: &str) -> bool {
 fn order_auto_routes(
     routes: &mut [DownloadRoute],
     resource: ResourceClass,
-    mirror_first_loader: bool,
+    force_mirror_first: bool,
 ) {
-    let cold_prefers_mirror = mirror_first_loader
+    let cold_prefers_mirror = force_mirror_first
         || crate::State::get_if_initialized()
             .is_some_and(|state| state.auto_prefers_mirror());
     let health = ROUTE_HEALTH.lock().clone();
@@ -1164,6 +1164,15 @@ fn order_auto_routes(
                 left_health
                     .consecutive_failures
                     .cmp(&right_health.consecutive_failures)
+            })
+            .then_with(|| {
+                force_mirror_first
+                    .then(|| {
+                        let left_mirror_rank = !left.is_mirror;
+                        let right_mirror_rank = !right.is_mirror;
+                        left_mirror_rank.cmp(&right_mirror_rank)
+                    })
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .then_with(|| {
                 (right_health.success_samples > 0)
@@ -1218,6 +1227,13 @@ fn uses_mirror_first_loader_routes(url: &str, resource: ResourceClass) -> bool {
         .any(|loader| path.contains(loader))
 }
 
+/// Content CDNs have no authentication requirement, so Automatic mode can
+/// safely try their mirror before historical official-CDN measurements. A
+/// failed or cooling mirror still remains behind a healthy official route.
+fn uses_mirror_first_cdn_routes(url: &str) -> bool {
+    is_modrinth_cdn_url(url) || is_forge_cdn_mirror_url(url)
+}
+
 pub fn resolve_download_routes_for(
     url: &str,
     resource: ResourceClass,
@@ -1231,7 +1247,7 @@ pub fn resolve_download_routes_for(
     // Modrinth API stays official-only. Modrinth CDN and CurseForge CDN content
     // use the existing mirror selector; in Automatic mode Tianpao is preferred
     // over official.
-    let mode = if is_modrinth_cdn_url(&url) || is_forge_cdn_mirror_url(&url) {
+    let mode = if uses_mirror_first_cdn_routes(&url) {
         if mode == crate::state::DownloadSourceMode::Auto {
             crate::state::DownloadSourceMode::MirrorPreferred
         } else {
@@ -4354,7 +4370,11 @@ async fn ensure_task_routes_probed(
     }
     let mirror_first_loader =
         uses_mirror_first_loader_routes(&request.url, request.resource);
-    order_auto_routes(routes, request.resource, mirror_first_loader);
+    order_auto_routes(
+        routes,
+        request.resource,
+        mirror_first_loader || uses_mirror_first_cdn_routes(&request.url),
+    );
 }
 
 pub(crate) async fn prepare_native_download_routes(
@@ -4377,7 +4397,8 @@ pub(crate) async fn prepare_native_download_routes(
         order_auto_routes(
             routes,
             request.resource,
-            uses_mirror_first_loader_routes(&request.url, request.resource),
+            uses_mirror_first_loader_routes(&request.url, request.resource)
+                || uses_mirror_first_cdn_routes(&request.url),
         );
     }
 }
@@ -7999,6 +8020,37 @@ mod tests {
         );
         assert_eq!(modrinth_routes[0].source, DownloadRouteSource::Official);
 
+        *ROUTE_HEALTH.lock() = previous_health;
+    }
+
+    #[test]
+    fn auto_modrinth_cdn_keeps_tianpao_ahead_of_a_sampled_official_route() {
+        let _guard = AUTO_SOURCE_TEST_LOCK.lock().unwrap();
+        let previous_health = std::mem::take(&mut *ROUTE_HEALTH.lock());
+        let url = "https://cdn-alt.modrinth.com/data/project/versions/version/file.jar";
+        let mut routes = explicit_mirror_routes(url, ResourceClass::Modrinth);
+        routes.push(official_route(url, ResourceClass::Modrinth));
+        let official = routes
+            .iter()
+            .find(|route| is_official_route(route))
+            .unwrap();
+        let key = route_health_key(official, ResourceClass::Modrinth).unwrap();
+        ROUTE_HEALTH.lock().insert(
+            key,
+            RouteHealth {
+                success_samples: 3,
+                throughput_bps: Some(100_000_000.0),
+                ..RouteHealth::default()
+            },
+        );
+
+        order_auto_routes(
+            &mut routes,
+            ResourceClass::Modrinth,
+            uses_mirror_first_cdn_routes(url),
+        );
+
+        assert_eq!(routes[0].source, DownloadRouteSource::Tianpao);
         *ROUTE_HEALTH.lock() = previous_health;
     }
 
