@@ -250,6 +250,14 @@ providePopupNotificationManager(popupNotificationManager)
 const { addPopupNotification } = popupNotificationManager
 
 const appVersion = getVersion()
+const isBetaBuild = ref(false)
+void appVersion
+	.then((version) => {
+		isBetaBuild.value = version.includes('-beta')
+	})
+	.catch((error) => {
+		console.warn('Failed to read the app version for the Beta label', error)
+	})
 const tauriApiClient = new TauriModrinthClient({
 	userAgent: async () => AxolotlBrandConfig.userAgent(await appVersion, await getOsType()),
 	labrinthBaseUrl: config.labrinthBaseUrl,
@@ -580,6 +588,10 @@ const messages = defineMessages({
 	restarting: {
 		id: 'app.restarting',
 		defaultMessage: 'Restarting...',
+	},
+	betaBuild: {
+		id: 'app.build.beta',
+		defaultMessage: 'Beta',
 	},
 	home: {
 		id: 'app.navigation.home',
@@ -2287,7 +2299,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		</div>
 		<div data-tauri-drag-region class="app-grid-statusbar bg-bg-raised h-[--top-bar-height] flex">
 			<div data-tauri-drag-region class="flex min-w-0 flex-1 overflow-hidden p-3">
-				<AxolotlLogo class="h-full w-auto shrink-0 pointer-events-none" />
+				<div data-tauri-drag-region class="flex shrink-0 items-center gap-2">
+					<AxolotlLogo class="h-full w-auto shrink-0 pointer-events-none" />
+					<span
+						v-if="isBetaBuild"
+						class="inline-flex shrink-0 rounded-full bg-[#b6e9ff] px-2 py-0.5 text-xs font-semibold leading-none text-[#005bda]"
+					>
+						{{ formatMessage(messages.betaBuild) }}
+					</span>
+				</div>
 				<div data-tauri-drag-region class="flex shrink-0 items-center gap-1 ml-3">
 					<button
 						class="cursor-pointer p-0 m-0 text-contrast border-none outline-none bg-button-bg rounded-full flex items-center justify-center w-6 h-6 hover:brightness-75 transition-all"

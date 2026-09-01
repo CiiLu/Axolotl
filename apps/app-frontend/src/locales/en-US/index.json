@@ -725,6 +725,9 @@
   "app.browse.source.planet-minecraft": {
     "message": "Planet Minecraft"
   },
+  "app.build.beta": {
+    "message": "Beta"
+  },
   "app.community-announcement.feedback-middle": {
     "message": ", or share them with us through "
   },
@@ -7348,6 +7351,51 @@
   },
   "app.settings.updates.current-version": {
     "message": "Current version {version}"
+  },
+  "app.settings.updates.database-isolation.active": {
+    "message": "Active"
+  },
+  "app.settings.updates.database-isolation.beta": {
+    "message": "Beta database"
+  },
+  "app.settings.updates.database-isolation.current-database": {
+    "message": "Database currently in use"
+  },
+  "app.settings.updates.database-isolation.description": {
+    "message": "Release and Beta use separate databases, so testing Beta does not change your Release data."
+  },
+  "app.settings.updates.database-isolation.release": {
+    "message": "Release database"
+  },
+  "app.settings.updates.database-isolation.title": {
+    "message": "Database isolation"
+  },
+  "app.settings.updates.database-operation.active-target": {
+    "message": "Cannot overwrite the database currently in use. Restart Axolotl and switch channels first."
+  },
+  "app.settings.updates.database-operation.beta-to-release": {
+    "message": "Copy Beta to Release"
+  },
+  "app.settings.updates.database-operation.cancel": {
+    "message": "Cancel"
+  },
+  "app.settings.updates.database-operation.confirm": {
+    "message": "Overwrite database"
+  },
+  "app.settings.updates.database-operation.confirm-description": {
+    "message": "This will completely replace the inactive {target} database with the contents of the {source} database. This cannot be undone."
+  },
+  "app.settings.updates.database-operation.confirm-title": {
+    "message": "Overwrite database?"
+  },
+  "app.settings.updates.database-operation.failed": {
+    "message": "The database could not be copied. Please make sure Axolotl is not using the target database."
+  },
+  "app.settings.updates.database-operation.label": {
+    "message": "Database operation"
+  },
+  "app.settings.updates.database-operation.release-to-beta": {
+    "message": "Copy Release to Beta"
   },
   "app.settings.updates.disabled": {
     "message": "Updates are disabled in this build."
