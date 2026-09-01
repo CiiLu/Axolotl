@@ -34,19 +34,30 @@ import SettingsSection from './SettingsSection.vue'
 
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
-const activeChannel = await getUpdateChannel()
+const [
+	activeChannel,
+	initialUpdatePreferences,
+	currentVersion,
+	isDevEnvironment,
+	databasePath,
+	portable,
+] = await Promise.all([
+	getUpdateChannel(),
+	getUpdatePreferences(),
+	getVersion(),
+	isDev(),
+	getCurrentAppDatabasePath().catch(() => ''),
+	invoke<boolean>('is_portable_mode').catch(() => false),
+])
 const selectedChannel = ref<UpdateChannel>(activeChannel)
-const updatePreferences = ref(await getUpdatePreferences())
+const updatePreferences = ref(initialUpdatePreferences)
 const checking = ref(false)
 const checkResult = ref<AppUpdateCheckResult | 'failed' | 'portable' | null>(null)
-const currentVersion = await getVersion()
-const currentDatabasePath = ref('')
-const hasBetaDatabase = ref(false)
+const currentDatabasePath = ref(databasePath)
 const latestChannelVersions = ref<Partial<Record<UpdateChannel, string>>>({})
 const latestChannelVersionsLoaded = ref(false)
-const isDevEnvironment = await isDev()
 const previewUpdateAnnouncement = inject<(version: string) => void>('previewUpdateAnnouncement')
-const isPortable = ref(false)
+const isPortable = ref(portable)
 const restartModal = ref<InstanceType<typeof NewModal>>()
 const copyDatabaseModal = ref<InstanceType<typeof NewModal>>()
 const databaseOperationModal = ref<InstanceType<typeof NewModal>>()
@@ -54,24 +65,6 @@ const pendingChannel = ref<UpdateChannel | null>(null)
 const databaseOperation = ref<'release-to-beta' | 'beta-to-release' | ''>('')
 const databaseOperationBusy = ref(false)
 let restoringChannelSelection = false
-
-try {
-	currentDatabasePath.value = await getCurrentAppDatabasePath()
-} catch {
-	// Database path is informational and may be unavailable during early startup.
-}
-
-try {
-	hasBetaDatabase.value = await betaDatabaseExists()
-} catch {
-	// Database isolation controls stay hidden until the Beta database can be confirmed.
-}
-
-try {
-	isPortable.value = await invoke('is_portable_mode')
-} catch {
-	// Best-effort check: fall back to non-portable when the command is unavailable.
-}
 
 const messages = defineMessages({
 	title: {
@@ -359,10 +352,7 @@ watch(selectedChannel, async (channel, previousChannel) => {
 
 async function applyChannel(channel: UpdateChannel, copyDatabase = false) {
 	try {
-		if (copyDatabase) {
-			await copyReleaseDatabaseToBeta()
-			hasBetaDatabase.value = true
-		}
+		if (copyDatabase) await copyReleaseDatabaseToBeta()
 		await setUpdateChannel(channel)
 		restartModal.value?.show()
 		return true
@@ -438,10 +428,9 @@ async function confirmDatabaseOperation() {
 			? (['release', 'beta'] as const)
 			: (['beta', 'release'] as const)
 	databaseOperationBusy.value = true
+	databaseOperationModal.value?.hide()
 	try {
 		await copyDatabaseBetweenChannels(sourceChannel, targetChannel)
-		hasBetaDatabase.value = await betaDatabaseExists()
-		databaseOperationModal.value?.hide()
 	} catch (error) {
 		handleError(
 			new Error(
@@ -452,7 +441,6 @@ async function confirmDatabaseOperation() {
 		)
 	} finally {
 		databaseOperationBusy.value = false
-		databaseOperation.value = ''
 	}
 }
 
@@ -526,7 +514,7 @@ function cancelDatabaseOperation() {
 					</button>
 				</div>
 			</div>
-			<div v-if="hasBetaDatabase" class="database-isolation">
+			<div class="database-isolation">
 				<div class="database-isolation-copy">
 					<h3 class="m-0 text-base font-semibold text-contrast">
 						{{ formatMessage(messages.databaseIsolationTitle) }}
