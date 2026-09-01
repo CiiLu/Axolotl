@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { EyeIcon, RefreshCwIcon, XIcon } from '@modrinth/assets'
+import { DatabaseIcon, EyeIcon, RefreshCwIcon, XIcon } from '@modrinth/assets'
 import {
 	ButtonStyled,
 	defineMessages,
@@ -18,6 +18,8 @@ import UpdateAnnouncementHistory from '@/components/ui/announcement/UpdateAnnoun
 import {
 	betaDatabaseExists,
 	copyReleaseDatabaseToBeta,
+	copyDatabaseBetweenChannels,
+	getCurrentAppDatabasePath,
 	getUpdateChannel,
 	getUpdatePreferences,
 	setUpdateChannel,
@@ -32,11 +34,14 @@ import SettingsSection from './SettingsSection.vue'
 
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
-const selectedChannel = ref<UpdateChannel>(await getUpdateChannel())
+const activeChannel = await getUpdateChannel()
+const selectedChannel = ref<UpdateChannel>(activeChannel)
 const updatePreferences = ref(await getUpdatePreferences())
 const checking = ref(false)
 const checkResult = ref<AppUpdateCheckResult | 'failed' | 'portable' | null>(null)
 const currentVersion = await getVersion()
+const currentDatabasePath = ref('')
+const hasBetaDatabase = ref(false)
 const latestChannelVersions = ref<Partial<Record<UpdateChannel, string>>>({})
 const latestChannelVersionsLoaded = ref(false)
 const isDevEnvironment = await isDev()
@@ -44,8 +49,23 @@ const previewUpdateAnnouncement = inject<(version: string) => void>('previewUpda
 const isPortable = ref(false)
 const restartModal = ref<InstanceType<typeof NewModal>>()
 const copyDatabaseModal = ref<InstanceType<typeof NewModal>>()
+const databaseOperationModal = ref<InstanceType<typeof NewModal>>()
 const pendingChannel = ref<UpdateChannel | null>(null)
+const databaseOperation = ref<'release-to-beta' | 'beta-to-release' | ''>('')
+const databaseOperationBusy = ref(false)
 let restoringChannelSelection = false
+
+try {
+	currentDatabasePath.value = await getCurrentAppDatabasePath()
+} catch {
+	// Database path is informational and may be unavailable during early startup.
+}
+
+try {
+	hasBetaDatabase.value = await betaDatabaseExists()
+} catch {
+	// Database isolation controls stay hidden until the Beta database can be confirmed.
+}
 
 try {
 	isPortable.value = await invoke('is_portable_mode')
@@ -212,6 +232,70 @@ const messages = defineMessages({
 		id: 'app.settings.updates.channel.start-empty',
 		defaultMessage: 'Start with empty database',
 	},
+	databaseIsolationTitle: {
+		id: 'app.settings.updates.database-isolation.title',
+		defaultMessage: 'Database isolation',
+	},
+	currentDatabase: {
+		id: 'app.settings.updates.database-isolation.current-database',
+		defaultMessage: 'Database currently in use',
+	},
+	databaseIsolationDescription: {
+		id: 'app.settings.updates.database-isolation.description',
+		defaultMessage:
+			'Release and Beta use separate databases, so testing Beta does not change your Release data.',
+	},
+	releaseDatabase: {
+		id: 'app.settings.updates.database-isolation.release',
+		defaultMessage: 'Release database',
+	},
+	betaDatabase: {
+		id: 'app.settings.updates.database-isolation.beta',
+		defaultMessage: 'Beta database',
+	},
+	activeDatabase: {
+		id: 'app.settings.updates.database-isolation.active',
+		defaultMessage: 'Active',
+	},
+	databaseOperation: {
+		id: 'app.settings.updates.database-operation.label',
+		defaultMessage: 'Database operation',
+	},
+	releaseToBeta: {
+		id: 'app.settings.updates.database-operation.release-to-beta',
+		defaultMessage: 'Copy Release to Beta',
+	},
+	betaToRelease: {
+		id: 'app.settings.updates.database-operation.beta-to-release',
+		defaultMessage: 'Copy Beta to Release',
+	},
+	databaseOperationTitle: {
+		id: 'app.settings.updates.database-operation.confirm-title',
+		defaultMessage: 'Overwrite database?',
+	},
+	databaseOperationDescription: {
+		id: 'app.settings.updates.database-operation.confirm-description',
+		defaultMessage:
+			'This will completely replace the inactive {target} database with the contents of the {source} database. This cannot be undone.',
+	},
+	databaseOperationConfirm: {
+		id: 'app.settings.updates.database-operation.confirm',
+		defaultMessage: 'Overwrite database',
+	},
+	databaseOperationActiveTarget: {
+		id: 'app.settings.updates.database-operation.active-target',
+		defaultMessage:
+			'Cannot overwrite the database currently in use. Restart Axolotl and switch channels first.',
+	},
+	databaseOperationFailed: {
+		id: 'app.settings.updates.database-operation.failed',
+		defaultMessage:
+			'The database could not be copied. Please make sure Axolotl is not using the target database.',
+	},
+	cancel: {
+		id: 'app.settings.updates.database-operation.cancel',
+		defaultMessage: 'Cancel',
+	},
 })
 
 async function loadLatestChannelVersions() {
@@ -275,7 +359,10 @@ watch(selectedChannel, async (channel, previousChannel) => {
 
 async function applyChannel(channel: UpdateChannel, copyDatabase = false) {
 	try {
-		if (copyDatabase) await copyReleaseDatabaseToBeta()
+		if (copyDatabase) {
+			await copyReleaseDatabaseToBeta()
+			hasBetaDatabase.value = true
+		}
 		await setUpdateChannel(channel)
 		restartModal.value?.show()
 		return true
@@ -332,6 +419,46 @@ async function checkForUpdates() {
 	} finally {
 		checking.value = false
 	}
+}
+
+function requestDatabaseOperation() {
+	if (!databaseOperation.value) return
+	databaseOperationModal.value?.show()
+}
+
+function selectDatabaseOperation(operation: 'release-to-beta' | 'beta-to-release') {
+	databaseOperation.value = operation
+	requestDatabaseOperation()
+}
+
+async function confirmDatabaseOperation() {
+	if (!databaseOperation.value || databaseOperationBusy.value) return
+	const [sourceChannel, targetChannel] =
+		databaseOperation.value === 'release-to-beta'
+			? (['release', 'beta'] as const)
+			: (['beta', 'release'] as const)
+	databaseOperationBusy.value = true
+	try {
+		await copyDatabaseBetweenChannels(sourceChannel, targetChannel)
+		hasBetaDatabase.value = await betaDatabaseExists()
+		databaseOperationModal.value?.hide()
+	} catch (error) {
+		handleError(
+			new Error(
+				targetChannel === activeChannel
+					? formatMessage(messages.databaseOperationActiveTarget)
+					: formatMessage(messages.databaseOperationFailed),
+			),
+		)
+	} finally {
+		databaseOperationBusy.value = false
+		databaseOperation.value = ''
+	}
+}
+
+function cancelDatabaseOperation() {
+	databaseOperationModal.value?.hide()
+	databaseOperation.value = ''
 }
 </script>
 
@@ -397,6 +524,57 @@ async function checkForUpdates() {
 							}}
 						</span>
 					</button>
+				</div>
+			</div>
+			<div v-if="hasBetaDatabase" class="database-isolation">
+				<div class="database-isolation-copy">
+					<h3 class="m-0 text-base font-semibold text-contrast">
+						{{ formatMessage(messages.databaseIsolationTitle) }}
+					</h3>
+					<p class="m-0 text-sm text-secondary">
+						{{ formatMessage(messages.databaseIsolationDescription) }}
+					</p>
+					<div class="database-path">
+						<span>{{ formatMessage(messages.currentDatabase) }}</span>
+						<code>{{ currentDatabasePath || '—' }}</code>
+					</div>
+					<div class="database-operation">
+						<span>{{ formatMessage(messages.databaseOperation) }}</span>
+						<div class="database-operation-buttons">
+							<ButtonStyled type="outlined" :disabled="activeChannel === 'beta'">
+								<button type="button" @click="selectDatabaseOperation('release-to-beta')">
+									<DatabaseIcon />
+									{{ formatMessage(messages.releaseToBeta) }}
+								</button>
+							</ButtonStyled>
+							<ButtonStyled type="outlined" :disabled="activeChannel === 'release'">
+								<button type="button" @click="selectDatabaseOperation('beta-to-release')">
+									<DatabaseIcon />
+									{{ formatMessage(messages.betaToRelease) }}
+								</button>
+							</ButtonStyled>
+						</div>
+					</div>
+				</div>
+				<div
+					class="database-diagram"
+					:aria-label="formatMessage(messages.databaseIsolationDescription)"
+				>
+					<div class="database-channel database-channel-release">
+						<span>R</span>
+						<strong>{{ formatMessage(messages.releaseDatabase) }}</strong>
+						<small>{{
+							activeChannel === 'release' ? formatMessage(messages.activeDatabase) : '\u00a0'
+						}}</small>
+					</div>
+					<div class="database-branch" aria-hidden="true"></div>
+					<div class="database-channel database-channel-beta">
+						<span>B</span>
+						<strong>{{ formatMessage(messages.betaDatabase) }}</strong>
+						<small>{{
+							activeChannel === 'beta' ? formatMessage(messages.activeDatabase) : '\u00a0'
+						}}</small>
+					</div>
 				</div>
 			</div>
 		</SettingsSection>
@@ -519,6 +697,43 @@ async function checkForUpdates() {
 			</div>
 		</template>
 	</NewModal>
+
+	<NewModal
+		ref="databaseOperationModal"
+		:header="formatMessage(messages.databaseOperationTitle)"
+		:closable="false"
+	>
+		<p class="m-0">
+			{{
+				formatMessage(messages.databaseOperationDescription, {
+					source:
+						databaseOperation === 'release-to-beta'
+							? formatMessage(messages.releaseDatabase)
+							: formatMessage(messages.betaDatabase),
+					target:
+						databaseOperation === 'release-to-beta'
+							? formatMessage(messages.betaDatabase)
+							: formatMessage(messages.releaseDatabase),
+				})
+			}}
+		</p>
+		<template #actions>
+			<div class="flex justify-end gap-2">
+				<ButtonStyled type="outlined">
+					<button type="button" :disabled="databaseOperationBusy" @click="cancelDatabaseOperation">
+						<XIcon />
+						{{ formatMessage(messages.cancel) }}
+					</button>
+				</ButtonStyled>
+				<ButtonStyled color="brand">
+					<button type="button" :disabled="databaseOperationBusy" @click="confirmDatabaseOperation">
+						<RefreshCwIcon :class="{ 'animate-spin': databaseOperationBusy }" />
+						{{ formatMessage(messages.databaseOperationConfirm) }}
+					</button>
+				</ButtonStyled>
+			</div>
+		</template>
+	</NewModal>
 </template>
 
 <style scoped>
@@ -528,6 +743,102 @@ async function checkForUpdates() {
 	align-items: flex-start;
 	gap: var(--gap-md);
 	padding: var(--gap-lg);
+}
+
+.database-isolation {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.8fr);
+	gap: var(--gap-lg);
+	margin: 0 var(--gap-lg) var(--gap-lg);
+	padding: var(--gap-md);
+	border: 1px solid var(--surface-4);
+	border-radius: var(--radius-md);
+	background: var(--surface-1);
+}
+
+.database-isolation-copy {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: var(--gap-sm);
+}
+
+.database-path {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: var(--gap-xs);
+	color: var(--color-secondary);
+	font-size: 0.9375rem;
+}
+
+.database-path code {
+	overflow-wrap: anywhere;
+	color: var(--color-contrast);
+	font-family: var(--font-mono);
+}
+
+.database-operation {
+	display: flex;
+	flex-direction: column;
+	gap: var(--gap-xs);
+	color: var(--color-secondary);
+	font-size: 0.9375rem;
+}
+
+.database-operation-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--gap-sm);
+}
+
+.database-diagram {
+	display: grid;
+	grid-template-columns: 1fr auto 1fr;
+	align-items: center;
+	gap: var(--gap-sm);
+	min-width: 0;
+}
+
+.database-channel {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.2rem;
+	padding: var(--gap-sm);
+	border: 1px solid var(--surface-4);
+	border-radius: var(--radius-sm);
+	background: var(--surface-2);
+	color: var(--color-contrast);
+	text-align: center;
+}
+
+.database-channel > span {
+	display: grid;
+	width: 2rem;
+	height: 2rem;
+	place-items: center;
+	border-radius: 50%;
+	background: var(--color-brand);
+	color: var(--color-button-text);
+	font-weight: 700;
+}
+
+.database-channel small {
+	color: var(--color-brand);
+	font-size: 0.7rem;
+	font-weight: 600;
+}
+
+.database-channel-beta > span {
+	background: var(--color-purple, var(--color-brand));
+}
+
+.database-branch {
+	width: 2.5rem;
+	height: 1px;
+	background: var(--surface-5);
 }
 
 .update-channel-panel {
@@ -635,5 +946,11 @@ async function checkForUpdates() {
 .update-check-result-disabled {
 	border-color: color-mix(in srgb, var(--color-yellow) 45%, var(--surface-4));
 	color: var(--color-yellow);
+}
+
+@media (max-width: 640px) {
+	.database-isolation {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }
 </style>

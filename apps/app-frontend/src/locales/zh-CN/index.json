@@ -33,7 +33,7 @@
     "message": "项目元数据缓存异常"
   },
   "app.action-bar.install.cancel": {
-	"message": "取消"
+    "message": "取消"
   },
   "app.action-bar.install.copied-details": {
     "message": "已复制"
@@ -7340,6 +7340,51 @@
   "app.settings.updates.channel.title": {
     "message": "更新通道"
   },
+  "app.settings.updates.database-isolation.active": {
+    "message": "正在使用"
+  },
+  "app.settings.updates.database-isolation.beta": {
+    "message": "Beta 数据库"
+  },
+  "app.settings.updates.database-isolation.current-database": {
+    "message": "当前正在使用的数据库"
+  },
+  "app.settings.updates.database-isolation.description": {
+    "message": "Release 和 Beta 使用相互独立的数据库，因此测试 Beta 不会改变 Release 数据。"
+  },
+  "app.settings.updates.database-isolation.release": {
+    "message": "Release 数据库"
+  },
+  "app.settings.updates.database-isolation.title": {
+    "message": "数据库隔离"
+  },
+  "app.settings.updates.database-operation.active-target": {
+    "message": "无法覆盖当前正在使用的数据库。请先重启 Axolotl 并切换更新通道。"
+  },
+  "app.settings.updates.database-operation.beta-to-release": {
+    "message": "从 Beta 复制到 Release"
+  },
+  "app.settings.updates.database-operation.cancel": {
+    "message": "取消"
+  },
+  "app.settings.updates.database-operation.confirm": {
+    "message": "覆盖数据库"
+  },
+  "app.settings.updates.database-operation.confirm-description": {
+    "message": "这会用 {source} 数据库的内容完全替换未使用的 {target} 数据库。此操作无法撤销。"
+  },
+  "app.settings.updates.database-operation.confirm-title": {
+    "message": "覆盖数据库？"
+  },
+  "app.settings.updates.database-operation.failed": {
+    "message": "无法复制数据库。请确认 Axolotl 未在使用目标数据库。"
+  },
+  "app.settings.updates.database-operation.label": {
+    "message": "数据库操作"
+  },
+  "app.settings.updates.database-operation.release-to-beta": {
+    "message": "从 Release 复制到 Beta"
+  },
   "app.settings.updates.check": {
     "message": "检查更新"
   },
@@ -10068,13 +10113,13 @@
     "message": "未知文件警告"
   },
   "app.settings.about.easteregg.click-hint": {
-	"message": "点击以打开彩蛋小游戏"
+    "message": "点击以打开彩蛋小游戏"
   },
   "app.settings.about.easteregg.contributors-title": {
-	"message": "贡献者彩蛋"
+    "message": "贡献者彩蛋"
   },
   "app.settings.about.easteregg.game-title": {
-	"message": "彩蛋小游戏"
+    "message": "彩蛋小游戏"
   },
   "app.settings.about.game.best": {
     "message": "最高分：{score}"

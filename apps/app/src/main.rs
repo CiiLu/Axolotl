@@ -248,6 +248,16 @@ fn get_update_channel(app: tauri::AppHandle) -> api::Result<String> {
 }
 
 #[tauri::command]
+async fn get_current_app_database_path(
+    app: tauri::AppHandle,
+) -> api::Result<String> {
+    Ok(theseus::current_app_database_path(&app.config().identifier)
+        .await?
+        .to_string_lossy()
+        .into_owned())
+}
+
+#[tauri::command]
 fn set_update_channel(
     app: tauri::AppHandle,
     channel: String,
@@ -343,6 +353,21 @@ async fn copy_release_database_to_beta(
     app: tauri::AppHandle,
 ) -> api::Result<()> {
     theseus::copy_release_database_to_beta(&app.config().identifier).await?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn copy_database_between_channels(
+    app: tauri::AppHandle,
+    source_channel: String,
+    target_channel: String,
+) -> api::Result<()> {
+    theseus::copy_database_between_channels(
+        &app.config().identifier,
+        &source_channel,
+        &target_channel,
+    )
+    .await?;
     Ok(())
 }
 
@@ -819,10 +844,12 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             initialize_state,
             get_update_channel,
+            get_current_app_database_path,
             set_update_channel,
             get_update_preferences,
             set_update_preferences,
             copy_release_database_to_beta,
+            copy_database_between_channels,
             beta_database_exists,
             backup_app_db_for_update,
             set_discord_activity,

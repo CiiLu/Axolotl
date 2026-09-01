@@ -157,6 +157,72 @@ pub async fn beta_database_exists(app_identifier: &str) -> crate::Result<bool> {
         .try_exists()?)
 }
 
+pub async fn current_app_database_path(
+    app_identifier: &str,
+) -> crate::Result<PathBuf> {
+    let settings_dir = DirectoryInfo::initial_settings_dir_path(app_identifier)
+        .ok_or(crate::ErrorKind::FSError(
+            "Could not find valid config dir".to_string(),
+        ))?;
+    app_db_path(&settings_dir).await
+}
+
+pub async fn copy_database_between_channels(
+    app_identifier: &str,
+    source_channel: &str,
+    target_channel: &str,
+) -> crate::Result<()> {
+    if !matches!(source_channel, "release" | "beta")
+        || !matches!(target_channel, "release" | "beta")
+        || source_channel == target_channel
+    {
+        return Err(crate::ErrorKind::InputError(
+            "Database channels must be different Release or Beta channels".to_string(),
+        )
+        .into());
+    }
+
+    let settings_dir = DirectoryInfo::initial_settings_dir_path(app_identifier)
+        .ok_or(crate::ErrorKind::FSError(
+            "Could not find valid config dir".to_string(),
+        ))?;
+    let active_channel = read_update_channel(&settings_dir).await?;
+    if target_channel == active_channel {
+        return Err(crate::ErrorKind::InputError(
+            "The active database cannot be overwritten while Axolotl is running".to_string(),
+        )
+        .into());
+    }
+
+    let source_path = settings_dir.join(source_channel).join(LEGACY_APP_DB_FILE);
+    let target_dir = settings_dir.join(target_channel);
+    let target_path = target_dir.join(LEGACY_APP_DB_FILE);
+    if !source_path.try_exists()? {
+        return Err(crate::ErrorKind::FSError(format!(
+            "The {source_channel} database does not exist"
+        ))
+        .into());
+    }
+
+    crate::util::io::create_dir_all(&target_dir).await?;
+    let temporary_path = target_dir.join(format!("{LEGACY_APP_DB_FILE}.tmp"));
+    let source_pool = open_app_db_pool(&source_path).await?;
+    let escaped_path = temporary_path.to_string_lossy().replace('\'', "''");
+    let result = sqlx::query(&format!("VACUUM INTO '{escaped_path}'"))
+        .execute(&source_pool)
+        .await;
+    source_pool.close().await;
+    result?;
+
+    tokio::fs::rename(&temporary_path, &target_path).await?;
+    tracing::info!(
+        source = %source_path.display(),
+        destination = %target_path.display(),
+        "Overwrote the inactive update channel database"
+    );
+    Ok(())
+}
+
 pub async fn backup_current_app_db_for_update(
     app_identifier: &str,
     target_version: &str,
