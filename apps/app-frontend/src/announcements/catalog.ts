@@ -33,6 +33,62 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.9.5-beta.3',
+		version: '1.9.5-beta.3',
+		publishedAt: '2026-09-01',
+		title: {
+			'en-US': 'Axolotl Launcher 1.9.5-beta.3',
+			'zh-CN': 'Axolotl Launcher 1.9.5-beta.3',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Add relevant instructions and tips about database isolation.',
+					'zh-CN': '添加数据库隔离的相关说明与提示。',
+				},
+				{
+					'en-US': 'Add a Beta badge to the beta software.',
+					'zh-CN': '为测试版软件添加 Beta 角标。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fix the issue where update packages on the Windows platform might not send UAC requests when requiring privilege elevation.',
+					'zh-CN': '修复 Windows 平台上更新包可能不会在需要权限提升时发出 UAC 请求的问题。',
+				},
+				{
+					'en-US':
+						'Fix a potential issue where forward slashes (/) may be incorrectly used on the Windows platform.',
+					'zh-CN': '修复 Windows 平台上可能错误地使用正斜杠（/）的问题。',
+				},
+				{
+					'en-US': 'Fixed the issue where not reusing the HTTP client caused slow download speeds.',
+					'zh-CN': '修复不会复用 HTTP 客户端导致下载速度过慢的问题。',
+				},
+				{
+					'en-US':
+						'Fix the issue where the global Mutex in RangeOutput causes slow download speeds.',
+					'zh-CN': '修复 RangeOutput 全局 Mutex 导致下载速度过慢的问题。',
+				},
+				{
+					'en-US':
+						'Fixed an issue where incorrectly using the official source could lead to slow download speeds.',
+					'zh-CN': '修复可能错误使用官方源导致下载速度过慢的问题。',
+				},
+				{
+					'en-US': 'Fix the issue where the settings page loads too slowly.',
+					'zh-CN': '修复设置页面载入速度过慢的问题。',
+				},
+				{
+					'en-US':
+						'Fixed the issue where the 1.16.5 Forge version failed to start due to a missing LWJGL library.',
+					'zh-CN': '修复 1.16.5 Forge 版本因缺少 LWJGL 库导致启动失败的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.9.5-beta.2',
 		version: '1.9.5-beta.2',
 		publishedAt: '2026-08-31',
@@ -41,18 +97,19 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.9.5-beta.2',
 		},
 		changes: {
-			"changed": [
+			changed: [
 				{
-					"en-US": "Improved the software update mechanism and logic.",
-					"zh-CN": "优化软件更新机制与逻辑。"
-				}
+					'en-US': 'Improved the software update mechanism and logic.',
+					'zh-CN': '优化软件更新机制与逻辑。',
+				},
 			],
-			"fixed": [
+			fixed: [
 				{
-					"en-US": "Fixed the issue where updating within the software would not update the version number, causing a loop of automatic updates.",
-					"zh-CN": "修复了在软件内更新不会更新版本号导致循环自动更新的问题。"
-				}
-			]
+					'en-US':
+						'Fixed the issue where updating within the software would not update the version number, causing a loop of automatic updates.',
+					'zh-CN': '修复了在软件内更新不会更新版本号导致循环自动更新的问题。',
+				},
+			],
 		},
 	},
 	{

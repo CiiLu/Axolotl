@@ -725,6 +725,9 @@
   "app.browse.source.planet-minecraft": {
     "message": "Planet Minecraft 来源"
   },
+  "app.build.beta": {
+    "message": "Beta"
+  },
   "app.community-announcement.feedback-middle": {
     "message": "，或在 "
   },
