@@ -7160,6 +7160,9 @@
   "app.settings.updates.database-operation.release-to-beta": {
     "message": "從 Release 複製到 Beta"
   },
+  "app.settings.updates.database-operation.success": {
+    "message": "已成功將 {source} 複製到 {target}。"
+  },
   "app.settings.updates.check": {
     "message": "檢查更新"
   },

@@ -33,7 +33,7 @@ import SettingsRow from './SettingsRow.vue'
 import SettingsSection from './SettingsSection.vue'
 
 const { formatMessage } = useVIntl()
-const { handleError } = injectNotificationManager()
+const { addNotification, handleError } = injectNotificationManager()
 const [
 	activeChannel,
 	initialUpdatePreferences,
@@ -285,6 +285,10 @@ const messages = defineMessages({
 		defaultMessage:
 			'The database could not be copied. Please make sure Axolotl is not using the target database.',
 	},
+	databaseOperationSuccess: {
+		id: 'app.settings.updates.database-operation.success',
+		defaultMessage: '{source} database was copied to {target} successfully.',
+	},
 	cancel: {
 		id: 'app.settings.updates.database-operation.cancel',
 		defaultMessage: 'Cancel',
@@ -431,6 +435,19 @@ async function confirmDatabaseOperation() {
 	databaseOperationModal.value?.hide()
 	try {
 		await copyDatabaseBetweenChannels(sourceChannel, targetChannel)
+		addNotification({
+			type: 'success',
+			title: formatMessage(messages.databaseOperationSuccess, {
+				source:
+					sourceChannel === 'release'
+						? formatMessage(messages.releaseDatabase)
+						: formatMessage(messages.betaDatabase),
+				target:
+					targetChannel === 'release'
+						? formatMessage(messages.releaseDatabase)
+						: formatMessage(messages.betaDatabase),
+			}),
+		})
 	} catch (error) {
 		handleError(
 			new Error(
@@ -530,13 +547,21 @@ function cancelDatabaseOperation() {
 						<span>{{ formatMessage(messages.databaseOperation) }}</span>
 						<div class="database-operation-buttons">
 							<ButtonStyled type="outlined" :disabled="activeChannel === 'beta'">
-								<button type="button" @click="selectDatabaseOperation('release-to-beta')">
+								<button
+									type="button"
+									:disabled="activeChannel === 'beta'"
+									@click="selectDatabaseOperation('release-to-beta')"
+								>
 									<DatabaseIcon />
 									{{ formatMessage(messages.releaseToBeta) }}
 								</button>
 							</ButtonStyled>
 							<ButtonStyled type="outlined" :disabled="activeChannel === 'release'">
-								<button type="button" @click="selectDatabaseOperation('beta-to-release')">
+								<button
+									type="button"
+									:disabled="activeChannel === 'release'"
+									@click="selectDatabaseOperation('beta-to-release')"
+								>
 									<DatabaseIcon />
 									{{ formatMessage(messages.betaToRelease) }}
 								</button>
