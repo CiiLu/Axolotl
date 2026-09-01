@@ -3015,6 +3015,7 @@ function clampWorldCoordinate(value: number) {
 						:dimension="workspace.dimension"
 						:enabled="workspace.highlightBiomeEnabled"
 						:highlighted-biomes="workspace.highlightedBiomes"
+						:container="isFullscreen ? fullscreenContainer : undefined"
 						@update:dimension="workspace.dimension = $event"
 						@update:enabled="workspace.highlightBiomeEnabled = $event"
 						@update:highlighted-biomes="workspace.highlightedBiomes = $event"
