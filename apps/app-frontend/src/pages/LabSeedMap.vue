@@ -3354,8 +3354,20 @@ function clampWorldCoordinate(value: number) {
 }
 
 .seed-map-experience:fullscreen {
-	height: 100vh;
+	/* Keep the fullscreen surface inside the viewport, including its padding. */
+	box-sizing: border-box;
+	width: 100vw;
+	height: 100dvh;
+	max-height: 100dvh;
+	min-height: 0;
+	overflow: hidden;
 	padding: 0.75rem;
+}
+
+.seed-map-experience:fullscreen .seed-map-canvas-shell {
+	/* The normal map has a 32rem minimum for usability; fullscreen must be able
+	 * to shrink so the toolbar and canvas do not push the surface past the viewport. */
+	min-height: 0;
 }
 
 .layer-strip {
@@ -3943,6 +3955,21 @@ function clampWorldCoordinate(value: number) {
 	}
 	.ore-range-controls {
 		grid-template-columns: minmax(0, 1fr);
+	}
+}
+</style>
+
+<style>
+/* The seed map is a fixed work surface on desktop. Give the route layers a
+ * definite height so the page's flex-1 map area cannot grow after a fullscreen
+ * enter/exit reflow and create a second page scrollbar. */
+@media (min-width: 901px) {
+	.app-viewport:has(.seed-map-page),
+	.app-viewport:has(.seed-map-page) .page-transition-grid,
+	.app-viewport:has(.seed-map-page) .page-transition-layer {
+		height: 100%;
+		min-height: 0;
+		overflow: hidden;
 	}
 }
 </style>
