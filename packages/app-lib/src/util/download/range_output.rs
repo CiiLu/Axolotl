@@ -1,15 +1,24 @@
-//! Direct positional output for native HTTP/1.1 range downloads.
+//! Positional output for native HTTP/1.1 and HTTP/2 range downloads.
 
 use crate::util::io::{self, IOError};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncSeekExt, AsyncWriteExt, SeekFrom};
-use tokio::sync::Mutex;
 
-/// A preallocated `.part` file shared by non-overlapping range tasks.
+/// A preallocated `.part` file. Writers open their own handle so a slow range
+/// never serializes unrelated ranges behind a file mutex.
 pub(crate) struct RangeOutput {
-    file: Mutex<File>,
+    path: PathBuf,
+    size: u64,
+}
+
+/// An independent sequential writer for one half-open byte range.
+pub(crate) struct RangeWriter {
+    file: File,
+    offset: u64,
+    end_exclusive: u64,
+    path: PathBuf,
 }
 
 impl RangeOutput {
@@ -17,7 +26,7 @@ impl RangeOutput {
         path: &Path,
         size: u64,
     ) -> Result<Arc<Self>, IOError> {
-        let file = io::retry_windows_sharing_violation(
+        io::retry_windows_sharing_violation(
             path,
             "creating ranged download output",
             || async {
@@ -29,39 +38,124 @@ impl RangeOutput {
                     .open(path)
                     .await?;
                 file.set_len(size).await?;
-                Ok(file)
+                Ok(())
             },
         )
         .await
         .map_err(|error| io::io_error_with_lock_info(error, path))?;
         Ok(Arc::new(Self {
-            file: Mutex::new(file),
+            path: path.to_path_buf(),
+            size,
         }))
     }
 
-    /// Writes a validated range chunk at its absolute file offset.
+    pub(crate) async fn open_range(
+        &self,
+        start: u64,
+        end_exclusive: u64,
+    ) -> Result<RangeWriter, IOError> {
+        if start >= end_exclusive || end_exclusive > self.size {
+            return Err(IOError::with_path(
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "invalid range bounds",
+                ),
+                &self.path,
+            ));
+        }
+        let path = self.path.clone();
+        let mut file = io::retry_windows_sharing_violation(
+            &path,
+            "opening ranged download output",
+            || async {
+                OpenOptions::new().read(true).write(true).open(&path).await
+            },
+        )
+        .await
+        .map_err(|error| io::io_error_with_lock_info(error, &path))?;
+        file.seek(SeekFrom::Start(start))
+            .await
+            .map_err(|error| io::io_error_with_lock_info(error, &path))?;
+        Ok(RangeWriter {
+            file,
+            offset: start,
+            end_exclusive,
+            path,
+        })
+    }
+
+    /// Legacy adapter; not used by the concurrent range hot path.
     pub(crate) async fn write_at(
         &self,
         offset: u64,
         bytes: &[u8],
         path: &Path,
     ) -> Result<(), IOError> {
-        let mut file = self.file.lock().await;
-        file.seek(SeekFrom::Start(offset))
-            .await
-            .map_err(|error| io::io_error_with_lock_info(error, path))?;
-        file.write_all(bytes)
+        let end = offset.checked_add(bytes.len() as u64).ok_or_else(|| {
+            IOError::with_path(
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "offset overflow",
+                ),
+                path,
+            )
+        })?;
+        let mut writer = self.open_range(offset, end).await?;
+        writer.write_next(bytes).await
+    }
+
+    /// Legacy adapter for callers that previously flushed the shared handle.
+    pub(crate) async fn flush(&self, path: &Path) -> Result<(), IOError> {
+        let mut file = io::retry_windows_sharing_violation(
+            path,
+            "flushing ranged download output",
+            || async {
+                OpenOptions::new().read(true).write(true).open(path).await
+            },
+        )
+        .await
+        .map_err(|error| io::io_error_with_lock_info(error, path))?;
+        file.flush()
             .await
             .map_err(|error| io::io_error_with_lock_info(error, path))
     }
+}
 
-    pub(crate) async fn flush(&self, path: &Path) -> Result<(), IOError> {
+impl RangeWriter {
+    pub(crate) fn offset(&self) -> u64 {
+        self.offset
+    }
+
+    pub(crate) fn remaining(&self) -> u64 {
+        self.end_exclusive.saturating_sub(self.offset)
+    }
+
+    pub(crate) async fn write_next(
+        &mut self,
+        bytes: &[u8],
+    ) -> Result<(), IOError> {
+        if bytes.len() as u64 > self.remaining() {
+            return Err(IOError::with_path(
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "write exceeds range",
+                ),
+                &self.path,
+            ));
+        }
         self.file
-            .lock()
+            .write_all(bytes)
             .await
+            .map_err(|error| io::io_error_with_lock_info(error, &self.path))?;
+        self.offset += bytes.len() as u64;
+        Ok(())
+    }
+
+    pub(crate) async fn flush(&mut self) -> Result<(), IOError> {
+        self.file
             .flush()
             .await
-            .map_err(|error| io::io_error_with_lock_info(error, path))
+            .map_err(|error| io::io_error_with_lock_info(error, &self.path))
     }
 }
 
@@ -70,16 +164,38 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn writes_non_overlapping_ranges_into_a_preallocated_file() {
+    async fn writes_non_overlapping_ranges_with_independent_writers() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("ranged.part");
         let output = RangeOutput::create(&path, 12).await.unwrap();
-
-        output.write_at(8, b"ijkl", &path).await.unwrap();
-        output.write_at(0, b"abcd", &path).await.unwrap();
-        output.write_at(4, b"efgh", &path).await.unwrap();
-        output.flush(&path).await.unwrap();
-
+        let mut a = output.open_range(0, 4).await.unwrap();
+        let mut b = output.open_range(4, 8).await.unwrap();
+        let mut c = output.open_range(8, 12).await.unwrap();
+        a.write_next(b"abcd").await.unwrap();
+        b.write_next(b"efgh").await.unwrap();
+        c.write_next(b"ijkl").await.unwrap();
+        a.flush().await.unwrap();
+        b.flush().await.unwrap();
+        c.flush().await.unwrap();
         assert_eq!(tokio::fs::read(path).await.unwrap(), b"abcdefghijkl");
+    }
+
+    #[tokio::test]
+    async fn rejects_writes_beyond_range() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("ranged.part");
+        let output = RangeOutput::create(&path, 8).await.unwrap();
+        let mut writer = output.open_range(0, 4).await.unwrap();
+        assert!(writer.write_next(b"12345").await.is_err());
+        assert_eq!(writer.offset(), 0);
+    }
+
+    #[tokio::test]
+    async fn rejects_empty_and_out_of_file_ranges() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("ranged.part");
+        let output = RangeOutput::create(&path, 8).await.unwrap();
+        assert!(output.open_range(2, 2).await.is_err());
+        assert!(output.open_range(7, 9).await.is_err());
     }
 }
