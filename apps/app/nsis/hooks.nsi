@@ -33,6 +33,22 @@
 Var /GLOBAL OldInstallDir
 
 !macro NSIS_HOOK_PREINSTALL
+    ; The updater is normally launched silently by the Tauri updater plugin.
+    ; A current-user install can still target a protected directory, so elevate
+    ; only the in-place update process instead of requiring UAC for first-time
+    ; current-user installs.
+    ${If} $UpdateMode == 1
+      ${GetOptions} $CMDLINE "/ELEVATED" $0
+      ${If} ${Errors}
+        UserInfo::GetAccountType
+        Pop $0
+        ${If} $0 != "Admin"
+          ExecShell "runas" "$EXEPATH" '$CMDLINE /ELEVATED'
+          Abort
+        ${EndIf}
+      ${EndIf}
+    ${EndIf}
+
     ; The updater already stops the running process and passes /UPDATE. Do not
     ; run the legacy uninstall/migration path during an in-place update, since
     ; it can resolve a different installation from the registry and relaunch
