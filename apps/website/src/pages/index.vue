@@ -76,7 +76,10 @@ const macLinks = reactive({
 // 使用 Update Server 的下载目录作为默认发布数据源；GitHub 保留为手动备用源。
 const { data: launcherRelease, status: launcherReleaseStatus } =
 	await useFetch<UpdateServerDownloadMetadata>(releaseApi, {
-		// Fetch at generate time so the static site does not depend on browser CORS.
+		// Download metadata is intentionally fetched in the browser. This keeps
+		// static generation independent from the update service's availability and
+		// lets every deployed page resolve the current release after loading.
+		server: false,
 		transform(data: UpdateServerDownloadMetadata) {
 			return {
 				tag_name: `v${data.version}`,
