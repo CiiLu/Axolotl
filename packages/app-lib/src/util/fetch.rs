@@ -231,7 +231,7 @@ impl Integrity {
         self
     }
 
-    fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.size.is_none()
             && self.sha1.is_none()
             && self.sha512.is_none()
@@ -5521,17 +5521,22 @@ pub async fn download_to_path(
 ) -> crate::Result<DownloadResult> {
     let tracking = request.install_tracking.clone();
     let request_url = request.url.clone();
-    let result = download_to_path_inner(
-        request,
-        destination.as_ref(),
-        semaphore,
-        progress,
-    )
-    .await;
+    let destination_path = destination.as_ref();
+    let integrity = request.integrity.clone();
+    let result =
+        crate::util::single_flight::run(destination_path, &integrity, || {
+            download_to_path_inner(
+                request,
+                destination_path,
+                semaphore,
+                progress,
+            )
+        })
+        .await;
     if let Err(error) = &result {
         tracing::debug!(
             url = %request_url,
-            destination = %destination.as_ref().display(),
+            destination = %destination_path.display(),
             error = %error,
             error_chain = %error_chain(error),
             "Download failed"
