@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ChevronDownIcon, SearchIcon, XIcon } from '@modrinth/assets'
-import { defineMessages, type MessageDescriptor, ProgressBar, useVIntl } from '@modrinth/ui'
+import {
+	defineMessages,
+	type MessageDescriptor,
+	ProgressBar,
+	useLoadingBarToken,
+	useVIntl,
+} from '@modrinth/ui'
 import { getVersion } from '@tauri-apps/api/app'
 import { platform as getOsPlatform, version as getOsVersion } from '@tauri-apps/plugin-os'
 import { computed, nextTick, ref, watch } from 'vue'
@@ -42,6 +48,7 @@ const settings = ref(loadedSettings)
 const devModeCounter = ref(0)
 const searchQuery = ref('')
 const selectedCategoryId = ref('interface')
+const settingsContentPending = ref(false)
 const contentContainer = ref<HTMLElement | null>(null)
 const searchHighlightTarget = ref<HTMLElement | null>(null)
 const expandedGroups = ref<Record<string, boolean>>({
@@ -53,6 +60,11 @@ const expandedGroups = ref<Record<string, boolean>>({
 })
 const hasSearchQuery = computed(() => !!normalizeSettingsSearchText(searchQuery.value))
 let searchHighlightTimer: ReturnType<typeof window.setTimeout> | undefined
+
+// The settings registry keeps each category lazy. Track only the currently
+// selected async component so the shared top loading bar reflects navigation
+// without eagerly loading every settings page.
+useLoadingBarToken(settingsContentPending)
 
 const messages = defineMessages({
 	search: {
@@ -376,8 +388,15 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 						:class="activeCategory.flushContent ? 'h-full' : 'mx-auto max-w-5xl px-6 pb-6'"
 						tabindex="-1"
 					>
-						<Suspense>
+						<Suspense
+							:key="activeCategory.id"
+							@pending="settingsContentPending = true"
+							@resolve="settingsContentPending = false"
+						>
 							<component :is="activeCategory.content" />
+							<template #fallback>
+								<div class="settings-content-fallback" aria-hidden="true" />
+							</template>
 						</Suspense>
 					</div>
 				</div>
@@ -508,6 +527,10 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 	flex-direction: column;
 	min-height: 0;
 	overflow: hidden;
+}
+
+.settings-content-fallback {
+	min-height: 100%;
 }
 
 .settings-footer-identity {
