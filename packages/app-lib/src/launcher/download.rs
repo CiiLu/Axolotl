@@ -1656,21 +1656,37 @@ pub async fn download_assets(
             || force;
 
         if should_fetch_object {
-            if local_source.is_some() {
-                fallback_assets.push(build_fallback_asset(st, name, asset));
+            let local_availability = if force {
+                ArtifactAvailability::NetworkRequired
             } else {
-                let url = format!(
-                    "https://resources.download.minecraft.net/{sub_hash}/{hash}",
-                    sub_hash = &hash[..2]
-                );
-                batch_items.push(H2BatchAsset {
-                    url,
-                    destination: resource_path,
-                    legacy_destination: should_fetch_legacy
-                        .then_some(legacy_resource_path),
-                    sha1: hash.clone(),
-                    size: asset.size as u64,
-                });
+                classify_local_artifact(
+                    local_source,
+                    &resource_path,
+                    &local_asset_object_path(hash),
+                    Some(hash),
+                    Some(asset.size as u64),
+                )
+                .await?
+            };
+            match local_availability {
+                ArtifactAvailability::LocalReusable => {
+                    fallback_assets.push(build_fallback_asset(st, name, asset));
+                }
+                ArtifactAvailability::Cached
+                | ArtifactAvailability::NetworkRequired => {
+                    let url = format!(
+                        "https://resources.download.minecraft.net/{sub_hash}/{hash}",
+                        sub_hash = &hash[..2]
+                    );
+                    batch_items.push(H2BatchAsset {
+                        url,
+                        destination: resource_path,
+                        legacy_destination: should_fetch_legacy
+                            .then_some(legacy_resource_path),
+                        sha1: hash.clone(),
+                        size: asset.size as u64,
+                    });
+                }
             }
         } else if should_fetch_legacy {
             legacy_copies.push((name, asset));
@@ -2439,6 +2455,45 @@ mod tests {
             .await
             .unwrap(),
             ArtifactAvailability::NetworkRequired,
+        );
+    }
+
+    #[tokio::test]
+    async fn local_asset_availability_distinguishes_reusable_and_missing() {
+        let directory = tempfile::tempdir().unwrap();
+        let local_root = directory.path().join(".minecraft");
+        let relative = Path::new("assets/objects/ab/hash");
+        let candidate = local_root.join(relative);
+        io::create_dir_all(candidate.parent().unwrap())
+            .await
+            .unwrap();
+        io::write(&candidate, "asset").await.unwrap();
+        let source = LocalRuntimeSource { root: local_root };
+        let destination = directory.path().join("destination");
+
+        assert_eq!(
+            classify_local_artifact(
+                Some(&source),
+                &destination,
+                relative,
+                Some("0000000000000000000000000000000000000000"),
+                Some(5),
+            )
+            .await
+            .unwrap(),
+            ArtifactAvailability::NetworkRequired
+        );
+        assert_eq!(
+            classify_local_artifact(
+                Some(&source),
+                &destination,
+                relative,
+                Some("05fac94380a70241f23780e7aef62b190894238f"),
+                Some(5),
+            )
+            .await
+            .unwrap(),
+            ArtifactAvailability::LocalReusable
         );
     }
 
