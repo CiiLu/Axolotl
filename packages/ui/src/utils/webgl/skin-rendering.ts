@@ -130,6 +130,7 @@ export function applyThreeDSkinLayers(model: THREE.Object3D, texture?: THREE.Tex
 					material.transparent = false
 					material.alphaTest = 0.1
 					material.depthWrite = true
+					material.alphaToCoverage = true
 					material.polygonOffset = false
 					material.polygonOffsetFactor = 0
 					material.polygonOffsetUnits = 0
@@ -313,6 +314,10 @@ export function applyTexture(model: THREE.Object3D, texture: THREE.Texture): voi
 							toneMapped: false,
 							transparent: isSkinLayer,
 						})
+						if (mat.alphaToCoverage !== isSkinLayer) {
+							mat.alphaToCoverage = isSkinLayer
+							mat.needsUpdate = true
+						}
 
 						setCommonMaterialProperties(mat)
 

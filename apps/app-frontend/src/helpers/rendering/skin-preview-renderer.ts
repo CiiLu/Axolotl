@@ -50,6 +50,7 @@ class BatchSkinRenderer {
 		})
 
 		this.renderer.outputColorSpace = THREE.SRGBColorSpace
+		this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
 		this.renderer.shadowMap.enabled = false
 		this.renderer.toneMapping = THREE.NoToneMapping
 		this.renderer.toneMappingExposure = 10.0
