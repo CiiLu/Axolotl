@@ -1172,12 +1172,21 @@ const installContext = computed(() => {
 const installingProjectIds = ref<Set<string>>(new Set())
 const CART_CONTENT_TYPES = new Set(['mod', 'resourcepack', 'datapack', 'shader', 'world'])
 
-function setProjectInstalling(projectId: string, installing: boolean) {
+function projectInstallingKey(projectId: string, instanceId?: string | null) {
+	return `${instanceId ?? activeInstance.value?.id ?? ''}\0${projectId}`
+}
+
+function setProjectInstalling(
+	projectId: string,
+	installing: boolean,
+	instanceId?: string | null,
+) {
+	const key = projectInstallingKey(projectId, instanceId)
 	const next = new Set(installingProjectIds.value)
 	if (installing) {
-		next.add(projectId)
+		next.add(key)
 	} else {
-		next.delete(projectId)
+		next.delete(key)
 	}
 	installingProjectIds.value = next
 }
@@ -1235,7 +1244,7 @@ async function toggleContentSelection(
 		return
 	}
 
-	setProjectInstalling(project.project_id, true)
+	setProjectInstalling(project.project_id, true, target.id)
 	try {
 		const preferences = getInstanceInstallTargetPreferences(contentType)
 		let versionId = project.latest_version || null
@@ -1272,7 +1281,7 @@ async function toggleContentSelection(
 			preferences,
 		})
 	} finally {
-		setProjectInstalling(project.project_id, false)
+		setProjectInstalling(project.project_id, false, target.id)
 	}
 }
 
@@ -1381,7 +1390,7 @@ function getCardActions(
 			: projectResult.project_id
 	const selectionKey = makeContentSelectionKey(projectResult.provider, providerProjectId)
 	const isInstalling =
-		installingProjectIds.value.has(projectResult.project_id) ||
+		installingProjectIds.value.has(projectInstallingKey(projectResult.project_id)) ||
 		contentSelection.isInstalling(selectionKey)
 	const isSelected = contentSelection.isSelected(selectionKey)
 	const isInstalled =
@@ -1439,6 +1448,7 @@ function getCardActions(
 				color: isQueued && !isInstalling && !isInstallingSelection ? 'green' : 'brand',
 				type: 'outlined',
 				onClick: async () => {
+					const installInstanceId = activeInstance.value?.id ?? null
 					if (isQueued) {
 						removeQueuedServerInstall(projectResult.project_id)
 						return
@@ -1448,7 +1458,7 @@ function getCardActions(
 					const isModpack = contentType === 'modpack'
 					const shouldShowInstalling = isModpack || !isQueued
 					if (shouldShowInstalling) {
-						setProjectInstalling(projectResult.project_id, true)
+						setProjectInstalling(projectResult.project_id, true, installInstanceId)
 					}
 					try {
 						await requestInstall({
@@ -1479,7 +1489,7 @@ function getCardActions(
 						handleError(err as Error)
 					} finally {
 						if (shouldShowInstalling) {
-							setProjectInstalling(projectResult.project_id, false)
+							setProjectInstalling(projectResult.project_id, false, installInstanceId)
 						}
 					}
 				},
@@ -1552,14 +1562,14 @@ function getCardActions(
 			type: 'outlined',
 			onClick: async () => {
 				const installInstanceId = instance.value?.id ?? null
-				setProjectInstalling(projectResult.project_id, true)
+				setProjectInstalling(projectResult.project_id, true, installInstanceId)
 				try {
 					const selectedInstall =
 						instance.value && projectResult.provider === 'modrinth'
 							? await chooseInstanceInstallVersion(projectResult, currentProjectType)
 							: { versionId: null as string | null }
 					if (selectedInstall === null) {
-						setProjectInstalling(projectResult.project_id, false)
+						setProjectInstalling(projectResult.project_id, false, installInstanceId)
 						return
 					}
 					const selectedPreferences = getCurrentSelectedInstallPreferences(currentProjectType)
@@ -1576,7 +1586,7 @@ function getCardActions(
 						instance.value ? instance.value.id : null,
 						'SearchCard',
 						(versionId, installedProjectIds) => {
-							setProjectInstalling(projectResult.project_id, false)
+							setProjectInstalling(projectResult.project_id, false, installInstanceId)
 							if (versionId && activeInstance.value?.id === installInstanceId) {
 								onSearchResultsInstalled(installedProjectIds ?? [projectResult.project_id])
 							}
@@ -1591,7 +1601,7 @@ function getCardActions(
 						},
 					)
 				} catch (err) {
-					setProjectInstalling(projectResult.project_id, false)
+					setProjectInstalling(projectResult.project_id, false, installInstanceId)
 					handleError(err)
 				}
 			},
