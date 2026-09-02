@@ -135,37 +135,35 @@ pub async fn copy_verified_local_artifact(
     progress: Option<&MinecraftDownloadProgress>,
     context: InstallErrorContext,
 ) -> crate::Result<bool> {
-    if !matches!(
-        classify_local_artifact(
-            Some(local),
-            destination,
-            relative_path,
-            expected_sha1,
-            expected_size,
-        )
-        .await?,
-        ArtifactAvailability::LocalReusable
-    ) {
-        return Ok(false);
-    }
-
+    let source = local.root.join(relative_path);
     if let Some(progress) = progress {
         progress.set_context(context.clone()).await?;
     }
+    let copied = match super::local_artifact::copy_verified(
+        &source,
+        destination,
+        expected_sha1,
+        expected_size,
+        &st.io_semaphore,
+    )
+    .await
+    {
+        Ok(copied) => copied,
+        Err(error) => {
+            if let Some(progress) = progress {
+                progress.persist_failure_context(context).await;
+            }
+            return Err(error);
+        }
+    };
+    if !copied {
+        return Ok(false);
+    }
 
-    let source = local.root.join(relative_path);
     let size = match expected_size {
         Some(size) => size,
         None => io::metadata(&source).await?.len(),
     };
-    if let Err(error) =
-        crate::util::fetch::copy(&source, destination, &st.io_semaphore).await
-    {
-        if let Some(progress) = progress {
-            progress.persist_failure_context(context).await;
-        }
-        return Err(error);
-    }
     if let Some(progress) = progress {
         progress.add_bytes(size).await?;
     }
@@ -1656,37 +1654,28 @@ pub async fn download_assets(
             || force;
 
         if should_fetch_object {
-            let local_availability = if force {
-                ArtifactAvailability::NetworkRequired
-            } else {
-                classify_local_artifact(
+            let local_candidate = !force
+                && super::local_artifact::candidate_is_usable(
                     local_source,
-                    &resource_path,
                     &local_asset_object_path(hash),
-                    Some(hash),
                     Some(asset.size as u64),
                 )
-                .await?
-            };
-            match local_availability {
-                ArtifactAvailability::LocalReusable => {
-                    fallback_assets.push(build_fallback_asset(st, name, asset));
-                }
-                ArtifactAvailability::Cached
-                | ArtifactAvailability::NetworkRequired => {
-                    let url = format!(
-                        "https://resources.download.minecraft.net/{sub_hash}/{hash}",
-                        sub_hash = &hash[..2]
-                    );
-                    batch_items.push(H2BatchAsset {
-                        url,
-                        destination: resource_path,
-                        legacy_destination: should_fetch_legacy
-                            .then_some(legacy_resource_path),
-                        sha1: hash.clone(),
-                        size: asset.size as u64,
-                    });
-                }
+                .await?;
+            if local_candidate {
+                fallback_assets.push(build_fallback_asset(st, name, asset));
+            } else {
+                let url = format!(
+                    "https://resources.download.minecraft.net/{sub_hash}/{hash}",
+                    sub_hash = &hash[..2]
+                );
+                batch_items.push(H2BatchAsset {
+                    url,
+                    destination: resource_path,
+                    legacy_destination: should_fetch_legacy
+                        .then_some(legacy_resource_path),
+                    sha1: hash.clone(),
+                    size: asset.size as u64,
+                });
             }
         } else if should_fetch_legacy {
             legacy_copies.push((name, asset));

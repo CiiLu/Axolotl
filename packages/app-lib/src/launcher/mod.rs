@@ -40,6 +40,7 @@ use tokio_util::sync::CancellationToken;
 use winreg::{RegKey, enums::HKEY_CURRENT_USER};
 
 mod args;
+mod local_artifact;
 mod natives;
 
 pub mod download;
