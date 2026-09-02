@@ -296,6 +296,7 @@
 					</Admonition>
 					<Table
 						v-if="job.items.length"
+						:key="`${job.job_id}-details`"
 						:columns="itemColumns"
 						:data="reorderJobItems(job)"
 						row-key="id"
