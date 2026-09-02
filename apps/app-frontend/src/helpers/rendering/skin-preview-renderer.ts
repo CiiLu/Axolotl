@@ -154,6 +154,12 @@ class BatchSkinRenderer {
 	private clearScene(): void {
 		if (!this.scene || !this.currentModel) return
 
+		this.currentModel.traverse((object) => {
+			const mesh = object as THREE.Mesh
+			if (mesh.isMesh && mesh.userData.threeDSkinLayersApplied) {
+				mesh.geometry.dispose()
+			}
+		})
 		this.scene.remove(this.currentModel)
 		this.currentModel.clear()
 		this.currentModel = null
