@@ -11,6 +11,18 @@
   "app.action-bar.downloads": {
     "message": "Downloads"
   },
+  "app.action-bar.notifications": {
+    "message": "Notifications"
+  },
+  "app.action-bar.notifications.clear": {
+    "message": "Clear all"
+  },
+  "app.action-bar.notifications.dismiss": {
+    "message": "Dismiss notification"
+  },
+  "app.action-bar.notifications.empty": {
+    "message": "No notifications"
+  },
   "app.action-bar.exporting-modpack": {
     "message": "Exporting modpack"
   },

@@ -11,6 +11,18 @@
   "app.action-bar.downloads": {
     "message": "下载"
   },
+  "app.action-bar.notifications": {
+    "message": "通知"
+  },
+  "app.action-bar.notifications.clear": {
+    "message": "清除全部"
+  },
+  "app.action-bar.notifications.dismiss": {
+    "message": "忽略通知"
+  },
+  "app.action-bar.notifications.empty": {
+    "message": "暂无通知"
+  },
   "app.action-bar.exporting-modpack": {
     "message": "正在导出整合包"
   },
