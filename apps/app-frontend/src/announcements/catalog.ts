@@ -33,6 +33,79 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.9.5-beta.5',
+		version: '1.9.5-beta.5',
+		publishedAt: '2026-09-02',
+		title: {
+			'en-US': 'Axolotl Launcher 1.9.5-beta.5',
+			'zh-CN': 'Axolotl Launcher 1.9.5-beta.5',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Add a "Back to Top" button on the content page.',
+					'zh-CN': '在内容页添加“回到顶部”按钮。',
+				},
+				{
+					'en-US': 'Add a notification center to show hidden download progress and warnings.',
+					'zh-CN': '添加通知中心，展示隐藏的下载进度和警告。',
+				},
+			],
+			changed: [
+				{
+					'en-US': 'Include the Mod downloads in the download center display.',
+					'zh-CN': '在下载中心显示 Mod 下载。',
+				},
+				{
+					'en-US': 'Skin preview now uses a 3D-rendered outer layer.',
+					'zh-CN': '皮肤预览现在使用 3D 渲染外层。',
+				},
+				{
+					'en-US': 'Skin preview now has anti-aliased rendering.',
+					'zh-CN': '皮肤预览现在具有抗锯齿渲染。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed the issue where versions 1.13 ~ 1.18 could not start due to incorrectly obtaining LWJGL information.',
+					'zh-CN': '修复因错误获取 LWJGL 信息导致 1.13 ~ 1.18 版本无法启动的问题。',
+				},
+				{
+					'en-US': 'Fixed the issue where translation preference settings could not be saved.',
+					'zh-CN': '修复无法保存翻译偏好设置的问题。',
+				},
+				{
+					'en-US':
+						'Fix the issue where the settings page title loads out of sync with the main content.',
+					'zh-CN': '修复设置页标题与主内容不同步加载的问题。',
+				},
+				{
+					'en-US': 'Fix a performance issue where extra validation caused slower download speeds.',
+					'zh-CN': '修复因额外校验导致下载速度变慢的性能问题。',
+				},
+				{
+					'en-US': 'Fixed the issue of slow download speeds for additional files during import.',
+					'zh-CN': '修复导入时下载额外文件速度慢的问题。',
+				},
+				{
+					'en-US': 'Fixed the invalid path issue when importing instances using symbolic links.',
+					'zh-CN': '修复使用符号链接导入实例时的路径非法问题。',
+				},
+				{
+					'en-US':
+						'Fixed the issue where the same data packages from different worlds were accidentally marked as duplicates.',
+					'zh-CN': '修复将不同世界中的相同数据包被意外标记为重复的问题。',
+				},
+				{
+					'en-US':
+						'Fixed the issue where the top and legs conflicted in rendering during skin preview.',
+					'zh-CN': '修复皮肤预览上衣与腿部渲染冲突的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.9.5-beta.4',
 		version: '1.9.5-beta.4',
 		publishedAt: '2026-09-01',
