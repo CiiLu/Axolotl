@@ -646,7 +646,13 @@ pub(crate) fn native_library_artifact_path(
     library: &Library,
     classifier: &str,
 ) -> crate::Result<String> {
-    if library_classifier(&library.name).is_some() {
+    // A four-part coordinate is only the native artifact path when its
+    // classifier is a native classifier. Other classifiers (sources,
+    // javadoc, etc.) can occur in loader metadata and must retain the
+    // legacy "append classifier" behaviour when this helper is reused.
+    if library_classifier(&library.name)
+        .is_some_and(|value| value.starts_with("natives-"))
+    {
         Ok(d::get_path_from_artifact(&library.name)?)
     } else {
         classified_library_artifact_path(&library.name, classifier)
@@ -1257,7 +1263,10 @@ async fn write_version_info(path: &Path, data: Vec<u8>) -> crate::Result<()> {
     Ok(())
 }
 
-const DERIVED_VERSION_CACHE_FORMAT: &str = "1";
+// Bumped when profile merge semantics change. This forces existing loader
+// caches to be regenerated so duplicate Forge/vanilla libraries regain native
+// classifier metadata.
+const DERIVED_VERSION_CACHE_FORMAT: &str = "2";
 
 fn derived_version_cache_marker_path(path: &Path) -> PathBuf {
     path.with_extension("json.axolotl-format")

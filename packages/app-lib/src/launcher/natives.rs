@@ -66,7 +66,12 @@ pub(crate) fn resolve_native_archives(
             .and_then(|downloads| downloads.classifiers.as_ref())
             .and_then(|classifiers| classifiers.get(&classifier));
         let classified_path = libraries_dir.join(
-            download::native_library_artifact_path(library, &classifier)?,
+            if let Some(path) = native.and_then(|native| native.path.as_deref())
+            {
+                path.to_owned()
+            } else {
+                download::native_library_artifact_path(library, &classifier)?
+            },
         );
         let (archive_path, sha1) = if let Some(native) = native {
             let cached = caches_dir
@@ -75,7 +80,21 @@ pub(crate) fn resolve_native_archives(
             // Modern native archives are content-addressed by SHA1. Do not
             // silently substitute the Maven artifact: it can be a different
             // classifier/version and produce an ABI-incompatible DLL set.
-            (cached, Some(native.sha1.clone()))
+            if cached.is_file() {
+                (cached, Some(native.sha1.clone()))
+            } else if classified_path.is_file()
+                && (native.sha1.len() != 40
+                    || sha1_file(&classified_path)? == native.sha1)
+            {
+                // Older instances downloaded classifiers directly into
+                // libraries/. Reuse that artifact when it is verifiably the
+                // requested archive (or when the legacy metadata has no
+                // usable SHA-1 to verify), allowing repair/import to recover
+                // without a redundant network download.
+                (classified_path, None)
+            } else {
+                (cached, Some(native.sha1.clone()))
+            }
         } else {
             (classified_path, None)
         };
