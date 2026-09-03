@@ -610,6 +610,20 @@ pub(crate) struct H2BatchAsset {
     pub logical_items: u32,
 }
 
+/// Completion state for one physical asset object. A legacy-resource copy is
+/// deliberately separate from fetching and committing the content-addressed
+/// object: a local path error must not cause another GET for an object that is
+/// already valid on disk.
+enum AssetBatchItemOutcome {
+    Completed {
+        downloaded: bool,
+    },
+    LocalCopyFailed {
+        downloaded: bool,
+        error: crate::Error,
+    },
+}
+
 impl Clone for H2BatchAsset {
     fn clone(&self) -> Self {
         Self {
@@ -730,6 +744,43 @@ mod tests {
             ASSET_BATCH_EXPANSION_STREAMS,
         ));
     }
+
+    #[tokio::test]
+    async fn committed_asset_recovers_a_legacy_copy_without_redownloading() {
+        let temp = tempfile::tempdir().unwrap();
+        let destination = temp.path().join("object");
+        tokio::fs::write(&destination, b"already committed")
+            .await
+            .unwrap();
+        let blocked_parent = temp.path().join("legacy-parent");
+        tokio::fs::write(&blocked_parent, b"not a directory")
+            .await
+            .unwrap();
+        let legacy = blocked_parent.join("resource");
+        let item = H2BatchAsset {
+            url: "https://resources.download.minecraft.net/aa/object".into(),
+            destination: destination.clone(),
+            legacy_destinations: vec![legacy.clone()],
+            sha1: "unused-by-copy-test".into(),
+            size: 17,
+            logical_items: 1,
+        };
+
+        assert!(copy_asset_legacy_destinations(&item).await.is_err());
+        assert_eq!(
+            tokio::fs::read(&destination).await.unwrap(),
+            b"already committed"
+        );
+
+        tokio::fs::remove_file(&blocked_parent).await.unwrap();
+        tokio::fs::create_dir(&blocked_parent).await.unwrap();
+        copy_asset_legacy_destinations(&item).await.unwrap();
+
+        assert_eq!(
+            tokio::fs::read(&legacy).await.unwrap(),
+            b"already committed"
+        );
+    }
 }
 
 /// Downloads a batch of small files over a shared HTTP/2 connection group,
@@ -809,9 +860,9 @@ where
         );
     }
 
-    let eligible_items = items.len();
     let batch_started = std::time::Instant::now();
     let mut completed_bytes = 0_u64;
+    let mut network_failures = 0_u32;
     let callback = Arc::new(on_completed);
     for pass in 0..ASSET_BATCH_RETRY_PASSES {
         if items.is_empty() {
@@ -838,7 +889,10 @@ where
                         pass > 0,
                     )
                     .await;
-                    if result.is_ok() {
+                    if matches!(
+                        &result,
+                        Ok(AssetBatchItemOutcome::Completed { .. })
+                    ) {
                         callback(item.clone()).await;
                     }
                     (item, result)
@@ -850,10 +904,33 @@ where
         items = Vec::new();
         for (item, result) in results {
             match result {
-                Ok(()) => {
-                    completed_bytes = completed_bytes.saturating_add(item.size);
+                Ok(AssetBatchItemOutcome::Completed { downloaded }) => {
+                    if downloaded {
+                        completed_bytes =
+                            completed_bytes.saturating_add(item.size);
+                    }
+                }
+                Ok(AssetBatchItemOutcome::LocalCopyFailed {
+                    downloaded,
+                    error,
+                }) => {
+                    if downloaded {
+                        completed_bytes =
+                            completed_bytes.saturating_add(item.size);
+                    }
+                    tracing::warn!(
+                        url = %fetch::sanitize_url_for_log(&item.url),
+                        destination = %item.destination.display(),
+                        error = %error,
+                        "Asset object is committed, but copying its legacy resource failed; retrying locally without another download"
+                    );
+                    // The ordinary fallback path sees the valid object and
+                    // performs only the outstanding local copy. Do not spend
+                    // another network retry pass on a local filesystem error.
+                    failed.push(item);
                 }
                 Err(error) => {
+                    network_failures = network_failures.saturating_add(1);
                     tracing::debug!(
                         url = %fetch::sanitize_url_for_log(&item.url),
                         pass = pass + 1,
@@ -877,7 +954,7 @@ where
                 completed_bytes,
                 batch_started.elapsed(),
             );
-        } else if eligible_items > 0 {
+        } else if network_failures > 0 {
             super::native_breaker::record_failure(route);
             fetch::record_route_health_failure(
                 route,
@@ -906,7 +983,7 @@ async fn download_asset_item(
     route: &DownloadRoute,
     apply_native_policy: bool,
     rescue: bool,
-) -> crate::Result<()> {
+) -> crate::Result<AssetBatchItemOutcome> {
     let integrity = Integrity {
         size: Some(item.size),
         sha1: Some(item.sha1.clone()),
@@ -921,8 +998,13 @@ async fn download_asset_item(
         .await
         .is_ok()
     {
-        copy_asset_legacy_destinations(item).await?;
-        return Ok(());
+        return Ok(match copy_asset_legacy_destinations(item).await {
+            Ok(()) => AssetBatchItemOutcome::Completed { downloaded: false },
+            Err(error) => AssetBatchItemOutcome::LocalCopyFailed {
+                downloaded: false,
+                error,
+            },
+        });
     }
     let _stream_permit = if apply_native_policy {
         Some(super::h2_stream_budget::acquire(route).await?)
@@ -956,7 +1038,7 @@ async fn download_asset_item(
     }
     // Any failure below leaves a partial file behind; clean it up so retries
     // start from a clean slate and no orphaned `.part` files accumulate.
-    let result: crate::Result<()> = async {
+    let result: crate::Result<AssetBatchItemOutcome> = async {
         let mut file = tokio::fs::File::create(&part_path).await?;
         let mut downloaded = 0_u64;
         let activity = super::h2_receive::H2TransferActivity::begin();
@@ -984,8 +1066,13 @@ async fn download_asset_item(
         fetch::verify_computed_integrity(&integrity, &computed)?;
         fetch::finalize_download(&part_path, &item.destination).await?;
 
-        copy_asset_legacy_destinations(item).await?;
-        Ok(())
+        Ok(match copy_asset_legacy_destinations(item).await {
+            Ok(()) => AssetBatchItemOutcome::Completed { downloaded: true },
+            Err(error) => AssetBatchItemOutcome::LocalCopyFailed {
+                downloaded: true,
+                error,
+            },
+        })
     }
     .await;
     if result.is_err() {
