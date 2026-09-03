@@ -3307,6 +3307,14 @@ fn in_flight_download_lock(key: String) -> Arc<AsyncMutex<()>> {
     }
 }
 
+/// Serializes every writer for one destination, including download engines
+/// that do not enter `download_to_path` (such as the H2 asset batch).
+pub(crate) fn destination_download_lock(
+    destination: &Path,
+) -> Arc<AsyncMutex<()>> {
+    in_flight_download_lock(download_lock_key(destination))
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct ParsedContentRange {
     start: u64,
@@ -5576,8 +5584,7 @@ async fn download_to_path_inner(
     if let Some(parent) = destination.parent() {
         io::create_dir_all(parent).await?;
     }
-    let lock_key = download_lock_key(destination);
-    let download_lock = in_flight_download_lock(lock_key);
+    let download_lock = destination_download_lock(destination);
     let _download_guard = download_lock.lock().await;
     let mode = source_mode_for_resource(request.resource);
     let mut routes = {

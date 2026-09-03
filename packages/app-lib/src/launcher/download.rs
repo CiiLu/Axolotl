@@ -30,7 +30,7 @@ use daedalus::{
 use futures::prelude::*;
 use reqwest::Method;
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     future::Future,
     path::{Path, PathBuf},
     pin::Pin,
@@ -1587,7 +1587,8 @@ struct FallbackAsset {
     size: u64,
     url: String,
     resource_path: PathBuf,
-    legacy_resource_path: PathBuf,
+    legacy_resource_paths: Vec<PathBuf>,
+    logical_items: u32,
 }
 
 fn build_fallback_asset(
@@ -1606,11 +1607,51 @@ fn build_fallback_asset(
         size: asset.size as u64,
         url,
         resource_path: st.directories.object_dir(hash),
-        legacy_resource_path: st
-            .directories
-            .legacy_assets_dir()
-            .join(name.replace('/', &String::from(std::path::MAIN_SEPARATOR))),
+        legacy_resource_paths: vec![
+            st.directories.legacy_assets_dir().join(
+                name.replace('/', &String::from(std::path::MAIN_SEPARATOR)),
+            ),
+        ],
+        logical_items: 1,
     }
+}
+
+fn build_fallback_asset_from_batch(item: H2BatchAsset) -> FallbackAsset {
+    FallbackAsset {
+        name: item.sha1.clone(),
+        hash: item.sha1,
+        size: item.size,
+        url: item.url,
+        resource_path: item.destination,
+        legacy_resource_paths: item.legacy_destinations,
+        logical_items: item.logical_items,
+    }
+}
+
+/// Coalesce index aliases that refer to one physical object. The key includes
+/// the destination and full integrity contract so unrelated artifacts can
+/// never share a writer. Legacy paths remain separate outputs of that single
+/// committed object.
+fn coalesce_batch_assets(items: Vec<H2BatchAsset>) -> Vec<H2BatchAsset> {
+    let mut positions: HashMap<(PathBuf, String, u64), usize> = HashMap::new();
+    let mut coalesced: Vec<H2BatchAsset> = Vec::new();
+    for mut item in items {
+        let key = (item.destination.clone(), item.sha1.clone(), item.size);
+        if let Some(&position) = positions.get(&key) {
+            let existing = &mut coalesced[position];
+            existing.logical_items =
+                existing.logical_items.saturating_add(item.logical_items);
+            for legacy in item.legacy_destinations.drain(..) {
+                if !existing.legacy_destinations.contains(&legacy) {
+                    existing.legacy_destinations.push(legacy);
+                }
+            }
+        } else {
+            positions.insert(key, coalesced.len());
+            coalesced.push(item);
+        }
+    }
+    coalesced
 }
 
 #[tracing::instrument(skip_all)]
@@ -1671,10 +1712,13 @@ pub async fn download_assets(
                 batch_items.push(H2BatchAsset {
                     url,
                     destination: resource_path,
-                    legacy_destination: should_fetch_legacy
-                        .then_some(legacy_resource_path),
+                    legacy_destinations: should_fetch_legacy
+                        .then_some(legacy_resource_path)
+                        .into_iter()
+                        .collect(),
                     sha1: hash.clone(),
                     size: asset.size as u64,
+                    logical_items: 1,
                 });
             }
         } else if should_fetch_legacy {
@@ -1683,6 +1727,8 @@ pub async fn download_assets(
             skipped_count += 1;
         }
     }
+
+    let mut batch_items = coalesce_batch_assets(batch_items);
 
     // Batch-download the object files over a single shared HTTP/2 connection:
     // hundreds of concurrent multiplexed streams, one connection per
@@ -1718,7 +1764,6 @@ pub async fn download_assets(
             // Items whose resolved URL targets a different authority cannot
             // share the batch connection and go through the per-file path.
             let route_authority = url_authority(&route.url);
-            let mut reroute = Vec::new();
             for item in &mut batch_items {
                 let item_routes = resolve_download_routes_for(
                     &item.url,
@@ -1735,22 +1780,15 @@ pub async fn download_assets(
                     .or_else(|| item_routes.first())
                     .map(|route| route.url.clone())
                     .unwrap_or_else(|| item.url.clone());
-                if url_authority(&item.url) != route_authority {
-                    reroute.push(item.sha1.clone());
-                }
             }
-            if !reroute.is_empty() {
-                let reroute_hashes = reroute
-                    .iter()
-                    .map(String::as_str)
-                    .collect::<std::collections::HashSet<_>>();
-                for (name, asset) in index.objects.iter() {
-                    if reroute_hashes.contains(asset.hash.as_str()) {
-                        fallback_assets
-                            .push(build_fallback_asset(st, name, asset));
-                    }
-                }
-            }
+            let (batch_items, rerouted_items): (Vec<_>, Vec<_>) = batch_items
+                .into_iter()
+                .partition(|item| url_authority(&item.url) == route_authority);
+            fallback_assets.extend(
+                rerouted_items
+                    .into_iter()
+                    .map(build_fallback_asset_from_batch),
+            );
             let callback = {
                 let progress = progress.clone();
                 let loading_bar = loading_bar.cloned();
@@ -1758,16 +1796,18 @@ pub async fn download_assets(
                     let progress = progress.clone();
                     let loading_bar = loading_bar.clone();
                     Box::pin(async move {
-                        if let Some(progress) = progress {
-                            if let Err(error) = progress.add_bytes(item.size).await {
-                                tracing::warn!(
-                                    error = %error,
-                                    "Failed to record batch asset bytes"
-                                );
+                        for _ in 0..item.logical_items {
+                            if let Some(progress) = &progress {
+                                if let Err(error) = progress.add_bytes(item.size).await {
+                                    tracing::warn!(
+                                        error = %error,
+                                        "Failed to record batch asset bytes"
+                                    );
+                                }
                             }
-                        }
-                        if let Some(loading_bar) = loading_bar {
-                            let _ = emit_loading(&loading_bar, per_file_fraction, None);
+                            if let Some(loading_bar) = &loading_bar {
+                                let _ = emit_loading(loading_bar, per_file_fraction, None);
+                            }
                         }
                     })
                 }
@@ -1789,22 +1829,15 @@ pub async fn download_assets(
                     failed.len(),
                     route.source.as_str(),
                 );
-                let failed_hashes = failed
-                    .iter()
-                    .map(|item| item.sha1.as_str())
-                    .collect::<std::collections::HashSet<_>>();
-                for (name, asset) in index.objects.iter() {
-                    if failed_hashes.contains(asset.hash.as_str()) {
-                        fallback_assets
-                            .push(build_fallback_asset(st, name, asset));
-                    }
-                }
+                fallback_assets.extend(
+                    failed.into_iter().map(build_fallback_asset_from_batch),
+                );
             }
         } else {
             // No route could be resolved; fall back to per-file for all.
-            for (name, asset) in index.objects.iter() {
-                fallback_assets.push(build_fallback_asset(st, name, asset));
-            }
+            fallback_assets.extend(
+                batch_items.into_iter().map(build_fallback_asset_from_batch),
+            );
         }
     }
 
@@ -1853,17 +1886,20 @@ pub async fn download_assets(
                 let progress = progress.clone();
                 async move {
                     let resource_path = &item.resource_path;
-                    let legacy_resource_path = &item.legacy_resource_path;
                     let hash = &item.hash;
                     let name = &item.name;
                     let should_fetch_object = force
                         || !asset_file_is_usable(resource_path, item.size);
-                    let should_fetch_legacy = (with_legacy
-                        && !asset_file_is_usable(
-                            legacy_resource_path,
-                            item.size,
-                        ))
-                        || force;
+                    let legacy_resource_paths = item
+                        .legacy_resource_paths
+                        .iter()
+                        .filter(|path| {
+                            force
+                                || (with_legacy
+                                    && !asset_file_is_usable(path, item.size))
+                        })
+                        .collect::<Vec<_>>();
+                    let should_fetch_legacy = !legacy_resource_paths.is_empty();
                     let fetch_progress =
                         if should_fetch_object || should_fetch_legacy {
                             progress.clone()
@@ -1908,24 +1944,37 @@ pub async fn download_assets(
                         } else {
                             tracing::trace!("Fetched asset with hash {hash}");
                         }
-                    }
-                    if should_fetch_legacy {
-                        crate::util::fetch::copy(
-                            resource_path,
-                            legacy_resource_path,
-                            &st.io_semaphore,
-                        )
-                        .await?;
-                        if !should_fetch_object
+                        if item.logical_items > 1
                             && let Some(progress) = &fetch_progress
                         {
-                            progress.add_bytes(item.size).await?;
+                            for _ in 1..item.logical_items {
+                                progress.add_bytes(item.size).await?;
+                            }
                         }
-                        tracing::trace!("Copied legacy asset with hash {hash}");
+                    }
+                    if should_fetch_legacy {
+                        for legacy_resource_path in legacy_resource_paths {
+                            crate::util::fetch::copy(
+                                resource_path,
+                                legacy_resource_path,
+                                &st.io_semaphore,
+                            )
+                            .await?;
+                            if !should_fetch_object
+                                && let Some(progress) = &fetch_progress
+                            {
+                                progress.add_bytes(item.size).await?;
+                            }
+                            tracing::trace!(
+                                "Copied legacy asset with hash {hash}"
+                            );
+                        }
                     }
 
                     if let Some(loading_bar) = loading_bar {
-                        emit_loading(loading_bar, per_file_fraction, None)?;
+                        for _ in 0..item.logical_items {
+                            emit_loading(loading_bar, per_file_fraction, None)?;
+                        }
                     }
                     tracing::trace!("Loaded asset with hash {hash}");
                     Ok::<_, crate::Error>(())
@@ -2408,6 +2457,56 @@ mod tests {
 
     fn urls(values: &[&str]) -> Option<Vec<String>> {
         Some(values.iter().map(|value| (*value).to_string()).collect())
+    }
+
+    #[test]
+    fn batch_assets_coalesce_duplicate_objects_and_keep_legacy_targets() {
+        let destination = PathBuf::from("assets/objects/ab/abcdef");
+        let first_legacy = PathBuf::from("resources/first");
+        let second_legacy = PathBuf::from("resources/second");
+        let make_item = |legacy_destinations| H2BatchAsset {
+            url: "https://resources.download.minecraft.net/ab/abcdef".into(),
+            destination: destination.clone(),
+            legacy_destinations,
+            sha1: "abcdef".into(),
+            size: 42,
+            logical_items: 1,
+        };
+
+        let items = coalesce_batch_assets(vec![
+            make_item(vec![first_legacy.clone()]),
+            make_item(vec![second_legacy.clone(), first_legacy.clone()]),
+        ]);
+
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].logical_items, 2);
+        assert_eq!(
+            items[0].legacy_destinations,
+            vec![first_legacy, second_legacy]
+        );
+    }
+
+    #[test]
+    fn batch_assets_do_not_coalesce_different_integrity_contracts() {
+        let destination = PathBuf::from("assets/objects/ab/object");
+        let make_item = |sha1: &str, size| H2BatchAsset {
+            url: format!("https://resources.download.minecraft.net/ab/{sha1}"),
+            destination: destination.clone(),
+            legacy_destinations: Vec::new(),
+            sha1: sha1.into(),
+            size,
+            logical_items: 1,
+        };
+
+        assert_eq!(
+            coalesce_batch_assets(vec![
+                make_item("first", 42),
+                make_item("second", 42),
+                make_item("first", 43),
+            ])
+            .len(),
+            3
+        );
     }
 
     #[test]

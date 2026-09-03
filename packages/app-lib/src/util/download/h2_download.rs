@@ -598,12 +598,16 @@ pub(crate) struct H2BatchAsset {
     pub url: String,
     /// Destination for the object (`assets/objects/<hh>/<hash>`).
     pub destination: std::path::PathBuf,
-    /// Optional legacy `resources/` copy destination.
-    pub legacy_destination: Option<std::path::PathBuf>,
+    /// Legacy `resources/` copies to create after the object is committed.
+    /// Several logical asset names may point to this one physical object.
+    pub legacy_destinations: Vec<std::path::PathBuf>,
     /// Expected SHA-1 hash of the asset (also its file name).
     pub sha1: String,
     /// Expected size in bytes.
     pub size: u64,
+    /// Number of logical index entries represented by this physical object.
+    /// Progress remains index-based even when duplicate objects are coalesced.
+    pub logical_items: u32,
 }
 
 impl Clone for H2BatchAsset {
@@ -611,9 +615,10 @@ impl Clone for H2BatchAsset {
         Self {
             url: self.url.clone(),
             destination: self.destination.clone(),
-            legacy_destination: self.legacy_destination.clone(),
+            legacy_destinations: self.legacy_destinations.clone(),
             sha1: self.sha1.clone(),
             size: self.size,
+            logical_items: self.logical_items,
         }
     }
 }
@@ -902,6 +907,23 @@ async fn download_asset_item(
     apply_native_policy: bool,
     rescue: bool,
 ) -> crate::Result<()> {
+    let integrity = Integrity {
+        size: Some(item.size),
+        sha1: Some(item.sha1.clone()),
+        ..Integrity::default()
+    };
+    let destination_lock = fetch::destination_download_lock(&item.destination);
+    let _destination_guard = destination_lock.lock().await;
+    // A different downloader may have committed the object while this item
+    // waited for the destination lock. Reuse it instead of opening another
+    // stream, which also prevents cross-engine `.part`/rename races.
+    if fetch::verify_file(&item.destination, &integrity)
+        .await
+        .is_ok()
+    {
+        copy_asset_legacy_destinations(item).await?;
+        return Ok(());
+    }
     let _stream_permit = if apply_native_policy {
         Some(super::h2_stream_budget::acquire(route).await?)
     } else {
@@ -926,11 +948,6 @@ async fn download_asset_item(
         .into());
     }
 
-    let integrity = Integrity {
-        size: Some(item.size),
-        sha1: Some(item.sha1.clone()),
-        ..Integrity::default()
-    };
     let mut hashers =
         fetch::IntegrityHashers::new_integrity_hashers(&integrity);
     let part_path = fetch::suffixed_path(&item.destination, ".part");
@@ -967,17 +984,7 @@ async fn download_asset_item(
         fetch::verify_computed_integrity(&integrity, &computed)?;
         fetch::finalize_download(&part_path, &item.destination).await?;
 
-        if let Some(legacy) = &item.legacy_destination {
-            if let Some(state) = crate::State::get_if_initialized() {
-                fetch::copy(&item.destination, legacy, &state.io_semaphore)
-                    .await?;
-            } else {
-                if let Some(parent) = legacy.parent() {
-                    crate::util::io::create_dir_all(parent).await?;
-                }
-                tokio::fs::copy(&item.destination, legacy).await?;
-            }
-        }
+        copy_asset_legacy_destinations(item).await?;
         Ok(())
     }
     .await;
@@ -985,4 +992,20 @@ async fn download_asset_item(
         let _ = tokio::fs::remove_file(&part_path).await;
     }
     result
+}
+
+async fn copy_asset_legacy_destinations(
+    item: &H2BatchAsset,
+) -> crate::Result<()> {
+    for legacy in &item.legacy_destinations {
+        if let Some(state) = crate::State::get_if_initialized() {
+            fetch::copy(&item.destination, legacy, &state.io_semaphore).await?;
+        } else {
+            if let Some(parent) = legacy.parent() {
+                crate::util::io::create_dir_all(parent).await?;
+            }
+            tokio::fs::copy(&item.destination, legacy).await?;
+        }
+    }
+    Ok(())
 }
