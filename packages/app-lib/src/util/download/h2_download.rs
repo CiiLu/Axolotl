@@ -1,9 +1,8 @@
 //! HTTP/2 multiplexed file downloads over shared per-authority connections.
 //!
-//! Every download to the same authority reuses one long-lived HTTP/2
-//! connection. General file downloads use one stream so larger files can
-//! switch to independent HTTP/1.1 range connections when that is faster;
-//! Minecraft assets use the dedicated batch multiplexer below.
+//! General downloads to the same authority reuse one long-lived HTTP/2
+//! connection. Minecraft assets use the dedicated batch multiplexer below,
+//! which can add one sibling connection only after sustained saturation.
 
 use super::h2_pool::{H2ConnectFailureKind, SharedH2Connection};
 use crate::util::fetch;
@@ -18,7 +17,10 @@ use std::path::Path;
 use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 use tokio::io::AsyncWriteExt;
+use tokio::sync::Mutex as AsyncMutex;
 use url::Url;
 
 /// Client-side concurrency target for the batch asset downloader. All
@@ -28,6 +30,21 @@ pub(crate) const ASSET_BATCH_CONCURRENCY: usize = 512;
 /// Internal retry passes for failed batch items before they are handed back
 /// to the caller for the regular per-file download path.
 const ASSET_BATCH_RETRY_PASSES: usize = 2;
+/// Only expand a busy batch after the first connection has had time to warm
+/// up. This avoids extra handshakes for the common small/low-latency batch.
+const ASSET_BATCH_EXPANSION_DELAY: Duration = Duration::from_millis(500);
+/// Expansion is useful only when the primary is close to the authority-wide
+/// stream budget (currently 32). The remaining streams can then be assigned
+/// to a separate TCP congestion domain.
+const ASSET_BATCH_EXPANSION_STREAMS: usize = 24;
+
+fn should_expand_asset_batch_connection(
+    elapsed: Duration,
+    primary_active_streams: usize,
+) -> bool {
+    elapsed >= ASSET_BATCH_EXPANSION_DELAY
+        && primary_active_streams >= ASSET_BATCH_EXPANSION_STREAMS
+}
 
 /// Outcome of attempting a multiplexed download.
 pub(crate) enum H2DownloadOutcome {
@@ -601,12 +618,121 @@ impl Clone for H2BatchAsset {
     }
 }
 
-/// Downloads a batch of small files over one shared HTTP/2 connection,
-/// multiplexing up to `concurrency` streams. This is deliberately NOT one
-/// connection per file: the caller groups items by authority and every item
-/// opens an independent stream on that single connection. Items that cannot be
-/// downloaded after internal retries are returned so the caller can retry them
-/// through the regular per-file path (which performs route fallback).
+/// Selects the least busy connection in an asset batch. A sibling connection
+/// is created once, at most, when the initial connection remains saturated
+/// beyond the warm-up period; this keeps the normal case at one TCP/TLS
+/// connection while giving a degraded long batch an independent recovery and
+/// congestion domain.
+struct AssetBatchConnectionGroup {
+    primary: Arc<SharedH2Connection>,
+    sibling: AsyncMutex<Option<Arc<SharedH2Connection>>>,
+    expansion_attempted: AtomicBool,
+    route: DownloadRoute,
+    reserve_native_budget: bool,
+    started: Instant,
+}
+
+impl AssetBatchConnectionGroup {
+    fn new(
+        primary: Arc<SharedH2Connection>,
+        route: &DownloadRoute,
+        reserve_native_budget: bool,
+    ) -> Self {
+        Self {
+            primary,
+            sibling: AsyncMutex::new(None),
+            expansion_attempted: AtomicBool::new(false),
+            route: route.clone(),
+            reserve_native_budget,
+            started: Instant::now(),
+        }
+    }
+
+    fn should_expand(&self) -> bool {
+        should_expand_asset_batch_connection(
+            self.started.elapsed(),
+            self.primary.active_streams(),
+        )
+    }
+
+    async fn connection(&self, rescue: bool) -> Arc<SharedH2Connection> {
+        if (rescue || self.should_expand())
+            && self
+                .expansion_attempted
+                .compare_exchange(
+                    false,
+                    true,
+                    Ordering::AcqRel,
+                    Ordering::Acquire,
+                )
+                .is_ok()
+        {
+            match super::h2_pool::shared_batch_connection(
+                &self.route,
+                self.reserve_native_budget,
+            )
+            .await
+            {
+                Ok(connection) => {
+                    tracing::info!(
+                        authority = %fetch::url_authority(&self.route.url).unwrap_or_default(),
+                        primary_active_streams = self.primary.active_streams(),
+                        "Expanded saturated HTTP/2 asset batch with a sibling connection"
+                    );
+                    *self.sibling.lock().await = Some(connection);
+                }
+                Err(error) => {
+                    tracing::debug!(
+                        authority = %fetch::url_authority(&self.route.url).unwrap_or_default(),
+                        error = %error,
+                        "Could not expand HTTP/2 asset batch; retaining primary connection"
+                    );
+                }
+            }
+        }
+
+        let sibling = self.sibling.lock().await.clone();
+        match sibling {
+            Some(sibling) if rescue && !sibling.is_dead() => sibling,
+            Some(sibling)
+                if !sibling.is_dead()
+                    && sibling.active_streams()
+                        < self.primary.active_streams() =>
+            {
+                sibling
+            }
+            _ => Arc::clone(&self.primary),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn asset_batch_expansion_requires_sustained_saturation() {
+        assert!(!should_expand_asset_batch_connection(
+            ASSET_BATCH_EXPANSION_DELAY,
+            ASSET_BATCH_EXPANSION_STREAMS - 1,
+        ));
+        assert!(!should_expand_asset_batch_connection(
+            ASSET_BATCH_EXPANSION_DELAY - Duration::from_millis(1),
+            ASSET_BATCH_EXPANSION_STREAMS,
+        ));
+        assert!(should_expand_asset_batch_connection(
+            ASSET_BATCH_EXPANSION_DELAY,
+            ASSET_BATCH_EXPANSION_STREAMS,
+        ));
+    }
+}
+
+/// Downloads a batch of small files over a shared HTTP/2 connection group,
+/// multiplexing up to `concurrency` streams. The group begins with one
+/// connection and may add one sibling only for a sustained saturated batch;
+/// it never creates one connection per file. Items that cannot be downloaded
+/// after internal retries are returned so the caller can retry them through
+/// the regular per-file path (which performs route fallback).
 /// Returned items have exhausted every batch pass, so downstream can treat
 /// them as persistently failing against the chosen route.
 pub(crate) async fn download_asset_batch_via_h2<F>(
@@ -657,6 +783,11 @@ where
                 return items;
             }
         };
+    let connections = Arc::new(AssetBatchConnectionGroup::new(
+        connection,
+        route,
+        apply_native_policy,
+    ));
     let route_authority = fetch::url_authority(&route.url);
 
     // Items whose URL targets a different authority cannot be multiplexed on
@@ -683,7 +814,7 @@ where
         }
         let results = futures::stream::iter(items)
             .map(|item| {
-                let connection = connection.clone();
+                let connections = Arc::clone(&connections);
                 let callback = callback.clone();
                 async move {
                     let Ok(uri) = item.url.parse::<Uri>() else {
@@ -694,11 +825,12 @@ where
                         return (item, Err(error));
                     };
                     let result = download_asset_item(
-                        &connection,
+                        &connections,
                         &uri,
                         &item,
                         route,
                         apply_native_policy,
+                        pass > 0,
                     )
                     .await;
                     if result.is_ok() {
@@ -763,17 +895,20 @@ where
 }
 
 async fn download_asset_item(
-    connection: &SharedH2Connection,
+    connections: &AssetBatchConnectionGroup,
     uri: &Uri,
     item: &H2BatchAsset,
     route: &DownloadRoute,
     apply_native_policy: bool,
+    rescue: bool,
 ) -> crate::Result<()> {
     let _stream_permit = if apply_native_policy {
         Some(super::h2_stream_budget::acquire(route).await?)
     } else {
         None
     };
+    let connection = connections.connection(rescue).await;
+    let _connection_stream = connection.track_stream();
     let mut headers = HeaderMap::new();
     headers.insert(
         USER_AGENT,
@@ -782,7 +917,7 @@ async fn download_asset_item(
     );
     headers.insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
 
-    let (response, mut stream) = open_stream(connection, uri, headers).await?;
+    let (response, mut stream) = open_stream(&connection, uri, headers).await?;
     if !response.status().is_success() {
         return Err(crate::ErrorKind::OtherError(format!(
             "HTTP/2 GET failed with status {}",
