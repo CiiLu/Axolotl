@@ -457,9 +457,26 @@ async function checkUpdates() {
 	)
 }
 
+/**
+ * Keep browser/webview shortcuts from escaping the launcher UI. F12 remains
+ * available when the in-app developer mode is enabled so development tools
+ * can still be opened intentionally.
+ */
+function handleGlobalKeydown(event: KeyboardEvent) {
+	const key = event.key.toLowerCase()
+	const isFindShortcut = key === 'f' && (event.ctrlKey || event.metaKey)
+	const isBlockedDevtoolsShortcut = event.key === 'F12' && !themeStore.devMode
+
+	if (isFindShortcut || isBlockedDevtoolsShortcut) {
+		event.preventDefault()
+		event.stopPropagation()
+	}
+}
+
 onMounted(async () => {
 	await useCheckDisableMouseover()
 
+	window.addEventListener('keydown', handleGlobalKeydown, true)
 	document.querySelector('body').addEventListener('click', handleClick)
 	document.querySelector('body').addEventListener('auxclick', handleAuxClick)
 
@@ -468,6 +485,7 @@ onMounted(async () => {
 })
 
 onUnmounted(async () => {
+	window.removeEventListener('keydown', handleGlobalKeydown, true)
 	document.querySelector('body').removeEventListener('click', handleClick)
 	document.querySelector('body').removeEventListener('auxclick', handleAuxClick)
 	clearDelayedUpdatePopup()
