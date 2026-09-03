@@ -205,6 +205,7 @@ type AppSettings = {
 	worlds_in_home: boolean
 	home_layout: 'standard' | 'minimal'
 	minimal_home_instance_id: string | null
+	close_behavior: 'ask' | 'close' | 'lightweight'
 	home_widgets: import('@/components/home/home-dashboard').HomeDashboardConfig | null
 
 	telemetry: boolean

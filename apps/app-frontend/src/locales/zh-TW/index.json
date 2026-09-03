@@ -401,6 +401,21 @@
   "app.appearance-settings.auto-install-dependencies.title": {
     "message": "自動安裝前置"
   },
+  "app.appearance-settings.close-behavior.ask": {
+    "message": "每次詢問"
+  },
+  "app.appearance-settings.close-behavior.close": {
+    "message": "直接結束"
+  },
+  "app.appearance-settings.close-behavior.description": {
+    "message": "選擇關閉視窗時要結束啟動器，還是將其隱藏至系統匣。"
+  },
+  "app.appearance-settings.close-behavior.lightweight": {
+    "message": "隱藏至系統匣"
+  },
+  "app.appearance-settings.close-behavior.title": {
+    "message": "選擇關閉 Axolotl Launcher 的方式"
+  },
   "app.appearance-settings.color-theme.description": {
     "message": "請選擇你偏好的 Axolotl Launcher 色彩主題。"
   },
@@ -715,6 +730,18 @@
   },
   "app.browse.source.planet-minecraft": {
     "message": "Planet Minecraft 來源"
+  },
+  "app.close-launcher.direct": {
+    "message": "直接結束"
+  },
+  "app.close-launcher.remember": {
+    "message": "記住我的選擇"
+  },
+  "app.close-launcher.title": {
+    "message": "選擇關閉 Axolotl Launcher 的方式"
+  },
+  "app.close-launcher.tray": {
+    "message": "隱藏至系統匣"
   },
   "app.community-announcement.feedback-middle": {
     "message": "，或於 "

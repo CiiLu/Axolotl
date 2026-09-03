@@ -416,6 +416,21 @@
   "app.appearance-settings.auto-install-dependencies.title": {
     "message": "自动安装前置"
   },
+  "app.appearance-settings.close-behavior.ask": {
+    "message": "每次询问"
+  },
+  "app.appearance-settings.close-behavior.close": {
+    "message": "直接关闭"
+  },
+  "app.appearance-settings.close-behavior.description": {
+    "message": "选择关闭窗口时是退出启动器，还是将其隐藏至系统托盘。"
+  },
+  "app.appearance-settings.close-behavior.lightweight": {
+    "message": "隐藏至托盘"
+  },
+  "app.appearance-settings.close-behavior.title": {
+    "message": "关闭 Axolotl Launcher 的方式"
+  },
   "app.appearance-settings.color-theme.description": {
     "message": "为 Axolotl Launcher 选择偏好的色彩主题。"
   },
@@ -739,6 +754,18 @@
   },
   "app.build.beta": {
     "message": "Beta"
+  },
+  "app.close-launcher.direct": {
+    "message": "直接关闭"
+  },
+  "app.close-launcher.remember": {
+    "message": "记住我的选择"
+  },
+  "app.close-launcher.title": {
+    "message": "选择关闭 Axolotl Launcher 的方式"
+  },
+  "app.close-launcher.tray": {
+    "message": "隐藏至托盘"
   },
   "app.community-announcement.feedback-middle": {
     "message": "，或在 "

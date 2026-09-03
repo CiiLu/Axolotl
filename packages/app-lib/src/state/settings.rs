@@ -142,6 +142,8 @@ pub struct Settings {
     pub transparent_background_blur: bool,
     pub sidebar_instance_count: u32,
     #[serde(default)]
+    pub close_behavior: String,
+    #[serde(default)]
     pub auto_hide_downloads_button: bool,
     #[serde(default)]
     pub home_layout: HomeLayout,
@@ -255,6 +257,12 @@ impl Settings {
             .fetch_one(exec)
             .await?;
 
+        let close_behavior: String = sqlx::query_scalar(
+            "SELECT close_behavior FROM settings WHERE id = 0",
+        )
+        .fetch_one(exec)
+        .await?;
+
         let engine_row =
             sqlx::query("SELECT download_engine FROM settings WHERE id = 0")
                 .fetch_one(exec)
@@ -308,6 +316,7 @@ impl Settings {
                 as u32,
             transparent_background_blur: res.transparent_background_blur == 1,
             sidebar_instance_count: res.sidebar_instance_count as u32,
+            close_behavior,
             auto_hide_downloads_button: res.auto_hide_downloads_button == 1,
             home_layout: HomeLayout::from_string(&res.home_layout),
             minimal_home_instance_id: res.minimal_home_instance_id,
@@ -571,6 +580,11 @@ impl Settings {
 		.bind(self.enter_lightweight_mode_on_game_launch)
 		.execute(exec)
 		.await?;
+
+        sqlx::query("UPDATE settings SET close_behavior = ? WHERE id = 0")
+            .bind(&self.close_behavior)
+            .execute(exec)
+            .await?;
 
         sqlx::query("UPDATE settings SET download_engine = ? WHERE id = 0")
             .bind(self.download_engine.as_str())
