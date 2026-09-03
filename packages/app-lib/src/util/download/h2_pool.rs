@@ -14,6 +14,7 @@ use h2::client::SendRequest;
 use rustls::ClientConfig;
 use rustls_pki_types::ServerName;
 use std::collections::HashMap;
+use std::net::IpAddr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, Once};
 use std::time::Duration;
@@ -220,31 +221,59 @@ fn platform_root_certs() -> rustls::RootCertStore {
     store
 }
 
+async fn connect_addresses(
+    host: &str,
+    port: u16,
+    addresses: &[IpAddr],
+) -> std::io::Result<TcpStream> {
+    let mut last_error = None;
+    for address in addresses {
+        match tokio::time::timeout(
+            CONNECT_TIMEOUT,
+            TcpStream::connect((*address, port)),
+        )
+        .await
+        {
+            Ok(Ok(stream)) => {
+                stream.set_nodelay(true).ok();
+                return Ok(stream);
+            }
+            Ok(Err(error)) => last_error = Some(error),
+            Err(_) => {
+                last_error = Some(std::io::Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    format!("connection to {host}:{port} timed out"),
+                ));
+            }
+        }
+    }
+    Err(last_error.unwrap_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("no addresses available for {host}"),
+        )
+    }))
+}
+
 async fn connect_tcp(host: &str, port: u16) -> std::io::Result<TcpStream> {
     // Prefer the ordered address list from the shared download resolver
     // (IPv4/IPv6 preference and per-IP reliability), falling back to the
     // system resolver when no list is cached yet.
-    let addresses =
-        crate::util::fetch::DOWNLOAD_DNS_RESOLVER.resolved_addresses(host);
+    let resolver = &crate::util::fetch::DOWNLOAD_DNS_RESOLVER;
+    let addresses = resolver.resolved_addresses(host);
     let mut last_error = None;
     if !addresses.is_empty() {
-        for address in addresses {
-            match tokio::time::timeout(
-                CONNECT_TIMEOUT,
-                TcpStream::connect((address, port)),
-            )
-            .await
-            {
-                Ok(Ok(stream)) => {
-                    stream.set_nodelay(true).ok();
-                    return Ok(stream);
-                }
-                Ok(Err(error)) => last_error = Some(error),
-                Err(_) => {
-                    last_error = Some(std::io::Error::new(
-                        std::io::ErrorKind::TimedOut,
-                        format!("connection to {host}:{port} timed out"),
-                    ));
+        match connect_addresses(host, port, &addresses).await {
+            Ok(stream) => return Ok(stream),
+            Err(error) => last_error = Some(error),
+        }
+        if resolver.record_connection_failure(host) {
+            resolver.pre_resolve(host).await;
+            let refreshed = resolver.resolved_addresses(host);
+            if !refreshed.is_empty() && refreshed != addresses {
+                match connect_addresses(host, port, &refreshed).await {
+                    Ok(stream) => return Ok(stream),
+                    Err(error) => last_error = Some(error),
                 }
             }
         }
