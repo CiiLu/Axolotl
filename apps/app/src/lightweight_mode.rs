@@ -364,11 +364,11 @@ pub fn lightweight_mode_enter(app: AppHandle) -> Result<(), String> {
     // waiting for a response from a window that is already being destroyed.
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        if let Err(error) = app
-            .state::<LightweightMode>()
-            .enter_for_close(&app)
+        if let Err(error) = app.state::<LightweightMode>().enter_for_close(&app)
         {
-            tracing::warn!("Failed to enter lightweight mode on close: {error}");
+            tracing::warn!(
+                "Failed to enter lightweight mode on close: {error}"
+            );
             let _ = app.emit("lightweight-mode-error", error);
         }
     });
