@@ -862,7 +862,6 @@ fn main() {
             remove_enqueued_update,
             set_restart_after_pending_update,
             is_apt_linux,
-            install_apt_update,
             toggle_decorations,
             set_transparent_window_frame,
             show_window,
@@ -927,39 +926,50 @@ fn main() {
                             }
                         }
 
-                        let update = if should_restart {
-                            (**update).clone()
+                        let version = update.version.clone();
+                        let install_result = if is_apt_linux() {
+                            tauri::async_runtime::block_on(
+                                install_apt_package(&version, data),
+                            )
+                            .map_err(|error| error.to_string())
                         } else {
-                            (**update).clone().restart_after_install(false)
+                            let update = if should_restart {
+                                (**update).clone()
+                            } else {
+                                (**update).clone().restart_after_install(false)
+                            };
+
+                            // Persist the trigger before installing: on Windows
+                            // the updater plugin launches the NSIS installer and
+                            // exits the process via `std::process::exit(0)`
+                            // without returning, so the success path below never
+                            // runs there.
+                            #[cfg(target_os = "windows")]
+                            set_changelog_toast(Some(update.version.clone()));
+
+                            update.install(data).map_err(|error| error.to_string())
                         };
 
-                        // Persist the trigger before installing: on Windows the
-                        // updater plugin launches the NSIS installer and exits the
-                        // process via `std::process::exit(0)` without returning, so
-                        // the success path below never runs there.
-                        #[cfg(target_os = "windows")]
-                        set_changelog_toast(Some(update.version.clone()));
-
-                        match update.install(data) {
+                        match install_result {
                             Ok(()) => {
-                                set_changelog_toast(Some(update.version.clone()));
+                                set_changelog_toast(Some(version.clone()));
                                 if should_restart {
                                     tracing::info!(
                                         "Pending update installed successfully (version {}); restarting because user requested reload",
-                                        update.version
+                                        version
                                     );
                                     app.restart();
                                 } else {
                                     tracing::info!(
                                         "Pending update installed successfully (version {}); exiting without relaunch (user did not request reload)",
-                                        update.version
+                                        version
                                     );
                                 }
                             }
                             Err(e) => {
                                 tracing::error!(
                                     "Pending update install failed (version {}): {e}",
-                                    update.version
+                                    version
                                 );
                                 set_changelog_toast(None);
 
