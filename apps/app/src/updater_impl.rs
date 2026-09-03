@@ -139,10 +139,13 @@ async fn fetch_apt_deb_asset(version: &str) -> Result<AptDebAsset> {
         )))
     })?;
 
-    let url = Url::parse(&format!("{UPDATE_SERVER_BASE}{}", artifact.relative_path))
-        .map_err(|error| {
-            theseus::Error::from(theseus::ErrorKind::OtherError(error.to_string()))
-        })?;
+    let url =
+        Url::parse(&format!("{UPDATE_SERVER_BASE}{}", artifact.relative_path))
+            .map_err(|error| {
+                theseus::Error::from(theseus::ErrorKind::OtherError(
+                    error.to_string(),
+                ))
+            })?;
 
     Ok(AptDebAsset {
         url,
@@ -367,7 +370,8 @@ pub async fn enqueue_update_for_installation<R: Runtime>(
             );
         }
 
-        let mut request = ClientBuilder::new().user_agent(launcher_user_agent());
+        let mut request =
+            ClientBuilder::new().user_agent(launcher_user_agent());
         if let Some(timeout) = update.timeout {
             request = request.timeout(timeout);
         }
@@ -507,9 +511,8 @@ pub async fn install_apt_package(version: &str, data: &[u8]) -> Result<()> {
     }
 
     let arch = apt_deb_arch()?;
-    let deb_path = std::env::temp_dir().join(format!(
-        "Axolotl.Launcher_{version}_{arch}.deb"
-    ));
+    let deb_path = std::env::temp_dir()
+        .join(format!("Axolotl.Launcher_{version}_{arch}.deb"));
     std::fs::write(&deb_path, data).map_err(|io| {
         theseus::Error::from(theseus::ErrorKind::OtherError(format!(
             "Failed to write the downloaded deb: {io}"
