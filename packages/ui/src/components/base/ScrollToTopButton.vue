@@ -5,16 +5,10 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import ButtonStyled from './ButtonStyled.vue'
 
 const visible = ref(false)
-const sidebarVisible = ref(false)
 let scrollContainer: Element | null = null
-let observer: MutationObserver | null = null
 
 function update() {
 	visible.value = (scrollContainer?.scrollTop ?? 0) > 300
-}
-
-function updateSidebar() {
-	sidebarVisible.value = document.querySelector('.app-contents')?.classList.contains('sidebar-enabled') ?? false
 }
 
 function scrollToTop() {
@@ -27,33 +21,22 @@ onMounted(() => {
 		scrollContainer.addEventListener('scroll', update, { passive: true })
 		update()
 	}
-	updateSidebar()
-	const appContents = document.querySelector('.app-contents')
-	if (appContents) {
-		observer = new MutationObserver(updateSidebar)
-		observer.observe(appContents, { attributes: true, attributeFilter: ['class'] })
-	}
 })
 
 onBeforeUnmount(() => {
 	scrollContainer?.removeEventListener('scroll', update)
-	observer?.disconnect()
 })
 </script>
 
 <template>
 	<Transition name="scroll-to-top">
-		<div
-			v-if="visible"
-			class="scroll-to-top-wrapper"
-			:class="{ 'sidebar-visible': sidebarVisible }"
-		>
+		<div v-if="visible" class="scroll-to-top-wrapper">
 			<ButtonStyled circular size="large" color="brand">
 				<button
+					v-tooltip="'Scroll to top'"
 					class="scroll-to-top-btn"
 					type="button"
 					aria-label="Scroll to top"
-					v-tooltip="'Scroll to top'"
 					@click="scrollToTop"
 				>
 					<ChevronUpIcon aria-hidden="true" />
@@ -69,17 +52,14 @@ onBeforeUnmount(() => {
 }
 
 .scroll-to-top-wrapper {
-	@apply fixed bottom-6 z-50;
-	right: 24px;
-}
-
-.scroll-to-top-wrapper.sidebar-visible {
-	right: calc(300px + 24px);
+	@apply fixed bottom-10 left-24 z-50;
 }
 
 .scroll-to-top-enter-active,
 .scroll-to-top-leave-active {
-	transition: opacity 0.24s ease, transform 0.24s ease;
+	transition:
+		opacity 0.24s ease,
+		transform 0.24s ease;
 }
 
 .scroll-to-top-enter-from,

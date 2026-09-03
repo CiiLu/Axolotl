@@ -412,7 +412,6 @@ watch(
 )
 
 const showScrollToTop = ref(false)
-const sidebarVisible = ref(false)
 const SCROLL_THRESHOLD = 300
 
 function getScrollContainer(): Element | null {
@@ -468,11 +467,6 @@ function restoreContentViewScroll() {
 	})
 }
 
-function checkSidebarVisibility() {
-	const appContents = document.querySelector('.app-contents')
-	sidebarVisible.value = appContents?.classList.contains('sidebar-enabled') ?? false
-}
-
 function handleScroll() {
 	const container = getScrollContainer()
 	if (container) {
@@ -492,14 +486,6 @@ onMounted(() => {
 	if (container) {
 		container.addEventListener('scroll', handleScroll, { passive: true })
 		handleScroll()
-		checkSidebarVisibility()
-	}
-	const observer = new MutationObserver(() => {
-		checkSidebarVisibility()
-	})
-	const appContents = document.querySelector('.app-contents')
-	if (appContents) {
-		observer.observe(appContents, { attributes: true, attributeFilter: ['class'] })
 	}
 })
 
@@ -1309,7 +1295,6 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 			<button
 				v-if="showScrollToTop"
 				class="scroll-to-top-btn"
-				:class="{ 'sidebar-visible': sidebarVisible }"
 				aria-label="Scroll to top"
 				@click="scrollToTop"
 			>
@@ -1321,12 +1306,7 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 
 <style scoped>
 .scroll-to-top-btn {
-	@apply fixed bottom-6 z-50 flex items-center justify-center rounded-full bg-brand p-3 text-brand-inverted shadow-lg transition-all duration-200 hover:brightness-110 hover:shadow-xl active:scale-95;
-	right: 24px;
-}
-
-.scroll-to-top-btn.sidebar-visible {
-	right: calc(300px + 24px);
+	@apply fixed bottom-10 left-24 z-50 flex items-center justify-center rounded-full bg-brand p-3 text-brand-inverted shadow-lg transition-all duration-200 hover:brightness-110 hover:shadow-xl active:scale-95;
 }
 
 .scroll-to-top-enter-active,

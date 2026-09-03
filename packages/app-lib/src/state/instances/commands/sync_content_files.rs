@@ -99,16 +99,17 @@ pub(crate) async fn sync_instance_content_files(
     let mut merges: HashMap<String, String> = HashMap::new();
     let mut claimed_reclaim_ids = HashSet::new();
     let mut externally_changed_file_ids = HashSet::new();
+    // The scanner above is rooted at the resolved game directory. Keep this
+    // base for re-hashing tracked files too: for symlinked/imported instances
+    // the launcher-owned `profiles/<instance.path>` directory is not
+    // necessarily where the game content lives.
+    let instance_dir = state.directories.instance_game_dir(instance);
 
     for file in scanned {
         let hash_key = file.hash_cache_key.trim_end_matches(".disabled");
         let existing_file = existing_files_by_path.get(&file.relative_path);
         let (scanned_sha1, scanned_size) = if existing_file.is_some() {
-            let path = state
-                .directories
-                .instances_dir()
-                .join(&instance.path)
-                .join(&file.relative_path);
+            let path = instance_dir.join(&file.relative_path);
             let (_, sha1) = fetch::sha1_file_async(&path).await?;
             (sha1, file.size)
         } else {
@@ -185,7 +186,6 @@ pub(crate) async fn sync_instance_content_files(
     // resource packs) for files that don't have them yet. This also backfills
     // rows created before these features existed; `icon_path` distinguishes
     // not-attempted (NULL), no-icon (empty string), and cached (path).
-    let instance_dir = state.directories.instance_game_dir(instance);
     let icon_cache_dir = state.directories.caches_dir().join("icons");
     for file in &mut files {
         let Some(project_type) = project_type_for_file(file) else {
@@ -704,6 +704,15 @@ mod tests {
             1,
             "expected the override-root mod to be scanned"
         );
+        assert!(files[0].relative_path.ends_with("mods/my-mod.jar"));
+
+        // The first sync creates the database record. The second one follows
+        // the tracked-file path, which must re-hash from the external game
+        // directory rather than the empty managed profiles directory.
+        let files = sync_instance_content_files(&instance, &state)
+            .await
+            .unwrap();
+        assert_eq!(files.len(), 1);
         assert!(files[0].relative_path.ends_with("mods/my-mod.jar"));
     }
 

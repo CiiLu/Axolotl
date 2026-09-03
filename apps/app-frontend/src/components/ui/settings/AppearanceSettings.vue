@@ -29,6 +29,7 @@ import { getOS } from '@/helpers/utils'
 import { useTheming } from '@/store/state'
 import {
 	type AccentColor,
+	type CloseBehavior,
 	type ColorTheme,
 	deriveAccentVariants,
 	type FeatureFlag,
@@ -227,6 +228,26 @@ const messages = defineMessages({
 	nativeDecorationsDescription: {
 		id: 'app.appearance-settings.native-decorations.description',
 		defaultMessage: 'Use system window frame (app restart required).',
+	},
+	closeBehaviorTitle: {
+		id: 'app.appearance-settings.close-behavior.title',
+		defaultMessage: 'Choose how to close Axolotl Launcher',
+	},
+	closeBehaviorDescription: {
+		id: 'app.appearance-settings.close-behavior.description',
+		defaultMessage: 'Choose whether closing the window exits the launcher or hides it to the tray.',
+	},
+	closeBehaviorAsk: {
+		id: 'app.appearance-settings.close-behavior.ask',
+		defaultMessage: 'Ask every time',
+	},
+	closeBehaviorClose: {
+		id: 'app.appearance-settings.close-behavior.close',
+		defaultMessage: 'Close directly',
+	},
+	closeBehaviorLightweight: {
+		id: 'app.appearance-settings.close-behavior.lightweight',
+		defaultMessage: 'Hide to tray',
 	},
 	defaultLandingPageTitle: {
 		id: 'app.appearance-settings.default-landing-page.title',
@@ -435,6 +456,7 @@ watch(
 			settings.value.transparent_background_opacity,
 			settings.value.transparent_background_blur,
 			settings.value.sidebar_instance_count,
+			settings.value.close_behavior,
 		] as const,
 	([
 		path,
@@ -444,6 +466,7 @@ watch(
 		transparentOpacity,
 		transparentBlur,
 		sidebarInstanceCount,
+		closeBehavior,
 	]) => {
 		themeStore.customBackgroundPath = path
 		themeStore.customBackgroundBlur = blur
@@ -453,6 +476,7 @@ watch(
 		themeStore.transparentBackgroundBlur = transparentBlur
 		themeStore.setTransparentBackgroundClass()
 		themeStore.sidebarInstanceCount = sidebarInstanceCount
+		themeStore.closeBehavior = closeBehavior as CloseBehavior
 	},
 	{ immediate: true },
 )
@@ -966,6 +990,27 @@ watch(
 				<template #description>{{ formatMessage(messages.nativeDecorationsDescription) }}</template>
 				<template #control>
 					<Toggle id="native-decorations" v-model="settings.native_decorations" />
+				</template>
+			</SettingsRow>
+			<SettingsRow>
+				<template #label>
+					<span id="settings-target-appearance-close-behavior" tabindex="-1">
+						{{ formatMessage(messages.closeBehaviorTitle) }}
+					</span>
+				</template>
+				<template #description>{{ formatMessage(messages.closeBehaviorDescription) }}</template>
+				<template #control>
+					<Combobox
+						id="close-behavior"
+						v-model="settings.close_behavior"
+						:name="formatMessage(messages.closeBehaviorTitle)"
+						:options="[
+							{ value: 'ask', label: formatMessage(messages.closeBehaviorAsk) },
+							{ value: 'close', label: formatMessage(messages.closeBehaviorClose) },
+							{ value: 'lightweight', label: formatMessage(messages.closeBehaviorLightweight) },
+						]"
+						@update:model-value="(value) => (themeStore.closeBehavior = value as CloseBehavior)"
+					/>
 				</template>
 			</SettingsRow>
 			<SettingsRow>

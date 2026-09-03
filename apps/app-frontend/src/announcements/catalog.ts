@@ -33,6 +33,78 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.9.5-beta.6',
+		version: '1.9.5-beta.6',
+		publishedAt: '2026-09-03',
+		title: {
+			'en-US': 'Axolotl Launcher 1.9.5-beta.6',
+			'zh-CN': 'Axolotl Launcher 1.9.5-beta.6',
+		},
+		changes: {
+			added: [
+				{
+					'en-US': 'Added option to hide to tray on app close (lightweight mode).',
+					'zh-CN': '现在可在关闭应用时选择隐藏到托盘（轻量模式）。',
+				},
+			],
+			changed: [
+				{
+					'en-US': 'Disable the translation button when translation is not ready.',
+					'zh-CN': '在翻译未就绪时禁用翻译按钮。',
+				},
+				{
+					'en-US': "Ctrl+F will no longer trigger the browser's built-in search box.",
+					'zh-CN': '现在 Ctrl+F 不会再呼出浏览器自带搜索框。',
+				},
+				{
+					'en-US': 'Pressing F12 will no longer open DevTools when developer mode is not enabled.',
+					'zh-CN': '现在当未启用开发者模式时按下 F12 不会再呼出 DevTools。',
+				},
+				{
+					'en-US':
+						'Server population info will now be displayed even when the server version is incompatible.',
+					'zh-CN': '现在即使服务器版本不兼容也会显示人数信息。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed the issue where the taskbar icon may not be centered on Windows platforms.',
+					'zh-CN': '修复在 Windows 平台上任务栏图标可能不居中的问题。',
+				},
+				{
+					'en-US':
+						'Fixed an error that occurred when editing instance contents while importing instances via hard links.',
+					'zh-CN': '修复使用符号链接导入实例时编辑实例内容出现错误的问题。',
+				},
+				{
+					'en-US': 'Fixed batch download adaptation issue for Minecraft Assets.',
+					'zh-CN': '修复 Minecraft Assets 批量下载无法自适应的问题。',
+				},
+				{
+					'en-US': 'Fixed race conditions and redundant downloads in Minecraft Assets temp files.',
+					'zh-CN': '修复 Minecraft Assets 临时文件异常竞争与重复下载的问题。',
+				},
+				{
+					'en-US': 'Fixed DNS cache not refreshing when DNS is unreachable.',
+					'zh-CN': '修复即使 DNS 不可达也不会刷新 DNS 缓存的问题。',
+				},
+				{
+					'en-US': 'Fixed fallback to re-download on local resource copy failure.',
+					'zh-CN': '修复本地资源复制失败而转为重新下载的问题。',
+				},
+				{
+					'en-US': 'Fixed "Back to Top" button obscuring bottom-right corner content.',
+					'zh-CN': '修复“返回顶部”按钮遮挡右下角内容的问题。',
+				},
+				{
+					'en-US': 'Fixed real-time logs disappearing when switching pages.',
+					'zh-CN': '修复切换页面导致实时日志丢失显示的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.9.5-beta.5',
 		version: '1.9.5-beta.5',
 		publishedAt: '2026-09-02',

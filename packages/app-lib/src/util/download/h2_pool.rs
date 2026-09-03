@@ -3,17 +3,19 @@
 //! `reqwest`'s connection pool opens a fresh TCP+TLS connection for every
 //! request that arrives while no idle connection is available, so a batch of
 //! concurrent downloads to one CDN costs one handshake per file. This module
-//! instead maintains a single long-lived HTTP/2 connection per authority and
+//! instead maintains a long-lived HTTP/2 connection per authority and
 //! multiplexes every download as a separate stream over it (`SendRequest` is
-//! cheap to clone and each clone opens an independent stream). Handshakes
-//! happen once per authority, and large files can also split into range
-//! streams over the same connection.
+//! cheap to clone and each clone opens an independent stream). Asset batches
+//! may lazily add one sibling under sustained saturation; large files can also
+//! split into range streams over their shared connection.
 
 use bytes::Bytes;
 use h2::client::SendRequest;
 use rustls::ClientConfig;
 use rustls_pki_types::ServerName;
 use std::collections::HashMap;
+use std::net::IpAddr;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, Once};
 use std::time::Duration;
 use tokio::net::TcpStream;
@@ -61,6 +63,20 @@ pub struct SharedH2Connection {
     physical_budget: Mutex<Option<super::native_budget::NativeBudgetPermit>>,
     /// Set to true by the driver task when the connection terminates.
     dead: Arc<std::sync::atomic::AtomicBool>,
+    /// Number of application streams currently assigned to this connection.
+    /// This is deliberately separate from HTTP/2's peer stream accounting: it
+    /// lets an asset batch distribute work across sibling TCP connections.
+    active_streams: Arc<AtomicUsize>,
+}
+
+pub(crate) struct H2StreamActivity {
+    active_streams: Arc<AtomicUsize>,
+}
+
+impl Drop for H2StreamActivity {
+    fn drop(&mut self) {
+        self.active_streams.fetch_sub(1, Ordering::Release);
+    }
 }
 
 impl SharedH2Connection {
@@ -74,6 +90,7 @@ impl SharedH2Connection {
             sender: Mutex::new(sender),
             physical_budget: Mutex::new(physical_budget),
             dead: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            active_streams: Arc::new(AtomicUsize::new(0)),
         }
     }
 
@@ -84,6 +101,17 @@ impl SharedH2Connection {
 
     pub fn is_dead(&self) -> bool {
         self.dead.load(std::sync::atomic::Ordering::Acquire)
+    }
+
+    pub(crate) fn active_streams(&self) -> usize {
+        self.active_streams.load(Ordering::Acquire)
+    }
+
+    pub(crate) fn track_stream(&self) -> H2StreamActivity {
+        self.active_streams.fetch_add(1, Ordering::AcqRel);
+        H2StreamActivity {
+            active_streams: Arc::clone(&self.active_streams),
+        }
     }
 
     fn has_physical_budget(&self) -> bool {
@@ -134,8 +162,23 @@ static CONNECTIONS: std::sync::LazyLock<
     AsyncMutex<HashMap<String, ConnectionSlot>>,
 > = std::sync::LazyLock::new(|| AsyncMutex::new(HashMap::new()));
 
+/// A bounded sibling connection for saturated asset batches. Normal file
+/// downloads always use `CONNECTIONS`; a second TCP congestion domain is only
+/// created by the asset scheduler after it observes sustained pressure.
+static BATCH_CONNECTIONS: std::sync::LazyLock<
+    AsyncMutex<HashMap<String, ConnectionSlot>>,
+> = std::sync::LazyLock::new(|| AsyncMutex::new(HashMap::new()));
+
 async fn connection_slot(authority: &str) -> ConnectionSlot {
     let mut connections = CONNECTIONS.lock().await;
+    connections
+        .entry(authority.to_string())
+        .or_insert_with(|| Arc::new(AsyncMutex::new(None)))
+        .clone()
+}
+
+async fn batch_connection_slot(authority: &str) -> ConnectionSlot {
+    let mut connections = BATCH_CONNECTIONS.lock().await;
     connections
         .entry(authority.to_string())
         .or_insert_with(|| Arc::new(AsyncMutex::new(None)))
@@ -178,31 +221,59 @@ fn platform_root_certs() -> rustls::RootCertStore {
     store
 }
 
+async fn connect_addresses(
+    host: &str,
+    port: u16,
+    addresses: &[IpAddr],
+) -> std::io::Result<TcpStream> {
+    let mut last_error = None;
+    for address in addresses {
+        match tokio::time::timeout(
+            CONNECT_TIMEOUT,
+            TcpStream::connect((*address, port)),
+        )
+        .await
+        {
+            Ok(Ok(stream)) => {
+                stream.set_nodelay(true).ok();
+                return Ok(stream);
+            }
+            Ok(Err(error)) => last_error = Some(error),
+            Err(_) => {
+                last_error = Some(std::io::Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    format!("connection to {host}:{port} timed out"),
+                ));
+            }
+        }
+    }
+    Err(last_error.unwrap_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("no addresses available for {host}"),
+        )
+    }))
+}
+
 async fn connect_tcp(host: &str, port: u16) -> std::io::Result<TcpStream> {
     // Prefer the ordered address list from the shared download resolver
     // (IPv4/IPv6 preference and per-IP reliability), falling back to the
     // system resolver when no list is cached yet.
-    let addresses =
-        crate::util::fetch::DOWNLOAD_DNS_RESOLVER.resolved_addresses(host);
+    let resolver = &crate::util::fetch::DOWNLOAD_DNS_RESOLVER;
+    let addresses = resolver.resolved_addresses(host);
     let mut last_error = None;
     if !addresses.is_empty() {
-        for address in addresses {
-            match tokio::time::timeout(
-                CONNECT_TIMEOUT,
-                TcpStream::connect((address, port)),
-            )
-            .await
-            {
-                Ok(Ok(stream)) => {
-                    stream.set_nodelay(true).ok();
-                    return Ok(stream);
-                }
-                Ok(Err(error)) => last_error = Some(error),
-                Err(_) => {
-                    last_error = Some(std::io::Error::new(
-                        std::io::ErrorKind::TimedOut,
-                        format!("connection to {host}:{port} timed out"),
-                    ));
+        match connect_addresses(host, port, &addresses).await {
+            Ok(stream) => return Ok(stream),
+            Err(error) => last_error = Some(error),
+        }
+        if resolver.record_connection_failure(host) {
+            resolver.pre_resolve(host).await;
+            let refreshed = resolver.resolved_addresses(host);
+            if !refreshed.is_empty() && refreshed != addresses {
+                match connect_addresses(host, port, &refreshed).await {
+                    Ok(stream) => return Ok(stream),
+                    Err(error) => last_error = Some(error),
                 }
             }
         }
@@ -376,6 +447,44 @@ pub(crate) async fn shared_connection(
         ));
     }
     tracing::debug!(authority, "Establishing cold shared HTTP/2 connection");
+    let connection = establish(route, reserve_native_budget).await?;
+    *cached = Some(Arc::clone(&connection));
+    Ok(connection)
+}
+
+/// Returns the optional second connection used exclusively by a busy asset
+/// batch. It is stored independently so ordinary file downloads retain their
+/// stable primary connection and never create extra TCP connections.
+pub(crate) async fn shared_batch_connection(
+    route: &DownloadRoute,
+    reserve_native_budget: bool,
+) -> Result<Arc<SharedH2Connection>, H2ConnectError> {
+    let authority =
+        crate::util::fetch::url_authority(&route.url).ok_or_else(|| {
+            H2ConnectError::new(
+                H2ConnectFailureKind::Protocol,
+                "HTTP/2 route has no authority".to_string(),
+            )
+        })?;
+    let slot = batch_connection_slot(&authority).await;
+    let mut cached = slot.lock().await;
+    if let Some(connection) =
+        cached.as_ref().filter(|connection| !connection.is_dead())
+    {
+        if !reserve_native_budget || connection.has_physical_budget() {
+            tracing::debug!(
+                authority,
+                "Reusing sibling HTTP/2 asset connection"
+            );
+            return Ok(Arc::clone(connection));
+        }
+        return Err(H2ConnectError::new(
+            H2ConnectFailureKind::Protocol,
+            "sibling HTTP/2 connection is not covered by the native connection budget"
+                .to_string(),
+        ));
+    }
+    tracing::debug!(authority, "Establishing sibling HTTP/2 asset connection");
     let connection = establish(route, reserve_native_budget).await?;
     *cached = Some(Arc::clone(&connection));
     Ok(connection)

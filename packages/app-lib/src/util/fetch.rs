@@ -1711,6 +1711,19 @@ fn record_route_failure(
     record_route_health_failure(route, resource, cooldown);
 }
 
+fn record_dns_connection_failure(
+    route: &DownloadRoute,
+    error: &reqwest::Error,
+) -> Option<String> {
+    if !error.is_connect() && !error.is_timeout() {
+        return None;
+    }
+    let host = route_host(route)?;
+    DOWNLOAD_DNS_RESOLVER
+        .record_connection_failure(&host)
+        .then_some(host)
+}
+
 fn record_native_transfer_failure(
     route: &DownloadRoute,
     cooldown: Option<time::Duration>,
@@ -1839,7 +1852,15 @@ async fn fetch_validated_metadata_route(
     }
     let _permit = semaphore.0.acquire().await?;
     let request_started = Instant::now();
-    let response = request.send().await?;
+    let response = match request.send().await {
+        Ok(response) => response,
+        Err(error) => {
+            if let Some(host) = record_dns_connection_failure(route, &error) {
+                DOWNLOAD_DNS_RESOLVER.pre_resolve(&host).await;
+            }
+            return Err(error.into());
+        }
+    };
     let ttfb = request_started.elapsed();
     let status = response.status();
     let remote_addr = response.remote_addr();
@@ -2844,6 +2865,11 @@ async fn fetch_advanced_with_client_and_progress(
                 }
                 Err(err) => {
                     drop(permit);
+                    if let Some(host) =
+                        record_dns_connection_failure(route, &err)
+                    {
+                        DOWNLOAD_DNS_RESOLVER.pre_resolve(&host).await;
+                    }
                     record_route_failure(route, resource, None);
                     let error_message = err.to_string();
                     let error: crate::Error = err.into();
@@ -3307,6 +3333,14 @@ fn in_flight_download_lock(key: String) -> Arc<AsyncMutex<()>> {
     }
 }
 
+/// Serializes every writer for one destination, including download engines
+/// that do not enter `download_to_path` (such as the H2 asset batch).
+pub(crate) fn destination_download_lock(
+    destination: &Path,
+) -> Arc<AsyncMutex<()>> {
+    in_flight_download_lock(download_lock_key(destination))
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct ParsedContentRange {
     start: u64,
@@ -3490,6 +3524,10 @@ async fn send_path_request_with_clients(
         let response = match request.send().await {
             Ok(response) => response,
             Err(error) => {
+                if let Some(host) = record_dns_connection_failure(route, &error)
+                {
+                    DOWNLOAD_DNS_RESOLVER.pre_resolve(&host).await;
+                }
                 if !fallback_to_http1
                     && redirect_count < 5
                     && is_h2_protocol_failure(&error)
@@ -5576,8 +5614,7 @@ async fn download_to_path_inner(
     if let Some(parent) = destination.parent() {
         io::create_dir_all(parent).await?;
     }
-    let lock_key = download_lock_key(destination);
-    let download_lock = in_flight_download_lock(lock_key);
+    let download_lock = destination_download_lock(destination);
     let _download_guard = download_lock.lock().await;
     let mode = source_mode_for_resource(request.resource);
     let mut routes = {

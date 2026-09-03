@@ -504,6 +504,11 @@ fn restart_app(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
+fn exit_app(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
+#[tauri::command]
 async fn check_symlink_capability() -> api::Result<String> {
     let capability = theseus::symlink::check_symlink_capability().await?;
     Ok(match capability {
@@ -866,11 +871,13 @@ fn main() {
             set_transparent_window_frame,
             show_window,
             restart_app,
+            exit_app,
             check_symlink_capability,
             is_elevated,
             allow_symlink_target,
             lightweight_mode::lightweight_mode_frontend_ready,
             lightweight_mode::lightweight_mode_set_route,
+            lightweight_mode::lightweight_mode_enter,
         ]);
 
     tracing::info!("Initializing app...");

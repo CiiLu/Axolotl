@@ -27,6 +27,7 @@ import {
 	Avatar,
 	BigOptionButton,
 	ButtonStyled,
+	Checkbox,
 	clientInstallableLoaders,
 	commonMessages,
 	ContentInstallModal,
@@ -56,6 +57,7 @@ import SymlinkMethodCards from '@modrinth/ui/src/components/flows/drop/SymlinkMe
 import { useQuery } from '@tanstack/vue-query'
 import { getVersion } from '@tauri-apps/api/app'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { Effect, getCurrentWindow } from '@tauri-apps/api/window'
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { openUrl } from '@tauri-apps/plugin-opener'
@@ -374,6 +376,13 @@ const privacyConsentPending = ref(false)
 const communityAnnouncementModal = ref()
 const surveyModal = ref()
 const updateAnnouncementModal = ref()
+const closeChoiceModal = ref<InstanceType<typeof NewModal>>()
+const closeChoiceOpen = ref(false)
+const closeChoiceRemember = ref(false)
+const closeRequestInProgress = ref(false)
+let allowWindowClose = false
+let unlistenCloseRequested: (() => void) | undefined
+let unlistenLightweightModeError: (() => void) | undefined
 const minecraftCrashModal = ref()
 const javaDownloadConfirmationModal = ref()
 const pendingUpdateAnnouncementVersion = ref(null)
@@ -454,9 +463,37 @@ async function checkUpdates() {
 	)
 }
 
+/**
+ * Keep browser/webview shortcuts from escaping the launcher UI. F12 remains
+ * available when the in-app developer mode is enabled so development tools
+ * can still be opened intentionally.
+ */
+function handleGlobalKeydown(event: KeyboardEvent) {
+	const key = event.key.toLowerCase()
+	const isFindShortcut = key === 'f' && (event.ctrlKey || event.metaKey)
+	const isBlockedDevtoolsShortcut = event.key === 'F12' && !themeStore.devMode
+
+	if (isFindShortcut || isBlockedDevtoolsShortcut) {
+		event.preventDefault()
+		event.stopPropagation()
+	}
+}
+
 onMounted(async () => {
+	unlistenLightweightModeError = await listen<string>('lightweight-mode-error', ({ payload }) => {
+		allowWindowClose = false
+		closeRequestInProgress.value = false
+		if (!closeChoiceOpen.value) {
+			closeChoiceOpen.value = true
+			closeChoiceRemember.value = false
+			closeChoiceModal.value?.show()
+		}
+		handleError(payload)
+	})
 	await useCheckDisableMouseover()
 
+	window.addEventListener('keydown', handleGlobalKeydown, true)
+	unlistenCloseRequested = await getCurrentWindow().onCloseRequested(handleCloseRequested)
 	document.querySelector('body').addEventListener('click', handleClick)
 	document.querySelector('body').addEventListener('auxclick', handleAuxClick)
 
@@ -465,6 +502,9 @@ onMounted(async () => {
 })
 
 onUnmounted(async () => {
+	window.removeEventListener('keydown', handleGlobalKeydown, true)
+	unlistenCloseRequested?.()
+	unlistenLightweightModeError?.()
 	document.querySelector('body').removeEventListener('click', handleClick)
 	document.querySelector('body').removeEventListener('auxclick', handleAuxClick)
 	clearDelayedUpdatePopup()
@@ -585,6 +625,22 @@ const messages = defineMessages({
 	restarting: {
 		id: 'app.restarting',
 		defaultMessage: 'Restarting...',
+	},
+	closeLauncherTitle: {
+		id: 'app.close-launcher.title',
+		defaultMessage: 'Choose how to close Axolotl Launcher',
+	},
+	closeLauncherDirect: {
+		id: 'app.close-launcher.direct',
+		defaultMessage: 'Close directly',
+	},
+	closeLauncherTray: {
+		id: 'app.close-launcher.tray',
+		defaultMessage: 'Hide to tray',
+	},
+	closeLauncherRemember: {
+		id: 'app.close-launcher.remember',
+		defaultMessage: 'Remember my choice',
 	},
 	betaBuild: {
 		id: 'app.build.beta',
@@ -939,6 +995,7 @@ async function setupApp() {
 		auto_hide_downloads_button,
 		home_layout,
 		minimal_home_instance_id,
+		close_behavior,
 		developer_mode,
 		feature_flags,
 		pending_update_toast_for_version,
@@ -993,6 +1050,7 @@ async function setupApp() {
 	themeStore.autoHideDownloadsButton = auto_hide_downloads_button
 	themeStore.homeLayout = home_layout
 	themeStore.minimalHomeInstanceId = minimal_home_instance_id
+	themeStore.closeBehavior = close_behavior
 	themeStore.devMode = developer_mode
 	themeStore.featureFlags = feature_flags
 	stateInitialized.value = true
@@ -1205,10 +1263,85 @@ stateInitialization
 		error.showError(err, null, false, 'state_init')
 	})
 
-const handleClose = async () => {
-	await saveWindowState(StateFlags.ALL)
-	await getCurrentWindow().close()
+async function closeWindowImmediately() {
+	if (closeRequestInProgress.value) return
+	closeRequestInProgress.value = true
+	allowWindowClose = true
+	try {
+		await saveWindowState(StateFlags.ALL)
+		await invoke('exit_app')
+	} catch (error) {
+		allowWindowClose = false
+		closeRequestInProgress.value = false
+		handleError(error)
+	}
 }
+
+async function enterLightweightModeOnClose() {
+	closeRequestInProgress.value = true
+	try {
+		await saveWindowState(StateFlags.ALL)
+		await invoke('lightweight_mode_enter')
+	} catch (error) {
+		allowWindowClose = false
+		closeRequestInProgress.value = false
+		handleError(error)
+	}
+}
+
+async function applyCloseChoice(choice: 'close' | 'lightweight', remember: boolean) {
+	if (closeRequestInProgress.value) return
+	closeRequestInProgress.value = true
+	const previousCloseBehavior = themeStore.closeBehavior
+	let closeBehaviorPersisted = false
+	try {
+		if (remember) {
+			const settings = await getSettings()
+			settings.close_behavior = choice
+			await setSettings(settings)
+			themeStore.closeBehavior = choice
+			closeBehaviorPersisted = true
+		}
+		if (choice === 'close') {
+			allowWindowClose = true
+			await saveWindowState(StateFlags.ALL)
+			await invoke('exit_app')
+		} else {
+			await enterLightweightModeOnClose()
+		}
+	} catch (error) {
+		if (remember && !closeBehaviorPersisted) {
+			themeStore.closeBehavior = previousCloseBehavior
+		}
+		allowWindowClose = false
+		closeRequestInProgress.value = false
+		closeChoiceOpen.value = true
+		handleError(error)
+	}
+}
+
+async function handleCloseRequested(event: { preventDefault: () => void }) {
+	if (allowWindowClose) return
+	event.preventDefault()
+	if (closeRequestInProgress.value) return
+	if (closeChoiceOpen.value) return
+
+	const behavior = themeStore.closeBehavior
+	if (behavior === 'close') {
+		await closeWindowImmediately()
+		return
+	}
+	if (behavior === 'lightweight') {
+		await enterLightweightModeOnClose()
+		return
+	}
+
+	closeChoiceOpen.value = true
+	closeChoiceRemember.value = false
+	closeChoiceModal.value?.show()
+}
+
+const handleClose = closeWindowImmediately
 
 const loading = setupLoadingStateProvider()
 loading.setEnabled(false)
@@ -2363,6 +2496,40 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<CommunityAnnouncementModal ref="communityAnnouncementModal" />
 	<SurveyAnnouncementModal ref="surveyModal" />
 	<UpdateAnnouncementModal ref="updateAnnouncementModal" @closed="handleUpdateAnnouncementClosed" />
+	<NewModal
+		ref="closeChoiceModal"
+		:header="formatMessage(messages.closeLauncherTitle)"
+		:closable="false"
+		max-width="30rem"
+	>
+		<div class="grid grid-cols-2 gap-3">
+			<ButtonStyled color="brand">
+				<button
+					type="button"
+					:disabled="closeRequestInProgress"
+					@click="applyCloseChoice('close', closeChoiceRemember)"
+				>
+					{{ formatMessage(messages.closeLauncherDirect) }}
+				</button>
+			</ButtonStyled>
+			<ButtonStyled>
+				<button
+					type="button"
+					:disabled="closeRequestInProgress"
+					@click="applyCloseChoice('lightweight', closeChoiceRemember)"
+				>
+					{{ formatMessage(messages.closeLauncherTray) }}
+				</button>
+			</ButtonStyled>
+		</div>
+		<div class="mt-4">
+			<Checkbox
+				v-model="closeChoiceRemember"
+				:disabled="closeRequestInProgress"
+				:label="formatMessage(messages.closeLauncherRemember)"
+			/>
+		</div>
+	</NewModal>
 	<ErrorModal ref="errorModal" />
 	<MinecraftAuthErrorModal ref="minecraftAuthErrorModal" />
 	<ContentInstallModal

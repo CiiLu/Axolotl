@@ -30,6 +30,7 @@ export type AccentColor = (typeof ACCENT_COLOR_OPTIONS)[number]
 export type CustomAccentColor = `custom:#${string}`
 export type AccentColorSetting = AccentColor | CustomAccentColor
 export type HomeLayout = 'standard' | 'minimal'
+export type CloseBehavior = 'ask' | 'close' | 'lightweight'
 
 /**
  * Extracts the `#rrggbb` hex from a `custom:#rrggbb` accent setting,
@@ -115,6 +116,7 @@ export type ThemeStore = {
 	autoHideDownloadsButton: boolean
 	homeLayout: HomeLayout
 	minimalHomeInstanceId: string | null
+	closeBehavior: CloseBehavior
 
 	devMode: boolean
 	featureFlags: FeatureFlags
@@ -136,6 +138,7 @@ export const DEFAULT_THEME_STORE: ThemeStore = {
 	autoHideDownloadsButton: false,
 	homeLayout: 'standard',
 	minimalHomeInstanceId: null,
+	closeBehavior: 'ask',
 
 	devMode: false,
 	featureFlags: DEFAULT_FEATURE_FLAGS,

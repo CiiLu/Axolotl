@@ -4,7 +4,7 @@ use std::{
     sync::Mutex,
 };
 use tauri::{
-    AppHandle, Listener, Manager, WebviewUrl, WebviewWindowBuilder,
+    AppHandle, Emitter, Listener, Manager, WebviewUrl, WebviewWindowBuilder,
     menu::{
         CheckMenuItem, IsMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu,
     },
@@ -93,11 +93,23 @@ pub struct LightweightMode(Mutex<LightweightModeState>);
 
 impl LightweightMode {
     fn enter(&self, app: &AppHandle) -> Result<(), String> {
+        self.enter_internal(app, true)
+    }
+
+    pub fn enter_for_close(&self, app: &AppHandle) -> Result<(), String> {
+        self.enter_internal(app, false)
+    }
+
+    fn enter_internal(
+        &self,
+        app: &AppHandle,
+        require_running: bool,
+    ) -> Result<(), String> {
         let state = self.0.lock().map_err(|error| error.to_string())?;
         if state.active {
             return Ok(());
         }
-        if state.running_processes == 0 {
+        if require_running && state.running_processes == 0 {
             return Err(
                 "Lightweight mode requires a running Minecraft instance"
                     .to_string(),
@@ -343,6 +355,24 @@ pub struct FrontendReadyPayload {
 #[tauri::command]
 pub fn lightweight_mode_set_route(app: AppHandle, route: String) {
     app.state::<LightweightMode>().set_route(route);
+}
+
+#[tauri::command]
+pub fn lightweight_mode_enter(app: AppHandle) -> Result<(), String> {
+    // Schedule the window destruction after returning from the IPC command.
+    // Destroying the webview synchronously would leave the invoke caller
+    // waiting for a response from a window that is already being destroyed.
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        if let Err(error) = app.state::<LightweightMode>().enter_for_close(&app)
+        {
+            tracing::warn!(
+                "Failed to enter lightweight mode on close: {error}"
+            );
+            let _ = app.emit("lightweight-mode-error", error);
+        }
+    });
+    Ok(())
 }
 
 fn destroy_main_window(app: &AppHandle) -> Result<(), String> {

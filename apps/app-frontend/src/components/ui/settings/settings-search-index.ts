@@ -113,6 +113,16 @@ export const settingsSearchEntries: SettingsSearchEntry[] = [
 		label: message('app.appearance-settings.native-decorations.title', 'Native decorations'),
 	},
 	{
+		id: 'appearance-close-behavior',
+		categoryId: 'interface',
+		targetId: 'settings-target-appearance-close-behavior',
+		label: message(
+			'app.appearance-settings.close-behavior.title',
+			'Choose how to close Axolotl Launcher',
+		),
+		keywords: ['close', 'tray', 'lightweight'],
+	},
+	{
 		id: 'launch-minimize-launcher',
 		categoryId: 'launch-defaults',
 		targetId: 'settings-target-launch-minimize',

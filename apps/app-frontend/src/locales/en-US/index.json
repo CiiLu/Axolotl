@@ -416,6 +416,21 @@
   "app.appearance-settings.auto-install-dependencies.title": {
     "message": "Automatically install dependencies"
   },
+  "app.appearance-settings.close-behavior.ask": {
+    "message": "Ask every time"
+  },
+  "app.appearance-settings.close-behavior.close": {
+    "message": "Close directly"
+  },
+  "app.appearance-settings.close-behavior.description": {
+    "message": "Choose whether closing the window exits the launcher or hides it to the tray."
+  },
+  "app.appearance-settings.close-behavior.lightweight": {
+    "message": "Hide to tray"
+  },
+  "app.appearance-settings.close-behavior.title": {
+    "message": "Choose how to close Axolotl Launcher"
+  },
   "app.appearance-settings.color-theme.description": {
     "message": "Select your preferred color theme for Axolotl Launcher."
   },
@@ -739,6 +754,18 @@
   },
   "app.build.beta": {
     "message": "Beta"
+  },
+  "app.close-launcher.direct": {
+    "message": "Close directly"
+  },
+  "app.close-launcher.remember": {
+    "message": "Remember my choice"
+  },
+  "app.close-launcher.title": {
+    "message": "Choose how to close Axolotl Launcher"
+  },
+  "app.close-launcher.tray": {
+    "message": "Hide to tray"
   },
   "app.community-announcement.feedback-middle": {
     "message": ", or share them with us through "
