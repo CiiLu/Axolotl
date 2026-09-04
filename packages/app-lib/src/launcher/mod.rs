@@ -16,6 +16,7 @@ pub(crate) use crate::launcher::direct_link::{
     pcl_ram_profile,
 };
 use crate::launcher::download::{LocalRuntimeSource, download_log_config};
+use crate::launcher::instance_runtime::InstanceRuntimeAdapter;
 use crate::launcher::quick_play_version::{
     QuickPlayServerVersion, QuickPlayVersion,
 };
@@ -51,6 +52,7 @@ use winreg::{RegKey, enums::HKEY_CURRENT_USER};
 mod args;
 mod direct_ensure;
 mod direct_link;
+pub(crate) mod instance_runtime;
 mod local_artifact;
 mod natives;
 
@@ -1032,7 +1034,9 @@ async fn install_minecraft_with_local_source(
     // Version-isolated external instances are direct-managed from creation.
     // Complete their external assets/libraries now so the first launch never
     // falls back to Axolotl's shared runtime directories.
-    if let Some(direct) = direct_link_for_instance(instance)? {
+    let runtime_adapter =
+        InstanceRuntimeAdapter::for_instance(instance, &state.directories)?;
+    if let Some(direct) = runtime_adapter.direct_link() {
         let resolved = direct.resolve()?;
         direct_ensure::ensure_direct_launch_dependencies(
             &state,
@@ -1462,48 +1466,17 @@ async fn select_linked_java(candidates: Vec<PathBuf>) -> Option<JavaVersion> {
 }
 
 /// Resolves the game directory a directly associated instance actually plays
-/// from: the shared `.minecraft` for HMCL/generic dialects, `versions/<id>`
-/// for PCL/PCL-CE version isolation. `None` when the instance is not directly
-/// associated or its linked metadata is incomplete.
+/// from. The selected runtime adapter preserves each external launcher's
+/// shared or version-isolated path semantics. `None` when the instance is not
+/// directly associated or its linked metadata is incomplete.
 ///
 /// Content browsing (mods/worlds listing) uses this so it reads the same
-/// folders the launch does. Unlike the launch path, an unreadable version
-/// chain degrades to the linked `.minecraft` root instead of failing: browsing
-/// must keep working when only the dialect resolution breaks.
+/// folders the launch does. If a version chain cannot be resolved, the
+/// selected runtime adapter supplies a mode-appropriate external fallback.
 pub(crate) fn linked_game_dir(instance: &Instance) -> Option<PathBuf> {
-    let direct = match direct_link_for_instance(instance) {
-        Ok(Some(direct)) => direct,
-        Ok(None) | Err(_) => return None,
-    };
-    match direct.resolve() {
-        Ok(resolved) => Some(resolved.game_dir),
-        Err(error) => {
-            tracing::warn!(
-                %error,
-                "Falling back to the shared linked `.minecraft` root; the \
-                 linked version chain could not be resolved"
-            );
-            if !instance.is_direct_linked()
-                && instance.game_dir_override.is_some()
-            {
-                Some(direct.version_dir())
-            } else {
-                Some(direct.dot_minecraft.clone())
-            }
-        }
-    }
-}
-
-fn direct_link_for_instance(
-    instance: &Instance,
-) -> crate::Result<Option<DirectLinkedLaunch>> {
-    if let Some(direct) = DirectLinkedLaunch::from_instance(instance)? {
-        return Ok(Some(direct));
-    }
-    let Some(game_dir_override) = instance.game_dir_override.as_deref() else {
-        return Ok(None);
-    };
-    DirectLinkedLaunch::from_external_version_dir(Path::new(game_dir_override))
+    let adapter =
+        InstanceRuntimeAdapter::external_for_instance(instance).ok()??;
+    Some(adapter.game_dir())
 }
 
 fn link_project_and_version(
@@ -1573,7 +1546,9 @@ pub async fn launch_minecraft(
 
     let state = State::get().await?;
 
-    let direct_launch = direct_link_for_instance(instance)?;
+    let runtime =
+        InstanceRuntimeAdapter::for_instance(instance, &state.directories)?;
+    let direct_launch = runtime.direct_link().cloned();
     let mut resolved_linked = direct_launch
         .as_ref()
         .map(DirectLinkedLaunch::resolve)
@@ -2209,16 +2184,8 @@ pub async fn launch_minecraft(
 
     let rpc_server = RpcServerBuilder::new().launch().await?;
 
-    let launch_libraries_dir = if let Some(direct) = &direct_launch {
-        direct.libraries_dir()
-    } else {
-        state.directories.libraries_dir()
-    };
-    let launch_log_configs_dir = if let Some(direct) = &direct_launch {
-        direct.log_configs_dir()
-    } else {
-        state.directories.log_configs_dir()
-    };
+    let launch_libraries_dir = runtime.libraries_dir(&state.directories);
+    let launch_log_configs_dir = runtime.log_configs_dir(&state.directories);
     let class_paths = if let (Some(direct), Some(libraries)) =
         (&direct_launch, linked_libraries.as_deref())
     {
@@ -2286,12 +2253,7 @@ pub async fn launch_minecraft(
             ));
     }
 
-    let launch_assets_dir = if let Some(direct) = &direct_launch {
-        // Use the assets of the linked installation in place.
-        direct.assets_dir()
-    } else {
-        state.directories.assets_dir()
-    };
+    let launch_assets_dir = runtime.assets_dir(&state.directories);
 
     command
         .arg("com.modrinth.theseus.MinecraftLaunch")

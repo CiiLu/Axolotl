@@ -645,7 +645,7 @@ mod tests {
 
     /// Creates a directly associated instance whose linked `.minecraft`
     /// lives in a fresh temp dir (generic dialect: launches from the linked
-    /// root itself).
+    /// `.minecraft/versions/<id>` directory).
     async fn create_direct_link_fixture(
         label: &str,
     ) -> (TempDir, crate::state::InstanceMetadata) {
@@ -695,18 +695,33 @@ mod tests {
                 .await
                 .unwrap();
 
-        // The generic dialect resolves to the linked `.minecraft` root; the
-        // absolute path makes the directory helpers land inside the linked
-        // installation instead of a ghost `profiles/<path>` folder.
-        assert_eq!(resolved, minecraft.path().to_string_lossy());
+        // The generic dialect resolves to the isolated version directory; the
+        // absolute path keeps helpers inside the linked installation instead
+        // of a ghost `profiles/<path>` folder.
+        assert_eq!(
+            resolved,
+            minecraft
+                .path()
+                .join("versions")
+                .join("logs-resolve")
+                .to_string_lossy()
+        );
         assert!(game_dir_override.is_none());
         assert_eq!(
             state.directories.instance_logs_dir(&resolved),
-            minecraft.path().join("logs")
+            minecraft
+                .path()
+                .join("versions")
+                .join("logs-resolve")
+                .join("logs")
         );
         assert_eq!(
             state.directories.crash_reports_dir(&resolved),
-            minecraft.path().join("crash-reports")
+            minecraft
+                .path()
+                .join("versions")
+                .join("logs-resolve")
+                .join("crash-reports")
         );
         assert!(
             !state
@@ -751,18 +766,18 @@ mod tests {
         let (minecraft, metadata) =
             create_direct_link_fixture("logs-enum").await;
 
-        std::fs::create_dir_all(minecraft.path().join("logs")).unwrap();
+        let version_dir = minecraft.path().join("versions").join("logs-enum");
+        std::fs::create_dir_all(version_dir.join("logs")).unwrap();
         std::fs::write(
-            minecraft.path().join("logs/latest.log"),
+            version_dir.join("logs").join("latest.log"),
             b"[12:00:00] [Render thread/INFO]: Setting user\n",
         )
         .unwrap();
-        std::fs::create_dir_all(minecraft.path().join("crash-reports"))
-            .unwrap();
+        std::fs::create_dir_all(version_dir.join("crash-reports")).unwrap();
         std::fs::write(
-            minecraft
-                .path()
-                .join("crash-reports/crash-2026-01-02_03.04.05-server.txt"),
+            version_dir
+                .join("crash-reports")
+                .join("crash-2026-01-02_03.04.05-server.txt"),
             b"---- Minecraft Crash Report ----\n",
         )
         .unwrap();
@@ -796,18 +811,18 @@ mod tests {
         let (minecraft, metadata) =
             create_direct_link_fixture("logs-crash").await;
 
-        std::fs::create_dir_all(minecraft.path().join("logs")).unwrap();
+        let version_dir = minecraft.path().join("versions").join("logs-crash");
+        std::fs::create_dir_all(version_dir.join("logs")).unwrap();
         std::fs::write(
-            minecraft.path().join("logs/latest.log"),
+            version_dir.join("logs").join("latest.log"),
             b"[12:00:00] [Render thread/INFO]: Setting user\n",
         )
         .unwrap();
-        std::fs::create_dir_all(minecraft.path().join("crash-reports"))
-            .unwrap();
+        std::fs::create_dir_all(version_dir.join("crash-reports")).unwrap();
         std::fs::write(
-            minecraft
-                .path()
-                .join("crash-reports/crash-2026-01-02_03.04.05-server.txt"),
+            version_dir
+                .join("crash-reports")
+                .join("crash-2026-01-02_03.04.05-server.txt"),
             b"---- Minecraft Crash Report ----\n\
               // Who set us up the TNT?\n\
               java.lang.OutOfMemoryError: Java heap space\n",

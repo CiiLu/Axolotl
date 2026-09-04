@@ -153,12 +153,14 @@ impl DirectLinkedLaunch {
                     self.launcher_root.as_deref(),
                 )?
             }
-            LinkedLauncherDialect::Hmcl | LinkedLauncherDialect::Generic => {
-                resolve_content_game_dir(
-                    &self.dot_minecraft,
-                    &self.version_dir(),
-                )?
-            }
+            LinkedLauncherDialect::Hmcl => resolve_content_game_dir(
+                &self.dot_minecraft,
+                &self.version_dir(),
+            )?,
+            // A generic direct link is the `.minecraft/versions/<id>` format;
+            // its content is always isolated beside the version metadata,
+            // including when the directory is currently empty.
+            LinkedLauncherDialect::Generic => self.version_dir(),
         };
         Ok(ResolvedLinkedLaunch { merged, game_dir })
     }
@@ -257,10 +259,10 @@ impl DirectLinkedLaunch {
     }
 }
 
-/// External launchers commonly keep an isolated instance's content beside
-/// its version JSON without a launcher-specific config file. Prefer that
-/// directory when it contains instance-owned content; otherwise use the
-/// shared `.minecraft` root.
+/// HMCL commonly keeps an isolated instance's content beside its version JSON
+/// without a launcher-specific config file. Prefer that directory when it
+/// contains instance-owned content; otherwise use the shared `.minecraft`
+/// root. Generic direct links use the isolated directory unconditionally.
 fn resolve_content_game_dir(
     dot_minecraft: &Path,
     version_dir: &Path,
@@ -1848,7 +1850,7 @@ mod tests {
     }
 
     #[test]
-    fn generic_version_without_content_folders_uses_shared_game_dir() {
+    fn generic_version_isolated_even_without_content_folders() {
         let root = tempfile::tempdir().unwrap();
         let version = root.path().join("versions/demo");
         std::fs::create_dir_all(&version).unwrap();
@@ -1857,6 +1859,15 @@ mod tests {
             resolve_content_game_dir(root.path(), &version).unwrap(),
             root.path()
         );
+
+        let direct = DirectLinkedLaunch {
+            dot_minecraft: root.path().to_path_buf(),
+            launcher_root: None,
+            version_id: "demo".to_string(),
+            version_json: Some(version.join("demo.json")),
+            dialect: LinkedLauncherDialect::Generic,
+        };
+        assert_eq!(direct.resolve().unwrap().game_dir, version);
     }
 
     #[test]
