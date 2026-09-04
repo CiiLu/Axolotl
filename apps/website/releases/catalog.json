@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-09-03T21:09:59.000Z",
+  "updated_at": "2026-09-04T05:18:15.323Z",
   "announcements": [
     {
       "id": "launcher-1.9.5",
@@ -11,7 +11,10 @@
       },
       "changes": {
         "added": [
-          { "en-US": "Added multi-update channel option.", "zh-CN": "添加多更新渠道选项。" },
+          {
+            "en-US": "Added multi-update channel option.",
+            "zh-CN": "添加多更新渠道选项。"
+          },
           {
             "en-US": "Add relevant instructions and tips about database isolation.",
             "zh-CN": "添加数据库隔离的相关说明与提示。"
