@@ -524,6 +524,7 @@ pub async fn install_apt_package(version: &str, data: &[u8]) -> Result<()> {
         std::process::Command::new("pkexec")
             .arg("apt")
             .arg("install")
+            .arg("-y")
             .arg(&install_path)
             .output()
     })
