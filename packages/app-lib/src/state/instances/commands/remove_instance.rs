@@ -15,7 +15,21 @@ pub(crate) async fn remove_instance(
             crate::ErrorKind::InputError("Unknown instance".to_string())
         })?;
 
-    let path = state.directories.instances_dir().join(&instance.path);
+    // Directly associated instances have no Axolotl profile directory. Their
+    // version directory is the instance itself, so removal deliberately
+    // deletes the externally managed content in place. Keep the shared
+    // `.minecraft` root (assets/libraries/other versions) intact.
+    let path = if instance.is_direct_linked() {
+        crate::launcher::DirectLinkedLaunch::from_instance(&instance)?
+            .ok_or_else(|| {
+                crate::ErrorKind::LauncherError(
+                    "Direct instance link metadata is incomplete".to_string(),
+                )
+            })?
+            .version_dir()
+    } else {
+        state.directories.instances_dir().join(&instance.path)
+    };
     if path.exists() {
         io::remove_dir_all(&path).await?;
     }
