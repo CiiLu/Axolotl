@@ -329,11 +329,13 @@ fn resolve_repository_paths(
     let dot_minecraft = canonicalize_checked(&dot_minecraft)?;
     let target = split_config_name(instance_folder).1;
     let target = if target.is_empty() {
-        instance_folder
-            .strip_prefix("versions/")
-            .unwrap_or(instance_folder)
+        Path::new(instance_folder)
+            .strip_prefix("versions")
+            .unwrap_or_else(|_| Path::new(instance_folder))
     } else {
-        target.strip_prefix("versions/").unwrap_or(target)
+        Path::new(target)
+            .strip_prefix("versions")
+            .unwrap_or_else(|_| Path::new(target))
     };
     let version_dir = dot_minecraft.join("versions").join(target);
     if !version_dir.is_dir() {
@@ -483,7 +485,7 @@ fn split_config_name(name: &str) -> (&str, &str) {
 
 /// Resolves the folder of an instance from a base path and its scan identity.
 fn resolve_instance_path(base_path: &Path, instance_folder: &str) -> PathBuf {
-    if let Some(rest) = instance_folder.strip_prefix("versions/") {
+    if let Ok(rest) = Path::new(instance_folder).strip_prefix("versions") {
         return base_path.join("versions").join(rest);
     }
     if base_path
@@ -547,9 +549,15 @@ mod tests {
         .unwrap();
 
         assert_eq!(resolved.launcher, ImportLauncherType::Generic);
-        assert_eq!(resolved.dot_minecraft, root.path().canonicalize().unwrap());
+        assert_eq!(
+            resolved.dot_minecraft,
+            crate::util::io::canonicalize(root.path()).unwrap()
+        );
         assert_eq!(resolved.version_id, "1.20.1");
-        assert_eq!(resolved.version_dir, version_dir.canonicalize().unwrap());
+        assert_eq!(
+            resolved.version_dir,
+            crate::util::io::canonicalize(&version_dir).unwrap()
+        );
     }
 
     #[tokio::test]
@@ -568,7 +576,10 @@ mod tests {
         .unwrap();
 
         assert_eq!(resolved.launcher_key(), "pcl2");
-        assert_eq!(resolved.dot_minecraft, root.path().canonicalize().unwrap());
+        assert_eq!(
+            resolved.dot_minecraft,
+            crate::util::io::canonicalize(root.path()).unwrap()
+        );
         assert_eq!(resolved.version_id, "1.12.2-forge");
     }
 

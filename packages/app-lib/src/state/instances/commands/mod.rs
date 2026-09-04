@@ -5,6 +5,9 @@ pub(crate) use self::create_instance::create_instance;
 mod create_direct_link_instance;
 pub use self::create_direct_link_instance::CreateDirectLinkInstance;
 pub(crate) use self::create_direct_link_instance::create_direct_link_instance;
+mod sync_direct_link_instances;
+pub use self::sync_direct_link_instances::DirectLinkSyncReport;
+pub(crate) use self::sync_direct_link_instances::sync_direct_link_instances;
 
 mod edit_instance;
 pub use self::edit_instance::{
