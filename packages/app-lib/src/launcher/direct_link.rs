@@ -120,7 +120,10 @@ impl DirectLinkedLaunch {
                 )?
             }
             LinkedLauncherDialect::Hmcl | LinkedLauncherDialect::Generic => {
-                self.dot_minecraft.clone()
+                resolve_content_game_dir(
+                    &self.dot_minecraft,
+                    &self.version_dir(),
+                )?
             }
         };
         Ok(ResolvedLinkedLaunch { merged, game_dir })
@@ -204,6 +207,31 @@ impl DirectLinkedLaunch {
                 .join(library.classpath_relative_path()?))
         }
     }
+}
+
+/// External launchers commonly keep an isolated instance's content beside
+/// its version JSON without a launcher-specific config file. Prefer that
+/// directory when it contains instance-owned content; otherwise use the
+/// shared `.minecraft` root.
+fn resolve_content_game_dir(
+    dot_minecraft: &Path,
+    version_dir: &Path,
+) -> crate::Result<PathBuf> {
+    for name in [
+        "mods",
+        "config",
+        "saves",
+        "resourcepacks",
+        "shaderpacks",
+        "datapacks",
+        "schematics",
+    ] {
+        let path = version_dir.join(name);
+        if path.is_dir() {
+            return Ok(version_dir.to_path_buf());
+        }
+    }
+    Ok(dot_minecraft.to_path_buf())
 }
 
 /// Applies the managed-install loader normalization to a directly linked
@@ -1757,6 +1785,30 @@ mod tests {
         )
         .unwrap();
         assert_eq!(shared, root.path());
+    }
+
+    #[test]
+    fn generic_version_with_content_folders_uses_its_isolated_game_dir() {
+        let root = tempfile::tempdir().unwrap();
+        let version = root.path().join("versions/demo");
+        std::fs::create_dir_all(version.join("mods")).unwrap();
+
+        assert_eq!(
+            resolve_content_game_dir(root.path(), &version).unwrap(),
+            version
+        );
+    }
+
+    #[test]
+    fn generic_version_without_content_folders_uses_shared_game_dir() {
+        let root = tempfile::tempdir().unwrap();
+        let version = root.path().join("versions/demo");
+        std::fs::create_dir_all(&version).unwrap();
+
+        assert_eq!(
+            resolve_content_game_dir(root.path(), &version).unwrap(),
+            root.path()
+        );
     }
 
     #[test]
