@@ -463,44 +463,45 @@ pub(crate) async fn ensure_linked_assets_from(
                 .then(|| (hash.clone(), u64::from(asset.size), destination))
         })
         .collect();
-    if missing.is_empty() {
-        return Ok(());
-    }
-    tracing::info!(
-        count = missing.len(),
-        "Downloading missing Minecraft assets into the linked installation"
-    );
+    if !missing.is_empty() {
+        tracing::info!(
+            count = missing.len(),
+            "Downloading missing Minecraft assets into the linked installation"
+        );
 
-    let limit = download_util::task_concurrency_limit(st)
-        .map(|limit| limit.saturating_mul(2))
-        .unwrap_or(FALLBACK_CONCURRENCY);
-    stream::iter(missing)
-        .map(Ok::<_, crate::Error>)
-        .try_for_each_concurrent(
-            limit,
-            |(hash, size, destination)| async move {
-                let url = format!("{resources_base}/{}/{}", &hash[..2], hash);
-                let request =
-                    DownloadRequest::new(&url, ResourceClass::MinecraftAsset)
-                        .with_integrity(Integrity::sha1(&hash).with_size(size));
-                fetch::download_to_path(
-                request,
-                &destination,
-                &st.download_semaphore,
-                &st.pool,
-                None,
+        let limit = download_util::task_concurrency_limit(st)
+            .map(|limit| limit.saturating_mul(2))
+            .unwrap_or(FALLBACK_CONCURRENCY);
+        stream::iter(missing)
+            .map(Ok::<_, crate::Error>)
+            .try_for_each_concurrent(
+                limit,
+                |(hash, size, destination)| async move {
+                    let url = format!("{resources_base}/{}/{}", &hash[..2], hash);
+                    let request = DownloadRequest::new(
+                        &url,
+                        ResourceClass::MinecraftAsset,
+                    )
+                    .with_integrity(Integrity::sha1(&hash).with_size(size));
+                    fetch::download_to_path(
+                        request,
+                        &destination,
+                        &st.download_semaphore,
+                        &st.pool,
+                        None,
+                    )
+                    .await
+                    .map_err(|error| {
+                        crate::ErrorKind::LauncherError(format!(
+                            "Failed to download required Minecraft asset {hash} from \
+                             {url}: {error}"
+                        ))
+                    })?;
+                    Ok(())
+                },
             )
-            .await
-            .map_err(|error| {
-                crate::ErrorKind::LauncherError(format!(
-                    "Failed to download required Minecraft asset {hash} from \
-                     {url}: {error}"
-                ))
-            })?;
-                Ok(())
-            },
-        )
-        .await?;
+            .await?;
+    }
 
     if with_legacy {
         let legacy_root = direct.assets_dir().join("virtual").join("legacy");
@@ -1495,7 +1496,7 @@ mod tests {
             url: format!("{base}/indexes/5.json"),
         };
 
-        ensure_linked_assets_from(&state, &direct, &asset_index, &base, false)
+        ensure_linked_assets_from(&state, &direct, &asset_index, &base, true)
             .await
             .unwrap();
 
@@ -1521,6 +1522,34 @@ mod tests {
             .unwrap(),
             b"already downloaded asset"
         );
+        assert_eq!(
+            std::fs::read(
+                root.path()
+                    .join("assets")
+                    .join("virtual")
+                    .join("legacy")
+                    .join("minecraft")
+                    .join("sounds")
+                    .join("click.ogg")
+            )
+            .unwrap(),
+            missing_bytes
+        );
+        // A second ensure has no missing objects, but must still materialize
+        // the legacy virtual tree from the already-present object store.
+        let legacy_click = root
+            .path()
+            .join("assets")
+            .join("virtual")
+            .join("legacy")
+            .join("minecraft")
+            .join("sounds")
+            .join("click.ogg");
+        std::fs::remove_file(&legacy_click).unwrap();
+        ensure_linked_assets_from(&state, &direct, &asset_index, &base, true)
+            .await
+            .unwrap();
+        assert_eq!(std::fs::read(legacy_click).unwrap(), missing_bytes);
         let hits = hits.lock().unwrap();
         // The pre-seeded object must never be requested; the missing one must
         // be fetched at least once (the fetch layer may retry under load).

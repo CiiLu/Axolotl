@@ -1,6 +1,7 @@
+use crate::launcher::instance_runtime::InstanceRuntimeAdapter;
 use crate::state::State;
 use crate::util::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[tracing::instrument]
 pub async fn get_full_path(instance_id: &str) -> crate::Result<PathBuf> {
@@ -14,26 +15,14 @@ pub async fn get_full_path(instance_id: &str) -> crate::Result<PathBuf> {
     // Directly associated instances never have a profile directory under
     // `profiles`; interactive APIs (open folder, worlds, servers, ...) must
     // operate on the linked `.minecraft` instead.
-    if let Some(linked) = instance
-        .instance
-        .linked_dot_minecraft
-        .as_deref()
-        .map(str::trim)
-        .filter(|linked| !linked.is_empty())
-    {
-        if let Some(game_dir) =
-            crate::launcher::linked_game_dir(&instance.instance)
-        {
-            return Ok(io::canonicalize(game_dir)?);
-        }
-        return Ok(io::canonicalize(linked)?);
-    }
+    let adapter = InstanceRuntimeAdapter::for_instance(
+        &instance.instance,
+        &state.directories,
+    )?;
+    Ok(io::canonicalize(adapter.game_dir())?)
 
     // `instance_game_dir` honours a per-instance `game_dir_override` before
     // falling back to the profile directory.
-    Ok(io::canonicalize(
-        state.directories.instance_game_dir(&instance.instance),
-    )?)
 }
 
 #[tracing::instrument]
@@ -103,18 +92,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn direct_link_instance_resolves_to_linked_dot_minecraft() {
+    async fn direct_link_instance_resolves_to_isolated_version_directory() {
         let state = global_state().await;
         let (_minecraft, metadata) =
             create_direct_link_fixture("paths-demo").await;
 
         let resolved = get_full_path(&metadata.instance.id).await.unwrap();
 
-        assert_eq!(
-            resolved.to_string_lossy(),
-            metadata.instance.linked_dot_minecraft.as_deref().unwrap(),
-            "interactive APIs must land in the linked `.minecraft`"
-        );
+        assert!(resolved.ends_with(Path::new("versions").join("paths-demo")));
         assert!(
             !state
                 .directories
@@ -132,9 +117,11 @@ mod tests {
             create_direct_link_fixture("paths-browse").await;
 
         // The file browser lists directories relative to the resolved root.
-        std::fs::create_dir_all(minecraft.path().join("mods")).unwrap();
+        let version_dir =
+            minecraft.path().join("versions").join("paths-browse");
+        std::fs::create_dir_all(version_dir.join("mods")).unwrap();
         std::fs::write(
-            minecraft.path().join("mods/browse-fixture.jar"),
+            version_dir.join("mods").join("browse-fixture.jar"),
             b"browse fixture",
         )
         .unwrap();
