@@ -1,5 +1,6 @@
 use crate::api::pack::import::{
-    ImportLauncherType, direct_link::resolve_direct_link,
+    ImportLauncherType,
+    direct_link::{direct_link_group, resolve_direct_link},
 };
 use crate::state::instances::{
     ContentSet, ContentSetStatus, ContentSourceKind, Instance,
@@ -148,7 +149,11 @@ pub(crate) async fn create_direct_link_instance(
         &mut tx,
     )
     .await?;
-    instance_rows::replace_instance_groups(&instance_id, &[], &mut tx).await?;
+    let groups = direct_link_group(&resolved.dot_minecraft)
+        .into_iter()
+        .collect::<Vec<_>>();
+    instance_rows::replace_instance_groups(&instance_id, &groups, &mut tx)
+        .await?;
     instance_rows::upsert_instance_launch_overrides(&launch_overrides, &mut tx)
         .await?;
     tx.commit().await?;

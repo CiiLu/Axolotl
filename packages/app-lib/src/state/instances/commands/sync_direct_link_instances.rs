@@ -1,6 +1,7 @@
 use super::create_direct_link_instance::create_direct_link_instance;
 use crate::api::pack::import::{
-    ImportLauncherType, direct_link::resolve_direct_link,
+    ImportLauncherType,
+    direct_link::{direct_link_group, resolve_direct_link},
 };
 use crate::event::{InstancePayloadType, emit::emit_instance};
 use crate::state::instances::{
@@ -105,7 +106,11 @@ pub(crate) async fn sync_direct_link_instances(
                 let content_changed = metadata.applied_content_set.game_version
                     != resolved.game_version
                     || metadata.applied_content_set.loader != resolved.loader;
-                if fields_changed || content_changed {
+                let groups = direct_link_group(&resolved.dot_minecraft)
+                    .into_iter()
+                    .collect::<Vec<_>>();
+                let groups_changed = metadata.groups != groups;
+                if fields_changed || content_changed || groups_changed {
                     if content_changed {
                         crate::state::edit_instance(
                             &instance.id,
@@ -150,6 +155,12 @@ pub(crate) async fn sync_direct_link_instances(
                                     .to_string(),
                             ),
                         },
+                        &mut tx,
+                    )
+                    .await?;
+                    instance_rows::replace_instance_groups(
+                        &instance.id,
+                        &groups,
                         &mut tx,
                     )
                     .await?;
