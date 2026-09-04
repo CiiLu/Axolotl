@@ -572,17 +572,18 @@ watch(
 	minecraftDirectories,
 	(value) => {
 		persistMinecraftDirectories(value)
-		void syncDirectLinkInstances()
+		void syncDirectLinkInstances(true)
 	},
 	{ deep: true },
 )
 
 let directLinkSyncRunning = false
-async function syncDirectLinkInstances() {
-	if (directLinkSyncRunning || minecraftDirectories.value.length === 0) return
+async function syncDirectLinkInstances(allowEmpty = false) {
+	if (directLinkSyncRunning || (!allowEmpty && minecraftDirectories.value.length === 0)) return
 	directLinkSyncRunning = true
 	try {
 		await sync_direct_links(minecraftDirectories.value)
+		window.dispatchEvent(new Event('axolotl-direct-links-synced'))
 	} catch (error) {
 		console.warn('Failed to sync external Minecraft instances', error)
 	} finally {

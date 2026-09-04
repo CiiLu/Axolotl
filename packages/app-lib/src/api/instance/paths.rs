@@ -21,6 +21,11 @@ pub async fn get_full_path(instance_id: &str) -> crate::Result<PathBuf> {
         .map(str::trim)
         .filter(|linked| !linked.is_empty())
     {
+        if let Some(game_dir) =
+            crate::launcher::linked_game_dir(&instance.instance)
+        {
+            return Ok(io::canonicalize(game_dir)?);
+        }
         return Ok(io::canonicalize(linked)?);
     }
 

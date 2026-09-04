@@ -54,6 +54,40 @@ pub(crate) struct ResolvedLinkedLaunch {
 }
 
 impl DirectLinkedLaunch {
+    /// Builds a generic direct link for an instance created in
+    /// .minecraft/versions/<id>. This is intentionally derived at runtime
+    /// instead of persisted in the database, preserving compatibility for
+    /// instances created before external direct management was added.
+    pub(crate) fn from_external_version_dir(
+        version_dir: &Path,
+    ) -> crate::Result<Option<Self>> {
+        let Some(version_id) =
+            version_dir.file_name().and_then(|name| name.to_str())
+        else {
+            return Ok(None);
+        };
+        if version_dir
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str())
+            .is_none_or(|name| !name.eq_ignore_ascii_case("versions"))
+        {
+            return Ok(None);
+        }
+        let Some(dot_minecraft) = version_dir.parent().and_then(Path::parent)
+        else {
+            return Ok(None);
+        };
+        let version_json = version_dir.join(version_id.to_string() + ".json");
+        Ok(Some(Self {
+            dot_minecraft: crate::util::io::canonicalize(dot_minecraft)?,
+            launcher_root: None,
+            version_id: version_id.to_string(),
+            version_json: Some(version_json),
+            dialect: LinkedLauncherDialect::Generic,
+        }))
+    }
+
     pub(crate) fn from_instance(
         instance: &Instance,
     ) -> crate::Result<Option<Self>> {
@@ -168,10 +202,24 @@ impl DirectLinkedLaunch {
             }
             by_id
         } else {
-            self.dot_minecraft
+            let inherited = self
+                .dot_minecraft
                 .join("versions")
                 .join(jar_id)
-                .join(format!("{jar_id}.jar"))
+                .join(format!("{jar_id}.jar"));
+            if inherited.is_file() {
+                return inherited;
+            }
+            let version_dir = self.version_dir();
+            if let Some(folder_name) =
+                version_dir.file_name().and_then(|name| name.to_str())
+            {
+                let by_folder = version_dir.join(format!("{folder_name}.jar"));
+                if by_folder.is_file() {
+                    return by_folder;
+                }
+            }
+            inherited
         }
     }
 
