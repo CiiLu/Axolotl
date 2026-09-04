@@ -1821,7 +1821,7 @@ pub async fn download_assets(
                 apply_native_policy.then_some(&st.fetch_semaphore),
                 callback,
             )
-            .await;
+            .await?;
             if !failed.is_empty() {
                 tracing::warn!(
                     items = failed.len(),
