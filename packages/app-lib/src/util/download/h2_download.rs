@@ -594,6 +594,8 @@ async fn verify_and_finalize(
 /// A single small file (a Minecraft asset object) to download over a shared
 /// HTTP/2 connection. All items in one batch must share the same authority.
 pub(crate) struct H2BatchAsset {
+    /// Canonical asset URL used to rebuild routes after batch failure.
+    pub original_url: String,
     /// Route-resolved URL for the asset.
     pub url: String,
     /// Destination for the object (`assets/objects/<hh>/<hash>`).
@@ -627,6 +629,7 @@ enum AssetBatchItemOutcome {
 impl Clone for H2BatchAsset {
     fn clone(&self) -> Self {
         Self {
+            original_url: self.original_url.clone(),
             url: self.url.clone(),
             destination: self.destination.clone(),
             legacy_destinations: self.legacy_destinations.clone(),
@@ -758,6 +761,8 @@ mod tests {
             .unwrap();
         let legacy = blocked_parent.join("resource");
         let item = H2BatchAsset {
+            original_url: "https://resources.download.minecraft.net/aa/object"
+                .into(),
             url: "https://resources.download.minecraft.net/aa/object".into(),
             destination: destination.clone(),
             legacy_destinations: vec![legacy.clone()],
