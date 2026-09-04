@@ -2,6 +2,7 @@ use crate::state::State;
 use crate::state::instances::adapters::sqlite::instance_rows;
 use crate::state::instances::config_sync;
 use crate::util::io;
+use std::path::{Path, PathBuf};
 
 pub(crate) async fn remove_instance(
     instance_id: &str,
@@ -27,6 +28,17 @@ pub(crate) async fn remove_instance(
                 )
             })?
             .version_dir()
+    } else if let Some(game_dir_override) = instance
+        .game_dir_override
+        .as_deref()
+        .map(PathBuf::from)
+        .filter(|path| is_version_isolated_game_dir(path))
+    {
+        // New instances created against a configured `.minecraft` root use
+        // a private `versions/<name>` directory. Remove that external
+        // directory when the instance is deleted, while preserving shared
+        // (non-isolated) overrides for backwards compatibility.
+        game_dir_override
     } else {
         state.directories.instances_dir().join(&instance.path)
     };
@@ -49,4 +61,11 @@ pub(crate) async fn remove_instance(
     }
 
     Ok(())
+}
+
+fn is_version_isolated_game_dir(path: &Path) -> bool {
+    path.parent()
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str())
+        == Some("versions")
 }

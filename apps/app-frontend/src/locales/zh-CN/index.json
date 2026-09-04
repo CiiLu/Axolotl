@@ -8804,6 +8804,9 @@
   "instance.settings.tabs.general.game-dir.managed-note": {
     "message": "此实例使用 Axolotl 托管目录。"
   },
+  "instance.settings.tabs.general.game-dir.external-note": {
+    "message": "此实例使用外部 .minecraft 目录，文件会直接在原位置管理。"
+  },
   "instance.settings.tabs.general.icon": {
     "message": "图标"
   },

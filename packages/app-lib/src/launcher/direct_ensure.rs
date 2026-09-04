@@ -22,7 +22,7 @@
 //! re-downloaded, mirroring HMCL.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use daedalus::minecraft::{
     AssetIndex, AssetsIndex, LoggingConfiguration, LoggingSide, VersionInfo,
@@ -356,9 +356,16 @@ pub(crate) async fn ensure_linked_assets(
     st: &State,
     direct: &DirectLinkedLaunch,
     asset_index: &AssetIndex,
+    with_legacy: bool,
 ) -> crate::Result<()> {
-    ensure_linked_assets_from(st, direct, asset_index, MINECRAFT_RESOURCES_BASE)
-        .await
+    ensure_linked_assets_from(
+        st,
+        direct,
+        asset_index,
+        MINECRAFT_RESOURCES_BASE,
+        with_legacy,
+    )
+    .await
 }
 
 pub(crate) async fn ensure_linked_assets_from(
@@ -366,6 +373,7 @@ pub(crate) async fn ensure_linked_assets_from(
     direct: &DirectLinkedLaunch,
     asset_index: &AssetIndex,
     resources_base: &str,
+    with_legacy: bool,
 ) -> crate::Result<()> {
     let Some(index_id) = non_empty(&asset_index.id) else {
         return Ok(());
@@ -493,6 +501,23 @@ pub(crate) async fn ensure_linked_assets_from(
             },
         )
         .await?;
+
+    if with_legacy {
+        let legacy_root = direct.assets_dir().join("virtual").join("legacy");
+        for (name, asset) in &index.objects {
+            if asset.hash.len() < 2 {
+                continue;
+            }
+            let object = objects_dir.join(&asset.hash[..2]).join(&asset.hash);
+            let legacy = legacy_root.join(Path::new(name));
+            if !legacy.is_file() {
+                if let Some(parent) = legacy.parent() {
+                    io::create_dir_all(parent).await?;
+                }
+                fetch::copy(&object, &legacy, &st.io_semaphore).await?;
+            }
+        }
+    }
     Ok(())
 }
 
@@ -611,7 +636,13 @@ pub(crate) async fn ensure_direct_launch_dependencies(
             .await?;
     }
 
-    ensure_linked_assets(st, direct, &version_info.asset_index).await?;
+    ensure_linked_assets(
+        st,
+        direct,
+        &version_info.asset_index,
+        version_info.assets == "legacy",
+    )
+    .await?;
     ensure_linked_log_config(st, direct, version_info.logging.as_ref()).await?;
     Ok(())
 }
@@ -1464,7 +1495,7 @@ mod tests {
             url: format!("{base}/indexes/5.json"),
         };
 
-        ensure_linked_assets_from(&state, &direct, &asset_index, &base)
+        ensure_linked_assets_from(&state, &direct, &asset_index, &base, false)
             .await
             .unwrap();
 

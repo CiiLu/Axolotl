@@ -1,4 +1,5 @@
 //! Logic for launching Minecraft
+use crate::api::pack::import::direct_link::direct_link_group;
 use crate::data::ModLoader;
 use crate::event::emit::{emit_instance, emit_loading, init_loading};
 use crate::event::{InstancePayloadType, LoadingBarType};
@@ -623,6 +624,99 @@ async fn get_instance_full_path(
     Ok(full_path)
 }
 
+/// Writes downloaded version metadata and the client jar into a
+/// version-isolated external game directory. Shared artifacts remain in
+/// Axolotl's metadata cache, while the external root retains the conventional
+/// `.minecraft/versions/<name>/<name>.{json,jar}` structure.
+async fn materialize_external_version(
+    instance: &Instance,
+    version_id: &str,
+    version_info: &VersionInfo,
+    state: &State,
+) -> crate::Result<()> {
+    let Some(game_dir_override) = instance.game_dir_override.as_deref() else {
+        return Ok(());
+    };
+    let version_dir = PathBuf::from(game_dir_override);
+    if !version_dir
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case("versions"))
+    {
+        return Ok(());
+    }
+    let Some(version_name) =
+        version_dir.file_name().and_then(|name| name.to_str())
+    else {
+        return Ok(());
+    };
+
+    let mut serialized = serde_json::to_value(version_info)?;
+    if let Some(object) = serialized.as_object_mut() {
+        object.insert("id".to_string(), version_name.to_string().into());
+    }
+    let version_json = version_dir.join(format!("{version_name}.json"));
+    io::write(&version_json, serde_json::to_vec(&serialized)?).await?;
+
+    let source_jar = state
+        .directories
+        .version_dir(version_id)
+        .join(format!("{version_id}.jar"));
+    let target_jar = version_dir.join(format!("{version_name}.jar"));
+    tokio::fs::copy(source_jar, target_jar).await?;
+    Ok(())
+}
+
+async fn promote_external_instance_link(
+    instance: &Instance,
+    state: &State,
+) -> crate::Result<()> {
+    if instance.is_direct_linked() {
+        return Ok(());
+    }
+    let Some(game_dir_override) = instance.game_dir_override.as_deref() else {
+        return Ok(());
+    };
+    let Some(direct) = DirectLinkedLaunch::from_external_version_dir(
+        Path::new(game_dir_override),
+    )?
+    else {
+        return Ok(());
+    };
+    let root = direct.dot_minecraft.to_string_lossy().to_string();
+    let version_json = direct
+        .version_json
+        .as_deref()
+        .map(io::canonicalize)
+        .transpose()?
+        .map(|path| path.to_string_lossy().to_string());
+    let mut tx = state.pool.begin().await?;
+    crate::state::instances::adapters::sqlite::instance_rows::set_direct_link_fields(
+        &instance.id,
+        &crate::state::instances::adapters::sqlite::instance_rows::DirectLinkFields {
+            launcher: Some("generic".to_string()),
+            launcher_root: Some(root.clone()),
+            dot_minecraft: Some(root.clone()),
+            version_id: Some(direct.version_id.clone()),
+            version_json_path: version_json,
+        },
+        &mut tx,
+    )
+    .await?;
+    if let Some(group) = direct_link_group(&direct.dot_minecraft) {
+        crate::state::instances::adapters::sqlite::instance_rows::replace_instance_groups(
+            &instance.id,
+            &[group],
+            &mut tx,
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    emit_instance(&instance.id, InstancePayloadType::Edited).await?;
+    Ok(())
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum InstanceCompletionPolicy {
     FinalizeHere,
@@ -932,6 +1026,28 @@ async fn install_minecraft_with_local_source(
     )
     .await?;
 
+    materialize_external_version(instance, &version_jar, &version_info, &state)
+        .await?;
+
+    // Version-isolated external instances are direct-managed from creation.
+    // Complete their external assets/libraries now so the first launch never
+    // falls back to Axolotl's shared runtime directories.
+    if let Some(direct) = direct_link_for_instance(instance)? {
+        let resolved = direct.resolve()?;
+        direct_ensure::ensure_direct_launch_dependencies(
+            &state,
+            &direct,
+            &resolved.merged.libraries,
+            &version_info,
+            java_version
+                .as_ref()
+                .map(|java| java.architecture.as_str())
+                .unwrap_or(std::env::consts::ARCH),
+            minecraft_updated,
+        )
+        .await?;
+    }
+
     let client_path = state
         .directories
         .version_dir(&version_jar)
@@ -946,6 +1062,7 @@ async fn install_minecraft_with_local_source(
             &state.pool,
         )
         .await?;
+        promote_external_instance_link(instance, &state).await?;
         if completion_policy == InstanceCompletionPolicy::FinalizeHere {
             crate::state::instances::commands::set_instance_install_stage(
                 &instance.id,
@@ -1193,6 +1310,7 @@ async fn install_minecraft_with_local_source(
         &state.pool,
     )
     .await?;
+    promote_external_instance_link(instance, &state).await?;
     if completion_policy == InstanceCompletionPolicy::FinalizeHere {
         crate::state::instances::commands::set_instance_install_stage(
             &instance.id,
@@ -1353,7 +1471,7 @@ async fn select_linked_java(candidates: Vec<PathBuf>) -> Option<JavaVersion> {
 /// chain degrades to the linked `.minecraft` root instead of failing: browsing
 /// must keep working when only the dialect resolution breaks.
 pub(crate) fn linked_game_dir(instance: &Instance) -> Option<PathBuf> {
-    let direct = match DirectLinkedLaunch::from_instance(instance) {
+    let direct = match direct_link_for_instance(instance) {
         Ok(Some(direct)) => direct,
         Ok(None) | Err(_) => return None,
     };
@@ -1365,9 +1483,27 @@ pub(crate) fn linked_game_dir(instance: &Instance) -> Option<PathBuf> {
                 "Falling back to the shared linked `.minecraft` root; the \
                  linked version chain could not be resolved"
             );
-            Some(direct.dot_minecraft.clone())
+            if !instance.is_direct_linked()
+                && instance.game_dir_override.is_some()
+            {
+                Some(direct.version_dir())
+            } else {
+                Some(direct.dot_minecraft.clone())
+            }
         }
     }
+}
+
+fn direct_link_for_instance(
+    instance: &Instance,
+) -> crate::Result<Option<DirectLinkedLaunch>> {
+    if let Some(direct) = DirectLinkedLaunch::from_instance(instance)? {
+        return Ok(Some(direct));
+    }
+    let Some(game_dir_override) = instance.game_dir_override.as_deref() else {
+        return Ok(None);
+    };
+    DirectLinkedLaunch::from_external_version_dir(Path::new(game_dir_override))
 }
 
 fn link_project_and_version(
@@ -1437,7 +1573,7 @@ pub async fn launch_minecraft(
 
     let state = State::get().await?;
 
-    let direct_launch = DirectLinkedLaunch::from_instance(instance)?;
+    let direct_launch = direct_link_for_instance(instance)?;
     let mut resolved_linked = direct_launch
         .as_ref()
         .map(DirectLinkedLaunch::resolve)

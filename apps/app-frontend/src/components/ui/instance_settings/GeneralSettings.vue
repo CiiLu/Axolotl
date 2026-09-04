@@ -128,6 +128,21 @@ async function setIcon() {
 
 const gameDirOverride = ref(instance.value.game_dir_override)
 const savingGameDir = ref(false)
+const isDirectLinked = computed(() => !!instance.value.linked_dot_minecraft)
+const linkedVersionDirectory = computed(() => {
+	if (instance.value.linked_launcher !== 'generic') return null
+	const path = instance.value.linked_version_json_path
+	if (!path) return null
+	const separator = Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/'))
+	return separator > 0 ? path.slice(0, separator) : null
+})
+const externalGameDir = computed(
+	() =>
+		gameDirOverride.value ??
+		linkedVersionDirectory.value ??
+		instance.value.linked_dot_minecraft ??
+		null,
+)
 
 watch(
 	() => instance.value.game_dir_override,
@@ -140,10 +155,10 @@ watch(
 // isolated is encoded in the path: `<root>/versions/<name>` vs the `.minecraft`
 // root itself. `isExternal` is false for built-in (managed) instances, which
 // expose no isolation option.
-const isExternal = computed(() => !!gameDirOverride.value)
+const isExternal = computed(() => !!externalGameDir.value)
 
 const gameDirInfo = computed(() => {
-	const path = gameDirOverride.value
+	const path = externalGameDir.value
 	if (!path) return { isolated: false, baseRoot: null }
 	const normalized = path.replace(/\\/g, '/')
 	const segments = normalized.split('/').filter(Boolean)
@@ -283,6 +298,10 @@ const messages = defineMessages({
 	gameDirManagedNote: {
 		id: 'instance.settings.tabs.general.game-dir.managed-note',
 		defaultMessage: 'This instance uses the Axolotl-managed folder.',
+	},
+	gameDirExternalNote: {
+		id: 'instance.settings.tabs.general.game-dir.external-note',
+		defaultMessage: 'This instance uses an external .minecraft folder managed in place.',
 	},
 	updateChannel: {
 		id: 'instance.settings.tabs.general.update-channel',
@@ -428,19 +447,22 @@ const messages = defineMessages({
 				{{ formatMessage(messages.gameDirDescription) }}
 			</p>
 			<template v-if="isExternal">
-				<div class="flex flex-col gap-1.5">
+				<div v-if="!isDirectLinked" class="flex flex-col gap-1.5">
 					<RadioButtons v-model="gameDirMode" :items="gameDirModeItems" force-selection>
 						<template #default="{ item }">
 							{{ formatMessage(gameDirModeLabel(item)) }}
 						</template>
 					</RadioButtons>
 				</div>
-				<p v-if="gameDirOverride" class="m-0 text-secondary break-all">
+				<p v-if="externalGameDir" class="m-0 text-secondary break-all">
 					{{ formatMessage(messages.gameDirCurrent) }}:
-					<code>{{ gameDirOverride }}</code>
+					<code>{{ externalGameDir }}</code>
 				</p>
-				<p class="m-0 text-sm text-secondary">
+				<p v-if="!isDirectLinked" class="m-0 text-sm text-secondary">
 					{{ formatMessage(messages.gameDirMoveNote) }}
+				</p>
+				<p v-else class="m-0 text-sm text-secondary">
+					{{ formatMessage(messages.gameDirExternalNote) }}
 				</p>
 			</template>
 			<p v-else class="m-0 text-sm text-secondary">

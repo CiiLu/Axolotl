@@ -194,6 +194,39 @@ pub(crate) async fn sync_direct_link_instances(
         }
     }
 
+    // Ordinary instances created with a version-isolated game-dir override
+    // are also associated with a configured root. If that root is removed
+    // from Settings before the next scan promotes the record to a direct
+    // link, drop only the Axolotl record here as well.
+    for metadata in &existing {
+        if metadata.instance.linked_dot_minecraft.is_some() {
+            continue;
+        }
+        let Some(game_dir_override) =
+            metadata.instance.game_dir_override.as_deref()
+        else {
+            continue;
+        };
+        let Some(root) = version_isolated_root(game_dir_override) else {
+            continue;
+        };
+        let Some(root) = crate::util::io::canonicalize(root).ok() else {
+            continue;
+        };
+        if canonical_roots.iter().any(|candidate| candidate == &root) {
+            continue;
+        }
+        instance_rows::delete_instance_by_id(
+            &metadata.instance.id,
+            &state.pool,
+        )
+        .await?;
+        let _ =
+            emit_instance(&metadata.instance.id, InstancePayloadType::Removed)
+                .await;
+        report.removed += 1;
+    }
+
     for metadata in existing {
         let Some(json_path) =
             metadata.instance.linked_version_json_path.as_deref()
@@ -204,10 +237,23 @@ pub(crate) async fn sync_direct_link_instances(
         else {
             continue;
         };
-        let Ok(root) = crate::util::io::canonicalize(root) else {
-            continue;
-        };
-        if !canonical_roots.iter().any(|candidate| candidate == &root) {
+        let canonical_root = crate::util::io::canonicalize(root).ok();
+        if canonical_root.as_ref().is_none_or(|root| {
+            !canonical_roots.iter().any(|candidate| candidate == root)
+        }) {
+            // Configured roots are authoritative. Removing a root from Settings
+            // only drops Axolotl's association; the external files remain intact.
+            instance_rows::delete_instance_by_id(
+                &metadata.instance.id,
+                &state.pool,
+            )
+            .await?;
+            let _ = emit_instance(
+                &metadata.instance.id,
+                InstancePayloadType::Removed,
+            )
+            .await;
+            report.removed += 1;
             continue;
         }
         let json_path = PathBuf::from(json_path);
@@ -231,4 +277,17 @@ pub(crate) async fn sync_direct_link_instances(
     }
 
     Ok(report)
+}
+
+fn version_isolated_root(path: &str) -> Option<PathBuf> {
+    let version_dir = Path::new(path);
+    if version_dir
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str())
+        != Some("versions")
+    {
+        return None;
+    }
+    version_dir.parent()?.parent().map(Path::to_path_buf)
 }
