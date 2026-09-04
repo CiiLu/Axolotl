@@ -1,7 +1,7 @@
 use super::sync_content_files::{
     fetch_content_file_updates, installed_modrinth_version_id,
-    instance_content_root, modrinth_update_enabled, project_type_for_file,
-    sync_instance_content_files,
+    instance_content_root, join_content_path, modrinth_update_enabled,
+    project_type_for_file, sync_instance_content_files,
 };
 use crate::State;
 use crate::pack::install_from::{PackFileHash, PackFormat};
@@ -1800,7 +1800,7 @@ async fn content_files_to_content_items(
     let instance_path = instance_content_root(&state.directories, instance)?;
     let paths = files
         .iter()
-        .map(|(path, _)| instance_path.join(path))
+        .map(|(path, _)| join_content_path(&instance_path, path))
         .collect::<Vec<_>>();
     let modification_times: Vec<Option<String>> =
         tokio::task::spawn_blocking(move || {

@@ -43,6 +43,16 @@ pub(crate) fn instance_content_root(
     Ok(io::canonicalize(directories.instance_game_dir(instance))?)
 }
 
+/// Joins a stored logical relative path using native path components. Content
+/// rows intentionally use `/` as their cross-platform serialization format;
+/// filesystem access must not concatenate that representation directly.
+pub(crate) fn join_content_path(root: &Path, relative: &str) -> PathBuf {
+    relative
+        .split(['/', '\\'])
+        .filter(|component| !component.is_empty() && *component != ".")
+        .fold(root.to_path_buf(), |path, component| path.join(component))
+}
+
 pub(crate) async fn sync_content_files(
     instance_id: &str,
     state: &State,
@@ -77,6 +87,11 @@ pub(crate) async fn sync_instance_content_files(
             .as_deref()
             .map(str::trim)
             .is_some_and(|linked| !linked.is_empty());
+    let instance_files_root = if is_direct_linked {
+        content_root.clone()
+    } else {
+        state.directories.instances_dir().join(&instance.path)
+    };
     let cache_key_path = if is_direct_linked {
         content_root.to_string_lossy().into_owned()
     } else {
@@ -153,11 +168,8 @@ pub(crate) async fn sync_instance_content_files(
         let hash_key = file.hash_cache_key.trim_end_matches(".disabled");
         let existing_file = existing_files_by_path.get(&file.relative_path);
         let (scanned_sha1, scanned_size) = if existing_file.is_some() {
-            let path = state
-                .directories
-                .instances_dir()
-                .join(&instance.path)
-                .join(&file.relative_path);
+            let path =
+                join_content_path(&instance_files_root, &file.relative_path);
             let (_, sha1) = fetch::sha1_file_async(&path).await?;
             (sha1, file.size)
         } else {
@@ -266,7 +278,7 @@ pub(crate) async fn sync_instance_content_files(
             continue;
         }
 
-        let path = instance_dir.join(&file.relative_path);
+        let path = join_content_path(&instance_dir, &file.relative_path);
 
         // Resource packs are read entry-wise so large archives are not
         // materialized in memory just to fetch `pack.png`.
@@ -755,6 +767,17 @@ mod tests {
                 .iter()
                 .map(|file| &file.relative_path)
                 .collect::<Vec<_>>(),
+        );
+
+        // A second refresh re-hashes the existing row. It must continue to
+        // use the linked external root rather than the Axolotl profile path.
+        let refreshed = sync_instance_content_files(&instance, &state)
+            .await
+            .unwrap();
+        assert!(
+            refreshed
+                .iter()
+                .any(|file| file.relative_path == "mods/linked-mod.jar")
         );
     }
 
