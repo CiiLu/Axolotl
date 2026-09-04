@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PlusIcon, RefreshCwIcon } from '@modrinth/assets'
+import { PlusIcon } from '@modrinth/assets'
 import {
 	ButtonStyled,
 	defineMessages,
@@ -7,13 +7,13 @@ import {
 	NavTabs,
 	useVIntl,
 } from '@modrinth/ui'
-import { onUnmounted, ref, shallowRef } from 'vue'
+import { onUnmounted, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { NewInstanceImage } from '@/assets/icons'
 import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { instance_listener } from '@/helpers/events.js'
-import { list, sync_direct_links } from '@/helpers/instance'
+import { list } from '@/helpers/instance'
 import { useBreadcrumbs } from '@/store/breadcrumbs.js'
 
 const { handleError } = injectNotificationManager()
@@ -35,56 +35,14 @@ const messages = defineMessages({
 		id: 'app.library.create-instance',
 		defaultMessage: 'Create new instance',
 	},
-	refreshInstances: {
-		id: 'app.library.refresh-instances',
-		defaultMessage: 'Refresh instances',
-	},
 })
 
 breadcrumbs.setRootContext({ name: formatMessage(messages.library), link: route.path })
 
 const instances = shallowRef(await list().catch(handleError))
-const refreshing = ref(false)
-
-function readConfiguredMinecraftDirectories(): string[] {
-	try {
-		const parsed = JSON.parse(localStorage.getItem('axolotl-minecraft-directories') ?? '[]')
-		return Array.isArray(parsed)
-			? parsed.filter((value): value is string => typeof value === 'string' && value.trim())
-			: []
-	} catch (error) {
-		console.debug('[direct-link] failed to read configured directories', error)
-		return []
-	}
-}
 
 const refreshInstances = async () => {
-	console.debug('[direct-link] reloading instance list')
 	instances.value = await list().catch(handleError)
-	console.debug('[direct-link] instance list reloaded', {
-		count: instances.value?.length ?? 0,
-		instances: instances.value?.map((instance) => ({ id: instance.id, name: instance.name })),
-	})
-}
-
-async function refreshExternalInstances() {
-	if (refreshing.value) return
-	refreshing.value = true
-	const roots = readConfiguredMinecraftDirectories()
-	console.debug('[direct-link] manual refresh started', { roots })
-	try {
-		if (roots.length > 0) {
-			const report = await sync_direct_links(roots)
-			console.debug('[direct-link] manual sync completed', report)
-		} else {
-			console.debug('[direct-link] manual sync skipped: no configured directories')
-		}
-		await refreshInstances()
-	} catch (error) {
-		console.warn('[direct-link] manual refresh failed', error)
-	} finally {
-		refreshing.value = false
-	}
 }
 
 window.addEventListener('axolotl-direct-links-synced', refreshInstances)
@@ -103,24 +61,16 @@ onUnmounted(() => {
 <template>
 	<div data-onboarding-id="library-content" class="p-6 flex flex-col gap-3">
 		<h1 class="m-0 text-2xl hidden">{{ formatMessage(messages.library) }}</h1>
-		<div class="flex min-w-0 items-center justify-between gap-3">
-			<NavTabs
-				:links="[
-					{ label: formatMessage(messages.allInstances), href: `/library` },
-					{ label: formatMessage(messages.modpacks), href: `/library/modpacks` },
-					{ label: formatMessage(messages.servers), href: `/library/servers` },
-					{ label: formatMessage(messages.custom), href: `/library/custom` },
-					{ label: formatMessage(messages.shared), href: `/library/shared`, shown: false },
-					{ label: formatMessage(messages.saved), href: `/library/saved`, shown: false },
-				]"
-			/>
-			<ButtonStyled color="standard" :disabled="refreshing" @click="refreshExternalInstances">
-				<button :aria-label="formatMessage(messages.refreshInstances)">
-					<RefreshCwIcon :class="{ 'animate-spin': refreshing }" />
-					{{ formatMessage(messages.refreshInstances) }}
-				</button>
-			</ButtonStyled>
-		</div>
+		<NavTabs
+			:links="[
+				{ label: formatMessage(messages.allInstances), href: `/library` },
+				{ label: formatMessage(messages.modpacks), href: `/library/modpacks` },
+				{ label: formatMessage(messages.servers), href: `/library/servers` },
+				{ label: formatMessage(messages.custom), href: `/library/custom` },
+				{ label: formatMessage(messages.shared), href: `/library/shared`, shown: false },
+				{ label: formatMessage(messages.saved), href: `/library/saved`, shown: false },
+			]"
+		/>
 		<template v-if="instances && instances.length > 0">
 			<RouterView v-if="route.path.startsWith('/library')" :instances="instances" />
 		</template>

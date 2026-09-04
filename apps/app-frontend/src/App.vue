@@ -525,13 +525,8 @@ function startDirectLinkSync() {
 
 		syncInFlight = (async () => {
 			const roots = readRoots()
-			console.debug('[direct-link] event sync started', { roots })
-			if (roots.length === 0) {
-				console.debug('[direct-link] event sync skipped: no configured directories')
-				return
-			}
+			if (roots.length === 0) return
 			await sync_direct_links(roots)
-				.then((report) => console.debug('[direct-link] event sync completed', report))
 				.catch((error) => {
 					console.warn('Failed to sync external Minecraft instances', error)
 				})
