@@ -624,6 +624,9 @@ enum AssetBatchItemOutcome {
         downloaded: bool,
         error: crate::Error,
     },
+    LocalObjectFailed {
+        error: crate::Error,
+    },
 }
 
 impl Clone for H2BatchAsset {
@@ -786,6 +789,20 @@ mod tests {
             b"already committed"
         );
     }
+
+    #[tokio::test]
+    async fn blocked_object_parent_is_detected_before_asset_get() {
+        let temp = tempfile::tempdir().unwrap();
+        let blocked_parent = temp.path().join("object-parent");
+        tokio::fs::write(&blocked_parent, b"not a directory")
+            .await
+            .unwrap();
+        let destination = blocked_parent.join("object");
+        let part_path = fetch::suffixed_path(&destination, ".part");
+
+        assert!(prepare_asset_part_path(&destination).await.is_err());
+        assert!(tokio::fs::metadata(&part_path).await.is_err());
+    }
 }
 
 /// Downloads a batch of small files over a shared HTTP/2 connection group,
@@ -803,7 +820,7 @@ pub(crate) async fn download_asset_batch_via_h2<F>(
     apply_native_policy: bool,
     native_semaphore: Option<&fetch::FetchSemaphore>,
     on_completed: F,
-) -> Vec<H2BatchAsset>
+) -> crate::Result<Vec<H2BatchAsset>>
 where
     F: Fn(H2BatchAsset) -> Pin<Box<dyn Future<Output = ()> + Send>>
         + Send
@@ -813,12 +830,16 @@ where
     if apply_native_policy
         && super::native::h2_ineligible_reason(route).is_some()
     {
-        return items;
+        return Ok(items);
     }
+    // Local object I/O failures are deterministic per destination; remember the
+    // first one and keep draining the batch so siblings already in flight or
+    // still queued are not abandoned, then surface the error to the caller.
+    let mut local_object_error: Option<crate::Error> = None;
     let _global_permit = if let Some(semaphore) = native_semaphore {
         match semaphore.0.acquire().await {
             Ok(permit) => Some(permit),
-            Err(_) => return items,
+            Err(_) => return Ok(items),
         }
     } else {
         None
@@ -841,7 +862,7 @@ where
                         None,
                     );
                 }
-                return items;
+                return Ok(items);
             }
         };
     let connections = Arc::new(AssetBatchConnectionGroup::new(
@@ -934,6 +955,17 @@ where
                     // another network retry pass on a local filesystem error.
                     failed.push(item);
                 }
+                Ok(AssetBatchItemOutcome::LocalObjectFailed { error }) => {
+                    tracing::warn!(
+                        url = %fetch::sanitize_url_for_log(&item.url),
+                        destination = %item.destination.display(),
+                        error = %error,
+                        "Asset object failed local I/O; continuing to drain the batch"
+                    );
+                    if local_object_error.is_none() {
+                        local_object_error = Some(error);
+                    }
+                }
                 Err(error) => {
                     network_failures = network_failures.saturating_add(1);
                     tracing::debug!(
@@ -968,6 +1000,9 @@ where
             );
         }
     }
+    if let Some(error) = local_object_error {
+        return Err(error);
+    }
     if !failed.is_empty() {
         tracing::warn!(
             items = failed.len(),
@@ -978,7 +1013,17 @@ where
             route.source.as_str(),
         );
     }
-    failed
+    Ok(failed)
+}
+
+async fn prepare_asset_part_path(
+    destination: &Path,
+) -> crate::Result<std::path::PathBuf> {
+    let part_path = fetch::suffixed_path(destination, ".part");
+    if let Some(parent) = part_path.parent() {
+        crate::util::io::create_dir_all(parent).await?;
+    }
+    Ok(part_path)
 }
 
 async fn download_asset_item(
@@ -1011,6 +1056,12 @@ async fn download_asset_item(
             },
         });
     }
+    let part_path = match prepare_asset_part_path(&item.destination).await {
+        Ok(part_path) => part_path,
+        Err(error) => {
+            return Ok(AssetBatchItemOutcome::LocalObjectFailed { error });
+        }
+    };
     let _stream_permit = if apply_native_policy {
         Some(super::h2_stream_budget::acquire(route).await?)
     } else {
@@ -1037,14 +1088,17 @@ async fn download_asset_item(
 
     let mut hashers =
         fetch::IntegrityHashers::new_integrity_hashers(&integrity);
-    let part_path = fetch::suffixed_path(&item.destination, ".part");
-    if let Some(parent) = part_path.parent() {
-        crate::util::io::create_dir_all(parent).await?;
-    }
     // Any failure below leaves a partial file behind; clean it up so retries
     // start from a clean slate and no orphaned `.part` files accumulate.
     let result: crate::Result<AssetBatchItemOutcome> = async {
-        let mut file = tokio::fs::File::create(&part_path).await?;
+        let mut file = match tokio::fs::File::create(&part_path).await {
+            Ok(file) => file,
+            Err(error) => {
+                return Ok(AssetBatchItemOutcome::LocalObjectFailed {
+                    error: error.into(),
+                });
+            }
+        };
         let mut downloaded = 0_u64;
         let activity = super::h2_receive::H2TransferActivity::begin();
         loop {
@@ -1053,13 +1107,21 @@ async fn download_asset_item(
             let Some(chunk) = chunk else {
                 break;
             };
-            file.write_all(&chunk).await?;
+            if let Err(error) = file.write_all(&chunk).await {
+                return Ok(AssetBatchItemOutcome::LocalObjectFailed {
+                    error: error.into(),
+                });
+            }
             hashers.update(&chunk);
             downloaded += chunk.len() as u64;
             activity.record_bytes(chunk.len());
             super::h2_receive::release_capacity(&mut stream, chunk.len())?;
         }
-        file.flush().await?;
+        if let Err(error) = file.flush().await {
+            return Ok(AssetBatchItemOutcome::LocalObjectFailed {
+                error: error.into(),
+            });
+        }
         drop(file);
         if downloaded == 0 {
             return Err(crate::ErrorKind::OtherError(
@@ -1069,7 +1131,11 @@ async fn download_asset_item(
         }
         let computed = hashers.finish(downloaded);
         fetch::verify_computed_integrity(&integrity, &computed)?;
-        fetch::finalize_download(&part_path, &item.destination).await?;
+        if let Err(error) =
+            fetch::finalize_download(&part_path, &item.destination).await
+        {
+            return Ok(AssetBatchItemOutcome::LocalObjectFailed { error });
+        }
 
         Ok(match copy_asset_legacy_destinations(item).await {
             Ok(()) => AssetBatchItemOutcome::Completed { downloaded: true },
@@ -1080,7 +1146,12 @@ async fn download_asset_item(
         })
     }
     .await;
-    if result.is_err() {
+    if result.is_err()
+        || matches!(
+            &result,
+            Ok(AssetBatchItemOutcome::LocalObjectFailed { .. })
+        )
+    {
         let _ = tokio::fs::remove_file(&part_path).await;
     }
     result
