@@ -719,9 +719,15 @@ fn main() {
                 ));
             }
 
-            if let Some(win) = app.get_window("main") {
-                let _ = win.set_focus();
-            }
+            // A second launch must restore the launcher UI. The main window
+            // may be hidden or destroyed when the app is in lightweight mode,
+            // so focusing it is not enough (see #490).
+            let app = app.clone();
+            tauri::async_runtime::spawn(async move {
+                let _ = app
+                    .state::<lightweight_mode::LightweightMode>()
+                    .exit(&app);
+            });
         }))
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_os::init())
