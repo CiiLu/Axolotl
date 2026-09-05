@@ -2324,7 +2324,7 @@ pub async fn download_libraries(
                                 local_source,
                                 &local_relative,
                                 &path,
-                                None,
+                                legacy_library_sha1(library),
                                 None,
                                 progress.as_ref(),
                                 context.clone(),
@@ -2333,7 +2333,7 @@ pub async fn download_libraries(
                                     download_minecraft_file_with_candidates(
                                         st,
                                         &urls,
-                                        None,
+                                        legacy_library_sha1(library),
                                         None,
                                         &path,
                                         ResourceClass::Loader,
@@ -2698,12 +2698,21 @@ mod tests {
                 "linux": "natives-linux",
                 "osx": "natives-osx",
                 "windows": "natives-windows"
-            }
+            },
+            "checksums": ["05fac94380a70241f23780e7aef62b190894238f"]
         }))
         .unwrap();
 
         assert!(library.natives_os_key_and_classifiers("x86_64").is_none());
         let classifier = library_native_classifier(&library, "x86_64").unwrap();
+        assert_eq!(
+            legacy_library_sha1(&library),
+            Some("05fac94380a70241f23780e7aef62b190894238f")
+        );
+        assert_eq!(
+            legacy_library_content_validation("lwjgl-platform.jar"),
+            ContentValidation::Jar
+        );
         let artifact_path =
             classified_library_artifact_path(&library.name, &classifier)
                 .unwrap();
