@@ -1,4 +1,13 @@
 {
+  "app.settings.developer.announcement-preview": {"message":"Announcement preview"},
+  "app.settings.developer.announcement-preview-description": {"message":"Preview the real announcement components using local sample content, without fetching or marking real announcements as read."},
+  "app.settings.developer.preview-with-action": {"message":"Include an optional external-link button"},
+  "app.settings.developer.preview-announcement-modal": {"message":"Preview startup modal"},
+  "app.settings.developer.preview-announcement-popup": {"message":"Preview Popup notification"},
+  "app.remote-announcements.preview-title": {"message":"Announcement style preview"},
+  "app.remote-announcements.preview-summary": {"message":"This is a local preview. Select View announcement to preview the full Markdown content."},
+  "app.remote-announcements.preview-action": {"message":"Visit website"},
+  "app.remote-announcements.preview-content": {"message":"## Announcement preview\n\nThis is **sample content**, not a published announcement.\n\n- Supports headings, lists, and links\n- Close buttons are always available\n\n> Previewing does not change real announcement read status.\n\n| Type | Display |\n| --- | --- |\n| Modal | Full Markdown content |\n| Popup | Summary, then full content |\n\n[Visit the website](https://axlmc.org)"},
   "app.remote-announcements.view": { "message": "View announcement" },
   "app.remote-announcements.unread": { "message": "Unread" },
   "app.remote-announcements.read-all": { "message": "Mark all announcements as read" },

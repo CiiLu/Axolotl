@@ -1284,6 +1284,10 @@ provide(
 		(await minecraftCrashModal.value?.handleLaunchError(launchError, payload)) ?? false,
 )
 provide('previewMinecraftCrashModal', () => minecraftCrashModal.value?.showPreview())
+const remoteAnnouncementPreview = ref<InstanceType<typeof RemoteAnnouncements>>()
+provide('previewRemoteAnnouncement', (type: 'modal' | 'notification', withAction = false) => {
+	remoteAnnouncementPreview.value?.preview(type, withAction)
+})
 provide('previewPrivacyConsentModal', previewPrivacyConsentModal)
 provide('previewUpdateAnnouncement', (version = null) => {
 	const previewVersion = version ?? pendingUpdateAnnouncementVersion.value
@@ -2547,6 +2551,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<PrivacyConsentModal ref="privacyConsentModal" @saved="handlePrivacyConsentSaved" />
 	<CommunityAnnouncementModal ref="communityAnnouncementModal" />
 	<RemoteAnnouncements :ready="stateInitialized && !privacyConsentPending && !showOnboarding && !updateAnnouncementShowing" />
+	<RemoteAnnouncements
+		ref="remoteAnnouncementPreview"
+		preview-only
+		:ready="stateInitialized && !privacyConsentPending && !showOnboarding && !updateAnnouncementShowing"
+	/>
 	<SurveyAnnouncementModal ref="surveyModal" />
 	<UpdateAnnouncementModal ref="updateAnnouncementModal" @closed="handleUpdateAnnouncementClosed" />
 	<NewModal

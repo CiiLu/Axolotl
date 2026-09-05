@@ -15,7 +15,7 @@ import {
 } from '@/helpers/remote-announcements'
 import { getUpdateChannel } from '@/helpers/settings'
 
-const props = defineProps<{ ready: boolean }>()
+const props = defineProps<{ ready: boolean; previewOnly?: boolean }>()
 const manager = injectPopupNotificationManager()
 const { formatMessage } = useVIntl()
 const { hasModal } = useModalStack()
@@ -23,6 +23,13 @@ const messages = defineMessages({
 	view: { id: 'app.remote-announcements.view', defaultMessage: 'View announcement' },
 	unread: { id: 'app.remote-announcements.unread', defaultMessage: 'Unread' },
 	readAll: { id: 'app.remote-announcements.read-all', defaultMessage: 'Mark all announcements as read' },
+	previewTitle: { id: 'app.remote-announcements.preview-title', defaultMessage: 'Announcement style preview' },
+	previewSummary: { id: 'app.remote-announcements.preview-summary', defaultMessage: 'This is a local preview. Select View announcement to preview the full Markdown content.' },
+	previewContent: {
+		id: 'app.remote-announcements.preview-content',
+		defaultMessage: '## Announcement preview\n\nThis is **sample content**, not a published announcement.\n\n- Supports headings, lists, and links\n- Close buttons are always available\n\n> Previewing does not change real announcement read status.\n\n| Type | Display |\n| --- | --- |\n| Modal | Full Markdown content |\n| Popup | Summary, then full content |\n\n[Visit the website](https://axlmc.org)',
+	},
+	previewAction: { id: 'app.remote-announcements.preview-action', defaultMessage: 'Visit website' },
 })
 const modal = ref<InstanceType<typeof NewModal>>()
 const selected = ref<RemoteAnnouncement | null>(null)
@@ -46,6 +53,7 @@ let interval: ReturnType<typeof setInterval> | undefined
 let advanceTimer: ReturnType<typeof setTimeout> | undefined
 
 function persist() {
+	if (props.previewOnly) return
 	try {
 		localStorage.setItem(stateKey, JSON.stringify({
 			reminded: [...reminded].slice(-1000), read: [...read].slice(-1000),
@@ -189,7 +197,30 @@ function contentClick(event: MouseEvent) {
 function reconnect() {
 	if (Date.now() - lastAttempt > 30000) void refresh()
 }
+function preview(type: RemoteAnnouncement['type'], withAction = false) {
+	if (!props.previewOnly || !props.ready || hasModal.value || disposed) return
+	const now = new Date().toISOString()
+	const item: RemoteAnnouncement = {
+		id: 'local-preview-' + type,
+		title: formatMessage(messages.previewTitle),
+		summary: formatMessage(messages.previewSummary),
+		content: formatMessage(messages.previewContent),
+		type,
+		priority: 'normal',
+		starts_at: now,
+		ends_at: null,
+		published_at: now,
+		action_label: withAction ? formatMessage(messages.previewAction) : null,
+		action_url: withAction ? 'https://axlmc.org' : null,
+	}
+	read.clear()
+	reminded.clear()
+	queuedThisSession.clear()
+	sync([item], true)
+}
+defineExpose({ preview })
 onMounted(() => {
+	if (props.previewOnly) return
 	try {
 		const saved = JSON.parse(localStorage.getItem(stateKey) ?? 'null')
 		if (saved && Array.isArray(saved.reminded)) for (const key of saved.reminded) if (typeof key === 'string') reminded.add(key)
