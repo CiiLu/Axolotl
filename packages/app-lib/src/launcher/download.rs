@@ -655,7 +655,8 @@ pub(crate) fn needs_java_artifact(library: &Library) -> bool {
     {
         return false;
     }
-    artifact.is_some_and(|artifact| !artifact.url.is_empty()) || library.url.is_some()
+    artifact.is_some_and(|artifact| !artifact.url.is_empty())
+        || library.url.is_some()
 }
 
 fn library_classifier(library_name: &str) -> Option<&str> {
