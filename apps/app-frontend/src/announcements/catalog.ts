@@ -57,6 +57,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US':
+						'Fixed a memory leak that retained page data after navigating between launcher pages. (issue #421)',
+					'zh-CN': '修复在启动器页面之间切换后仍保留页面数据的内存泄漏问题。(issue #421)',
+				},
+				{
+					'en-US':
 						'Fixed completed download tasks showing stale progress, a cancel action, or an active-download shortcut.',
 					'zh-CN': '修复下载任务完成后仍显示旧进度、取消按钮或正在下载入口的问题。',
 				},
