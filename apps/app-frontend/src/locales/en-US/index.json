@@ -1,4 +1,7 @@
 {
+  "app.remote-announcements.view": { "message": "View announcement" },
+  "app.remote-announcements.unread": { "message": "Unread" },
+  "app.remote-announcements.read-all": { "message": "Mark all announcements as read" },
   "app.account.signed-in-as": {
     "message": "Signed in as"
   },

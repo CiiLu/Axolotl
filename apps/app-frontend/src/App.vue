@@ -82,6 +82,7 @@ import MinecraftAuthErrorModal from '@/components/ui/minecraft-auth-error-modal/
 import MinecraftCrashModal from '@/components/ui/MinecraftCrashModal.vue'
 import AuthGrantFlowWaitModal from '@/components/ui/modal/AuthGrantFlowWaitModal.vue'
 import CommunityAnnouncementModal from '@/components/ui/modal/CommunityAnnouncementModal.vue'
+import RemoteAnnouncements from '@/components/ui/RemoteAnnouncements.vue'
 import CurseForgeManualDownloadsModal from '@/components/ui/modal/CurseForgeManualDownloadsModal.vue'
 import InstallToPlayModal from '@/components/ui/modal/InstallToPlayModal.vue'
 import InstanceIconPickerModal from '@/components/ui/modal/InstanceIconPickerModal.vue'
@@ -2545,6 +2546,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<JavaDownloadConfirmationModal ref="javaDownloadConfirmationModal" />
 	<PrivacyConsentModal ref="privacyConsentModal" @saved="handlePrivacyConsentSaved" />
 	<CommunityAnnouncementModal ref="communityAnnouncementModal" />
+	<RemoteAnnouncements :ready="stateInitialized && !privacyConsentPending && !showOnboarding && !updateAnnouncementShowing" />
 	<SurveyAnnouncementModal ref="surveyModal" />
 	<UpdateAnnouncementModal ref="updateAnnouncementModal" @closed="handleUpdateAnnouncementClosed" />
 	<NewModal

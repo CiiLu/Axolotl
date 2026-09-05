@@ -1,4 +1,7 @@
 {
+  "app.remote-announcements.view": { "message": "查看公告" },
+  "app.remote-announcements.unread": { "message": "未读" },
+  "app.remote-announcements.read-all": { "message": "将所有公告标为已读" },
   "app.account.signed-in-as": {
     "message": "登录身份："
   },
