@@ -5847,7 +5847,7 @@
     "message": "Allow anonymous telemetry"
   },
   "app.privacy-consent.telemetry-description": {
-    "message": "Helps count opted-in installations and diagnose launcher errors using sanitized, limited reports. Full Minecraft logs and account credentials are not uploaded."
+    "message": "Helps count opted-in installations and daily active users. Full Minecraft logs and account credentials are never uploaded."
   },
   "app.privacy-consent.title": {
     "message": "Privacy & security"
@@ -6945,7 +6945,7 @@
     "message": "View installed Java"
   },
   "app.settings.privacy.data-handling": {
-    "message": "Telemetry uses a random installation identifier. Error context is sanitized and limited before it leaves this device. Turning telemetry off clears pending reports immediately."
+    "message": "Telemetry uses a random installation identifier and sends only a daily activity signal. Turning telemetry off clears pending data immediately."
   },
   "app.settings.privacy.discord-rpc": {
     "message": "Discord Rich Presence"
@@ -6957,7 +6957,7 @@
     "message": "Allow telemetry"
   },
   "app.settings.privacy.telemetry-description": {
-    "message": "Send an anonymous daily activity signal and sanitized launcher error reports. Minecraft logs and account credentials are never uploaded."
+    "message": "Send one anonymous daily activity signal to improve usage statistics. Minecraft logs and account credentials are never uploaded."
   },
   "app.settings.resources.app-cache": {
     "message": "App cache"

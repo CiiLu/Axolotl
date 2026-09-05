@@ -5901,7 +5901,7 @@
     "message": "允许匿名遥测"
   },
   "app.privacy-consent.telemetry-description": {
-    "message": "通过脱敏且限长的报告统计选择加入的安装量并排查启动器错误。不会上传完整 Minecraft 日志或账户凭据。"
+    "message": "用于统计选择加入的安装量和每日活跃用户。绝不上传完整 Minecraft 日志或账户凭据。"
   },
   "app.privacy-consent.title": {
     "message": "隐私与安全"
@@ -6936,7 +6936,7 @@
     "message": "查看已安装 Java"
   },
   "app.settings.privacy.data-handling": {
-    "message": "遥测使用随机安装标识。错误上下文离开设备前会经过脱敏和长度限制。关闭遥测会立即清空待发送报告。"
+    "message": "遥测使用随机安装标识，仅发送每日活跃信号。关闭遥测会立即清空待发送数据。"
   },
   "app.settings.privacy.discord-rpc": {
     "message": "Discord 活动状态"
@@ -6948,7 +6948,7 @@
     "message": "允许遥测"
   },
   "app.settings.privacy.telemetry-description": {
-    "message": "发送匿名每日活跃信号和脱敏的启动器错误报告。绝不上传 Minecraft 日志或账户凭据。"
+    "message": "发送匿名每日活跃信号以优化使用统计。绝不上传 Minecraft 日志或账户凭据。"
   },
   "app.settings.resources.app-cache": {
     "message": "应用缓存"
