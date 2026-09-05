@@ -518,6 +518,7 @@ pub async fn install_apt_package(version: &str, data: &[u8]) -> Result<()> {
             "Failed to write the downloaded deb: {io}"
         )))
     })?;
+    let _deb_cleanup = TempDebFile(deb_path.clone());
 
     let install_path = deb_path.clone();
     let output = tokio::task::spawn_blocking(move || {
@@ -540,8 +541,6 @@ pub async fn install_apt_package(version: &str, data: &[u8]) -> Result<()> {
         )))
     })?;
 
-    let _ = std::fs::remove_file(&deb_path);
-
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(theseus::Error::from(theseus::ErrorKind::OtherError(
@@ -551,4 +550,25 @@ pub async fn install_apt_package(version: &str, data: &[u8]) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Removes a temporary Debian package when installation finishes or fails.
+///
+/// The installer awaits a blocking task and has several fallible operations
+/// after creating the file. Keeping cleanup in `Drop` makes every return path
+/// (including task and process-launch errors) remove the package.
+struct TempDebFile(std::path::PathBuf);
+
+impl Drop for TempDebFile {
+    fn drop(&mut self) {
+        if let Err(error) = std::fs::remove_file(&self.0) {
+            if error.kind() != std::io::ErrorKind::NotFound {
+                tracing::warn!(
+                    path = %self.0.display(),
+                    error = %error,
+                    "Failed to remove temporary deb file"
+                );
+            }
+        }
+    }
 }
