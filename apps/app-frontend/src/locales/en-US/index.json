@@ -8315,6 +8315,12 @@
   "create.back": {
     "message": "Back to Library"
   },
+  "create.pcl-hmcl-hint": {
+    "message": "Using PCL / HMCL?"
+  },
+  "create.add-minecraft-folder": {
+    "message": "Add .minecraft folder"
+  },
   "create.import.description": {
     "message": "Import instances from other launchers or install a modpack."
   },

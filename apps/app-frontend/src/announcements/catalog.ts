@@ -33,6 +33,56 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.9.6-beta.1',
+		version: '1.9.6-beta.1',
+		publishedAt: '2026-09-05',
+		title: {
+			'en-US': 'Axolotl Launcher 1.9.6-beta.1',
+			'zh-CN': 'Axolotl Launcher 1.9.6-beta.1',
+		},
+		changes: {
+			added: [
+				{
+					'en-US':
+						'Added status filters to the Content tab, including a dedicated view for disabled mods. (issue #498)',
+					'zh-CN': '内容页新增状态筛选，可单独查看已禁用的 Mod。(issue #498)',
+				},
+			],
+			changed: [
+				{
+					'en-US': 'Improved the loading speed of the Discover page.',
+					'zh-CN': '优化了“发现内容”页面的打开速度。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed a memory leak that retained page data after navigating between launcher pages. (issue #421)',
+					'zh-CN': '修复在启动器页面之间切换后仍保留页面数据的内存泄漏问题。(issue #421)',
+				},
+				{
+					'en-US':
+						'Fixed completed download tasks showing stale progress, a cancel action, or an active-download shortcut.',
+					'zh-CN': '修复下载任务完成后仍显示旧进度、取消按钮或正在下载入口的问题。',
+				},
+				{
+					'en-US':
+						'Fixed unnecessary full-page animations when switching tabs in multiplayer page.',
+					'zh-CN': '修复在多人游戏中切换标签时触发整页动画的问题。',
+				},
+				{
+					'en-US':
+						'Fixed the Discover page breadcrumb briefly showing "Discover content" twice while loading.',
+					'zh-CN': '修复“发现内容”页面加载时面包屑短暂重复显示两个“发现内容”的问题。',
+				},
+				{
+					'en-US': 'Fixed some placeholder text being able to be ctrl+a selected. (issue #511)',
+					'zh-CN': '修复了部分placeholder文字可被ctrl+a选中的问题。(issue #511)',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.9.5',
 		version: '1.9.5',
 		publishedAt: '2026-09-04',
