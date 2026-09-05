@@ -203,7 +203,9 @@ function entryName(entry: SettingsSearchEntry): string {
 }
 
 function messageSearchTexts(message?: MessageDescriptor): string[] {
-	if (!message) return []
+	// Search metadata is assembled from several registries. Guard the runtime
+	// boundary so a malformed entry cannot abort the entire settings render.
+	if (!message || typeof message !== 'object' || typeof message.id !== 'string') return []
 
 	const texts = [formatMessage(message), message.defaultMessage].filter(
 		(text): text is string => !!text,
