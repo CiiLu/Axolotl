@@ -5163,7 +5163,7 @@
     "message": "没有找到可分享或分析的日志内容，请确认实例中有最近几分钟内生成的日志。"
   },
   "app.minecraft-crash.preparation-timed-out": {
-    "message": "启动准备在 60 秒内未能完成，现已取消。请检查 Java 路径、启动前命令、包装器命令和网络连接，然后重试。"
+    "message": "启动准备未能在设定的超时时间内完成，现已取消。请检查 Java 路径、启动前命令、包装器命令和网络连接，然后重试。"
   },
   "app.minecraft-crash.preview-instance": {
     "message": "Minecraft 测试实例"
@@ -8838,13 +8838,22 @@
     "message": "选择更新渠道"
   },
   "instance.settings.tabs.hooks": {
-    "message": "启动 Hooks"
+    "message": "启动准备"
   },
   "instance.settings.tabs.hooks.custom-hooks": {
     "message": "自定义启动 Hooks"
   },
+  "instance.settings.tabs.hooks.custom-launch-preparation-timeout": {
+    "message": "使用自定义启动准备超时时间"
+  },
   "instance.settings.tabs.hooks.description": {
-    "message": "Hooks允许高级用户在启动游戏前后运行特定的系统命令。"
+    "message": "配置启动准备阶段的等待时间，以及在游戏启动前后运行的可选命令。"
+  },
+  "instance.settings.tabs.hooks.launch-preparation-timeout": {
+    "message": "启动准备超时时间"
+  },
+  "instance.settings.tabs.hooks.launch-preparation-timeout.description": {
+    "message": "启动准备阶段允许的最长等待时间，单位为秒（30–600）。"
   },
   "instance.settings.tabs.hooks.post-exit": {
     "message": "退出后执行"
@@ -8865,7 +8874,7 @@
     "message": "输入启动前命令……"
   },
   "instance.settings.tabs.hooks.title": {
-    "message": "游戏启动钩子"
+    "message": "启动准备"
   },
   "instance.settings.tabs.hooks.wrapper": {
     "message": "包装器命令"
