@@ -660,6 +660,23 @@ pub(crate) fn needs_java_artifact(library: &Library) -> bool {
         || library.url.is_some()
 }
 
+fn java_artifact_applies(
+    library: &Library,
+    java_arch: &str,
+    minecraft_updated: bool,
+) -> bool {
+    library.downloadable
+        && needs_java_artifact(library)
+        && library.rules.as_ref().is_none_or(|rules| {
+            parse_rules(
+                rules,
+                java_arch,
+                &QuickPlayType::None,
+                minecraft_updated,
+            )
+        })
+}
+
 fn library_classifier(library_name: &str) -> Option<&str> {
     let mut coordinates = library_name.split(':');
     coordinates.next()?;
@@ -2065,7 +2082,7 @@ pub async fn download_libraries(
     // Deduplicate by target path so repeated manifest entries download once.
     let mut seen_java_paths = std::collections::HashSet::new();
     for library in libraries {
-        if !needs_java_artifact(library) {
+        if !java_artifact_applies(library, java_arch, minecraft_updated) {
             continue;
         }
         let target = d::get_path_from_artifact(&library.name)
@@ -2746,6 +2763,30 @@ mod tests {
         .unwrap();
 
         assert!(needs_java_artifact(&library));
+    }
+
+    #[test]
+    fn java_artifact_rules_are_applied_before_path_deduplication() {
+        let blocked: Library = serde_json::from_value(serde_json::json!({
+            "name": "example:library:1.0",
+            "rules": [{"action": "allow", "features": {"is_demo_user": true}}],
+            "downloads": {"artifact": {
+                "url": "https://example.invalid/library.jar",
+                "sha1": "", "size": 1
+            }}
+        }))
+        .unwrap();
+        let allowed: Library = serde_json::from_value(serde_json::json!({
+            "name": "example:library:1.0",
+            "downloads": {"artifact": {
+                "url": "https://example.invalid/library.jar",
+                "sha1": "", "size": 1
+            }}
+        }))
+        .unwrap();
+
+        assert!(!java_artifact_applies(&blocked, "x86_64", true));
+        assert!(java_artifact_applies(&allowed, "x86_64", true));
     }
 
     #[test]
