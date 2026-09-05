@@ -33,6 +33,30 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-1.9.6-beta.1',
+		version: '1.9.6-beta.1',
+		publishedAt: '2026-09-05',
+		title: {
+			'en-US': 'Axolotl Launcher 1.9.6-beta.1',
+			'zh-CN': 'Axolotl Launcher 1.9.6-beta.1',
+		},
+		changes: {
+			changed: [
+				{
+					'en-US': 'Improved the loading speed of the Discover page.',
+					'zh-CN': '优化了“发现内容”页面的打开速度。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'Fixed the Discover page breadcrumb briefly showing "Discover content" twice while loading.',
+					'zh-CN': '修复“发现内容”页面加载时面包屑短暂重复显示两个“发现内容”的问题。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-1.9.5',
 		version: '1.9.5',
 		publishedAt: '2026-09-04',
