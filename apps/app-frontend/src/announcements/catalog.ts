@@ -44,40 +44,94 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			added: [
 				{
 					'en-US':
-						'Added status filters to the Content tab, including a dedicated view for disabled mods. (issue #498)',
-					'zh-CN': '内容页新增状态筛选，可单独查看已禁用的 Mod。(issue #498)',
+						'Added the ability to directly use the .minecraft folder as an instance manager (currently in beta, unexpected errors may occur).',
+					'zh-CN':
+						'新增可直接使用 .minecraft 文件夹作为实例管理（当前处于测试阶段，可能会有意想不到的错误）。',
+				},
+				{
+					'en-US': 'Custom instance startup timeout is now supported.',
+					'zh-CN': '现在支持自定义实例启动超时时间。',
+				},
+				{
+					'en-US': 'Now there is a new page specifically for displaying disabled mods.',
+					'zh-CN': '现在有了新的页面专门显示禁用的 Mod。',
 				},
 			],
 			changed: [
 				{
-					'en-US': 'Improved the loading speed of the Discover page.',
-					'zh-CN': '优化了“发现内容”页面的打开速度。',
+					'en-US': 'Optimize the Easter egg game and adjust some mechanics.',
+					'zh-CN': '优化彩蛋游戏，修改部分机制。',
+				},
+				{
+					'en-US':
+						'Linux systems using apt will now be upgraded via deb packages instead of the built-in updater.',
+					'zh-CN': '使用 apt 的 Linux 系统现在将通过 deb 包进行升级，而不是内置 updater。',
+				},
+				{
+					'en-US': 'Now telemetry no longer collects all error information.',
+					'zh-CN': '现在遥测不再收集所有错误信息。',
 				},
 			],
 			fixed: [
 				{
-					'en-US':
-						'Fixed a memory leak that retained page data after navigating between launcher pages. (issue #421)',
-					'zh-CN': '修复在启动器页面之间切换后仍保留页面数据的内存泄漏问题。(issue #421)',
+					'en-US': 'Fix the issue where DNS TTL was incorrectly refreshed.',
+					'zh-CN': '修复 DNS TTL 被错误刷新的问题。',
 				},
 				{
 					'en-US':
-						'Fixed completed download tasks showing stale progress, a cancel action, or an active-download shortcut.',
-					'zh-CN': '修复下载任务完成后仍显示旧进度、取消按钮或正在下载入口的问题。',
+						'Fix the incorrect failure handling mechanism when Minecraft Assets download fails.',
+					'zh-CN': '修复 Minecraft Assets 下载失败时错误的失败处理机制。',
+				},
+				{
+					'en-US': 'Fix the issue where the 1.16.5 Forge version cannot start.',
+					'zh-CN': '修复 1.16.5 Forge 版本无法启动的问题。',
 				},
 				{
 					'en-US':
-						'Fixed unnecessary full-page animations when switching tabs in multiplayer page.',
-					'zh-CN': '修复在多人游戏中切换标签时触发整页动画的问题。',
+						"Fix the issue where the launcher cannot be invoked by running the launcher's main program in lightweight mode.",
+					'zh-CN': '修复轻量模式下无法通过运行启动器主程序的方式唤起启动器。',
 				},
 				{
 					'en-US':
-						'Fixed the Discover page breadcrumb briefly showing "Discover content" twice while loading.',
-					'zh-CN': '修复“发现内容”页面加载时面包屑短暂重复显示两个“发现内容”的问题。',
+						'Fix the issue where the launcher could still launch automatically after the user unchecked "Launch when complete" during installation/update.',
+					'zh-CN': '修复安装/更新启动器时，用户取消勾选“完成后启动”后仍可能出现自动启动的情况。',
 				},
 				{
-					'en-US': 'Fixed some placeholder text being able to be ctrl+a selected. (issue #511)',
-					'zh-CN': '修复了部分placeholder文字可被ctrl+a选中的问题。(issue #511)',
+					'en-US':
+						'Fix the issue where searching for any text on the settings page causes the page to become blank.',
+					'zh-CN': '修复设置页面搜索任意文字使得页面变为空页面的问题。',
+				},
+				{
+					'en-US':
+						'Fix the issue where switching from the AI page to other pages in Settings causes the launcher to freeze.',
+					'zh-CN': '修复设置从 AI 页面切换到其他页面会导致启动器冻结的问题。',
+				},
+				{
+					'en-US':
+						'Fix the issue where the multi-select action box on the content page obscures the left and right action buttons.',
+					'zh-CN': '修复内容页多选操作框遮挡左右操作按钮的问题。',
+				},
+				{
+					'en-US': 'Fix the slow loading issue on the Explore content page.',
+					'zh-CN': '修复探索内容页面加载过慢的问题。',
+				},
+				{
+					'en-US':
+						'Fix the issue where the multiplayer game page played unnecessary extra animations.',
+					'zh-CN': '修复多人游戏页面播放额外的不需要的动画的问题。',
+				},
+				{
+					'en-US':
+						'Fixed download tasks showing stale progress, a cancel action, or an active-download shortcut.',
+					'zh-CN': '修复了已完成的下载任务会显示过期进度、取消操作或活动下载快捷方式的问题。',
+				},
+				{
+					'en-US': 'Fixed an issue where some placeholder text could be selected with Ctrl+A.',
+					'zh-CN': '修复部分占位符文字可被 Ctrl+A 选中。',
+				},
+				{
+					'en-US': 'Fix memory leaks caused by Vue in some scenarios.',
+					'zh-CN': '修复部分 Vue 导致的内存泄漏问题。',
 				},
 			],
 		},
