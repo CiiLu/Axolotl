@@ -646,21 +646,16 @@ pub(crate) fn needs_java_artifact(library: &Library) -> bool {
     }
     // Legacy pure-native libraries carry a natives map but no downloads.artifact;
     // their main JAR is not downloaded by the original installer either.
+    let artifact = library
+        .downloads
+        .as_ref()
+        .and_then(|downloads| downloads.artifact.as_ref());
     if library.natives.is_some()
-        && library
-            .downloads
-            .as_ref()
-            .and_then(|downloads| downloads.artifact.as_ref())
-            .is_none()
+        && artifact.is_none_or(|artifact| artifact.url.is_empty())
     {
         return false;
     }
-    library
-        .downloads
-        .as_ref()
-        .and_then(|downloads| downloads.artifact.as_ref())
-        .is_some()
-        || library.url.is_some()
+    artifact.is_some_and(|artifact| !artifact.url.is_empty()) || library.url.is_some()
 }
 
 fn library_classifier(library_name: &str) -> Option<&str> {
