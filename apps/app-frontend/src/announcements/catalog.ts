@@ -63,6 +63,10 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 						'Fixed the Discover page breadcrumb briefly showing "Discover content" twice while loading.',
 					'zh-CN': '修复“发现内容”页面加载时面包屑短暂重复显示两个“发现内容”的问题。',
 				},
+				{
+					'en-US': 'Fixed some placeholder text being able to be ctrl+a selected. (issue #511)',
+					'zh-CN': '修复了部分placeholder文字可被ctrl+a选中的问题。(issue #511)',
+				},
 			],
 		},
 	},
