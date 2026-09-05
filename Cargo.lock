@@ -6828,6 +6828,7 @@ dependencies = [
  "either",
  "enumset",
  "flate2",
+ "futures",
  "hyper",
  "hyper-util",
  "image",
