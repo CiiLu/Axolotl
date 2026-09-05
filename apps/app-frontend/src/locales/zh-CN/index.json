@@ -8333,6 +8333,12 @@
   "create.back": {
     "message": "返回库"
   },
+  "create.pcl-hmcl-hint": {
+    "message": "正在使用 PCL / HMCL？"
+  },
+  "create.add-minecraft-folder": {
+    "message": "添加 .minecraft 文件夹"
+  },
   "create.import.description": {
     "message": "从其他启动器导入实例，或安装整合包。"
   },
