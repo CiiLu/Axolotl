@@ -10,6 +10,7 @@ import {
 import { getVersion } from '@tauri-apps/api/app'
 import { platform as getOsPlatform, version as getOsVersion } from '@tauri-apps/plugin-os'
 import { computed, nextTick, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
 import {
 	getVisibleSettingsCategories,
@@ -38,6 +39,7 @@ interface SettingsSearchResult {
 }
 
 const themeStore = useTheming()
+const route = useRoute()
 const { formatMessage } = useVIntl()
 const { progress, version: downloadingVersion } = injectAppUpdateDownloadProgress()
 
@@ -47,7 +49,7 @@ const osVersion = getOsVersion()
 const settings = ref(loadedSettings)
 const devModeCounter = ref(0)
 const searchQuery = ref('')
-const selectedCategoryId = ref('interface')
+const selectedCategoryId = ref(route.hash.slice(1) || 'interface')
 const settingsContentPending = ref(false)
 const contentContainer = ref<HTMLElement | null>(null)
 const searchHighlightTarget = ref<HTMLElement | null>(null)
@@ -152,6 +154,14 @@ watch(visibleCategories, (categories) => {
 		selectedCategoryId.value = categories[0]?.id ?? 'interface'
 	}
 })
+
+watch(
+	() => route.hash,
+	(hash) => {
+		const categoryId = hash.slice(1)
+		if (categoryId) selectedCategoryId.value = categoryId
+	},
+)
 
 function selectCategory(categoryId: string) {
 	selectedCategoryId.value = categoryId
