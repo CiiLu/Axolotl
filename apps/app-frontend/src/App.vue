@@ -67,6 +67,7 @@ import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 
 import { type RouteLocationNormalizedLoaded, RouterView, useRoute, useRouter } from 'vue-router'
 
 import { getAnnouncementByVersion } from '@/announcements/catalog'
+import { sync_direct_links } from '@/helpers/instance'
 import InstanceExportModal from '@/components/lab/recipe-generator/InstanceExportModal.vue'
 import AccountsCard from '@/components/ui/AccountsCard.vue'
 import UpdateAnnouncementModal from '@/components/ui/announcement/UpdateAnnouncementModal.vue'
@@ -502,7 +503,53 @@ onMounted(async () => {
 
 	checkUpdates()
 	void warnIfRunningElevated()
+	startDirectLinkSync()
 })
+
+let directLinkSync: (() => Promise<void>) | undefined
+let stopDirectLinkSync: (() => void) | undefined
+function startDirectLinkSync() {
+	const readRoots = () => {
+		try {
+			const parsed = JSON.parse(localStorage.getItem('axolotl-minecraft-directories') ?? '[]')
+			return Array.isArray(parsed)
+				? parsed.filter((value): value is string => typeof value === 'string' && value.trim())
+				: []
+		} catch {
+			return []
+		}
+	}
+	let syncInFlight: Promise<void> | undefined
+	const sync = async () => {
+		if (syncInFlight) return syncInFlight
+
+		syncInFlight = (async () => {
+			const roots = readRoots()
+			if (roots.length === 0) return
+			await sync_direct_links(roots)
+				.catch((error) => {
+					console.warn('Failed to sync external Minecraft instances', error)
+				})
+			window.dispatchEvent(new Event('axolotl-direct-links-synced'))
+		})().finally(() => {
+			syncInFlight = undefined
+		})
+
+		return syncInFlight
+	}
+	const handleWindowFocus = () => {
+		void sync()
+	}
+
+	directLinkSync = sync
+	window.addEventListener('focus', handleWindowFocus)
+	void sync()
+	stopDirectLinkSync = () => {
+		window.removeEventListener('focus', handleWindowFocus)
+		if (directLinkSync === sync) directLinkSync = undefined
+		if (stopDirectLinkSync) stopDirectLinkSync = undefined
+	}
+}
 
 onUnmounted(async () => {
 	window.removeEventListener('keydown', handleGlobalKeydown, true)
@@ -511,6 +558,7 @@ onUnmounted(async () => {
 	document.querySelector('body').removeEventListener('click', handleClick)
 	document.querySelector('body').removeEventListener('auxclick', handleAuxClick)
 	clearDelayedUpdatePopup()
+	stopDirectLinkSync?.()
 	await unlistenUpdateDownload?.()
 	downloadManager.dispose()
 })
@@ -1391,7 +1439,10 @@ router.afterEach((to, from, failure) => {
 		fromPath: from.path,
 		failed: failure,
 	})
-	if (!failure && stateInitialized.value) syncDiscordActivity(to)
+	if (!failure) {
+		void directLinkSync?.()
+		if (stateInitialized.value) syncDiscordActivity(to)
+	}
 	setTimeout(() => {
 		if (!suspensePending && stateInitialized.value) {
 			if (initialLoadToken) {
