@@ -50,6 +50,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US':
+						'Fixed completed download tasks showing stale progress, a cancel action, or an active-download shortcut.',
+					'zh-CN': '修复下载任务完成后仍显示旧进度、取消按钮或正在下载入口的问题。',
+				},
+				{
+					'en-US':
 						'Fixed unnecessary full-page animations when switching tabs in multiplayer page.',
 					'zh-CN': '修复在多人游戏中切换标签时触发整页动画的问题。',
 				},
