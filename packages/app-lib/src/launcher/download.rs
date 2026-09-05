@@ -636,6 +636,25 @@ pub(crate) fn is_native_library(library: &Library) -> bool {
 /// canonical example); the two are independent and must not be treated as
 /// mutually exclusive.
 pub(crate) fn needs_java_artifact(library: &Library) -> bool {
+    // Four-part native coordinates (group:artifact:version:natives-*) store
+    // their native archive metadata in downloads.artifact, which is not a
+    // Java JAR. Exclude them so they only produce NativeArtifact tasks.
+    if library_classifier(&library.name)
+        .is_some_and(|classifier| classifier.starts_with("natives-"))
+    {
+        return false;
+    }
+    // Legacy pure-native libraries carry a natives map but no downloads.artifact;
+    // their main JAR is not downloaded by the original installer either.
+    if library.natives.is_some()
+        && library
+            .downloads
+            .as_ref()
+            .and_then(|downloads| downloads.artifact.as_ref())
+            .is_none()
+    {
+        return false;
+    }
     library
         .downloads
         .as_ref()
