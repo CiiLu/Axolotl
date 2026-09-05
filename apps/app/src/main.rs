@@ -724,9 +724,8 @@ fn main() {
             // so focusing it is not enough (see #490).
             let app = app.clone();
             tauri::async_runtime::spawn(async move {
-                let _ = app
-                    .state::<lightweight_mode::LightweightMode>()
-                    .exit(&app);
+                let _ =
+                    app.state::<lightweight_mode::LightweightMode>().exit(&app);
             });
         }))
         .plugin(tauri_plugin_http::init())
