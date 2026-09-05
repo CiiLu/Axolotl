@@ -391,11 +391,10 @@ const pageTitle: MessageDescriptor = settingsPageTitle
 						tabindex="-1"
 					>
 						<Suspense
-							:key="activeCategory.id"
 							@pending="settingsContentPending = true"
 							@resolve="settingsContentPending = false"
 						>
-							<component :is="activeCategory.content" />
+							<component :is="activeCategory.content" :key="activeCategory.id" />
 							<template #fallback>
 								<div class="settings-content-fallback" aria-hidden="true" />
 							</template>
