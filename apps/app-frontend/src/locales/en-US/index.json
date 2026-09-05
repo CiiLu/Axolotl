@@ -5109,7 +5109,7 @@
     "message": "No log content was found to share or analyze. Make sure the instance has logs generated in the last few minutes."
   },
   "app.minecraft-crash.preparation-timed-out": {
-    "message": "Launch preparation did not finish within 60 seconds and was cancelled. Check the Java path, launch hooks, wrapper command, and network connection, then try again."
+    "message": "Launch preparation did not finish within the configured timeout and was cancelled. Check the Java path, launch hooks, wrapper command, and network connection, then try again."
   },
   "app.minecraft-crash.preview-instance": {
     "message": "Minecraft test instance"
@@ -8817,13 +8817,22 @@
     "message": "Select update channel"
   },
   "instance.settings.tabs.hooks": {
-    "message": "Launch hooks"
+    "message": "Launch preparation"
   },
   "instance.settings.tabs.hooks.custom-hooks": {
     "message": "Custom launch hooks"
   },
+  "instance.settings.tabs.hooks.custom-launch-preparation-timeout": {
+    "message": "Use a custom launch preparation timeout"
+  },
   "instance.settings.tabs.hooks.description": {
-    "message": "Hooks allow advanced users to run certain system commands before and after launching the game."
+    "message": "Configure the time allowed for launch preparation and optional commands that run before and after the game."
+  },
+  "instance.settings.tabs.hooks.launch-preparation-timeout": {
+    "message": "Launch preparation timeout"
+  },
+  "instance.settings.tabs.hooks.launch-preparation-timeout.description": {
+    "message": "Maximum time to wait for launch preparation to finish, in seconds (30–600)."
   },
   "instance.settings.tabs.hooks.post-exit": {
     "message": "Post-exit"
@@ -8844,7 +8853,7 @@
     "message": "Enter pre-launch command..."
   },
   "instance.settings.tabs.hooks.title": {
-    "message": "Game launch hooks"
+    "message": "Launch preparation"
   },
   "instance.settings.tabs.hooks.wrapper": {
     "message": "Wrapper"
