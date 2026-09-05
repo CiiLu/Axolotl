@@ -652,6 +652,7 @@ pub(crate) fn needs_java_artifact(library: &Library) -> bool {
         .and_then(|downloads| downloads.artifact.as_ref());
     if library.natives.is_some()
         && artifact.is_none_or(|artifact| artifact.url.is_empty())
+        && library.url.is_none()
     {
         return false;
     }
@@ -2731,6 +2732,20 @@ mod tests {
             .unwrap()[0],
             format!("https://maven.legacyfabric.net/{artifact_path}")
         );
+    }
+
+    #[test]
+    fn native_library_with_legacy_repository_keeps_java_artifact_task() {
+        let library: Library = serde_json::from_value(serde_json::json!({
+            "name": "org.lwjgl.lwjgl:lwjgl-platform:2.9.4",
+            "url": "https://libraries.minecraft.net/",
+            "natives": {
+                "windows": "natives-windows"
+            }
+        }))
+        .unwrap();
+
+        assert!(needs_java_artifact(&library));
     }
 
     #[test]
