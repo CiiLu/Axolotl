@@ -50,6 +50,11 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			fixed: [
 				{
 					'en-US':
+						'Fixed unnecessary full-page animations when switching tabs in multiplayer page.',
+					'zh-CN': '修复在多人游戏中切换标签时触发整页动画的问题。',
+				},
+				{
+					'en-US':
 						'Fixed the Discover page breadcrumb briefly showing "Discover content" twice while loading.',
 					'zh-CN': '修复“发现内容”页面加载时面包屑短暂重复显示两个“发现内容”的问题。',
 				},
