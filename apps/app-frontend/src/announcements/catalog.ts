@@ -41,6 +41,13 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 			'zh-CN': 'Axolotl Launcher 1.9.6-beta.1',
 		},
 		changes: {
+			added: [
+				{
+					'en-US':
+						'Added status filters to the Content tab, including a dedicated view for disabled mods. (issue #498)',
+					'zh-CN': '内容页新增状态筛选，可单独查看已禁用的 Mod。(issue #498)',
+				},
+			],
 			changed: [
 				{
 					'en-US': 'Improved the loading speed of the Discover page.',
