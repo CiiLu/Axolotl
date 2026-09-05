@@ -1,8 +1,6 @@
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
     tauri::plugin::Builder::new("telemetry")
-        .invoke_handler(tauri::generate_handler![
-            notify_online,
-        ])
+        .invoke_handler(tauri::generate_handler![notify_online,])
         .build()
 }
 
