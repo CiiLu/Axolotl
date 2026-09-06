@@ -1,6 +1,7 @@
 use super::create_direct_link_instance::create_direct_link_instance;
 use crate::api::pack::import::direct_link::{
-    detect_direct_link_source, direct_link_group, resolve_direct_link,
+    detect_direct_link_source, direct_link_group,
+    has_minecraft_version_manifest, resolve_direct_link,
 };
 use crate::event::{InstancePayloadType, emit::emit_instance};
 use crate::state::instances::{
@@ -79,6 +80,13 @@ pub(crate) async fn sync_direct_link_instances(
             };
             let folder = entry.path();
             if !folder.is_dir() {
+                continue;
+            }
+            // A `versions` directory can also contain PCL bookkeeping entries
+            // left by an interrupted install. They have no version manifest,
+            // so they are not Minecraft instances and should not surface a
+            // warning on every root synchronization.
+            if !has_minecraft_version_manifest(&folder) {
                 continue;
             }
             let folder_name = entry.file_name().to_string_lossy().to_string();
