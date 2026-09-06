@@ -47,6 +47,7 @@ pub(crate) struct DirectLinkSource {
 /// generic Minecraft installation.
 pub(crate) fn detect_direct_link_source(
     dot_minecraft: &Path,
+    version_dir: &Path,
 ) -> DirectLinkSource {
     for launcher_root in [
         dot_minecraft.parent().map(Path::to_path_buf),
@@ -72,9 +73,12 @@ pub(crate) fn detect_direct_link_source(
         }
 
         if super::hmcl::config_exists(&launcher_root)
-            && super::hmcl::get_instances(&launcher_root).iter().any(
-                |(_, game_dir)| paths_match(Path::new(game_dir), dot_minecraft),
+            && super::hmcl::configured_game_dir(
+                &launcher_root,
+                dot_minecraft,
+                version_dir,
             )
+            .is_some()
         {
             return DirectLinkSource {
                 launcher: ImportLauncherType::HMCL,
@@ -649,7 +653,10 @@ mod tests {
         )
         .unwrap();
 
-        let source = detect_direct_link_source(&game_dir);
+        let source = detect_direct_link_source(
+            &game_dir,
+            &game_dir.join("versions").join("demo"),
+        );
         assert_eq!(source.launcher, ImportLauncherType::HMCL);
         assert_eq!(source.launcher_root, root.path());
     }

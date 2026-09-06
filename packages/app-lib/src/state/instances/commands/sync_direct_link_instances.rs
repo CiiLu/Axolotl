@@ -83,7 +83,7 @@ pub(crate) async fn sync_direct_link_instances(
             }
             let folder_name = entry.file_name().to_string_lossy().to_string();
             let instance_folder = Path::new("versions").join(&folder_name);
-            let source = detect_direct_link_source(root);
+            let source = detect_direct_link_source(root, &folder);
             let resolved = match resolve_direct_link(
                 source.launcher,
                 source.launcher_root.clone(),
