@@ -26,6 +26,69 @@ pub(crate) struct ResolvedDirectLink {
     pub loader_version: Option<String>,
 }
 
+/// The launcher's dialect and root used to resolve a traditional
+/// `.minecraft/versions/<id>` directory. The root is intentionally separate
+/// from the game directory: PCL stores its settings beside the executable,
+/// while its `.minecraft` may be a sibling directory.
+#[derive(Clone, Debug)]
+pub(crate) struct DirectLinkSource {
+    pub launcher: ImportLauncherType,
+    pub launcher_root: PathBuf,
+}
+
+/// Identifies the launcher that owns an externally selected version folder.
+///
+/// Direct-link Settings receives `.minecraft` roots rather than launcher
+/// executables, so the normal import scanner cannot infer PCL from its
+/// executable alone. Probe the selected root and its parent, where portable
+/// PCL/PCL-CE installations keep their executable and `PCL` configuration.
+/// HMCL is only selected when its configuration actually references the
+/// supplied game directory; an unrelated `.hmcl` folder must not relabel a
+/// generic Minecraft installation.
+pub(crate) fn detect_direct_link_source(
+    dot_minecraft: &Path,
+) -> DirectLinkSource {
+    for launcher_root in [
+        dot_minecraft.parent().map(Path::to_path_buf),
+        Some(dot_minecraft.to_path_buf()),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        if super::pe_info::folder_has_product(
+            &launcher_root,
+            "Plain Craft Launcher",
+        ) {
+            let launcher =
+                if launcher_root.join("PCL").join("config.v1.yml").is_file() {
+                    ImportLauncherType::PCL2CE
+                } else {
+                    ImportLauncherType::PCL2
+                };
+            return DirectLinkSource {
+                launcher,
+                launcher_root,
+            };
+        }
+
+        if super::hmcl::config_exists(&launcher_root)
+            && super::hmcl::get_instances(&launcher_root).iter().any(
+                |(_, game_dir)| paths_match(Path::new(game_dir), dot_minecraft),
+            )
+        {
+            return DirectLinkSource {
+                launcher: ImportLauncherType::HMCL,
+                launcher_root,
+            };
+        }
+    }
+
+    DirectLinkSource {
+        launcher: ImportLauncherType::Generic,
+        launcher_root: dot_minecraft.to_path_buf(),
+    }
+}
+
 /// Returns the stable user-facing group for a directly linked `.minecraft`
 /// root. The complete normalized path is used as the group name so two roots
 /// with the same display folder name remain distinct.
@@ -566,6 +629,29 @@ mod tests {
             resolved.version_dir,
             crate::util::io::canonicalize(&version_dir).unwrap()
         );
+    }
+
+    #[test]
+    fn identifies_hmcl_only_when_it_owns_the_game_directory() {
+        let root = TempDir::new().unwrap();
+        let game_dir = root.path().join("game");
+        std::fs::create_dir_all(game_dir.join("versions")).unwrap();
+        let hmcl_dir = root.path().join(".hmcl");
+        std::fs::create_dir_all(&hmcl_dir).unwrap();
+        std::fs::write(
+            hmcl_dir.join("hmcl.json"),
+            serde_json::to_vec(&json!({
+                "configurations": {
+                    "default": { "gameDir": game_dir.to_string_lossy() }
+                }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let source = detect_direct_link_source(&game_dir);
+        assert_eq!(source.launcher, ImportLauncherType::HMCL);
+        assert_eq!(source.launcher_root, root.path());
     }
 
     #[tokio::test]

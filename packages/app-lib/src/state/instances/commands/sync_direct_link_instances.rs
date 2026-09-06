@@ -1,7 +1,6 @@
 use super::create_direct_link_instance::create_direct_link_instance;
-use crate::api::pack::import::{
-    ImportLauncherType,
-    direct_link::{direct_link_group, resolve_direct_link},
+use crate::api::pack::import::direct_link::{
+    detect_direct_link_source, direct_link_group, resolve_direct_link,
 };
 use crate::event::{InstancePayloadType, emit::emit_instance};
 use crate::state::instances::{
@@ -84,11 +83,12 @@ pub(crate) async fn sync_direct_link_instances(
             }
             let folder_name = entry.file_name().to_string_lossy().to_string();
             let instance_folder = Path::new("versions").join(&folder_name);
+            let source = detect_direct_link_source(root);
             let resolved = match resolve_direct_link(
-                ImportLauncherType::Generic,
-                root.clone(),
+                source.launcher,
+                source.launcher_root.clone(),
                 instance_folder.to_string_lossy().to_string(),
-                None,
+                Some(folder.to_string_lossy().to_string()),
             )
             .await
             {
@@ -121,6 +121,12 @@ pub(crate) async fn sync_direct_link_instances(
                 let instance = &metadata.instance;
                 let fields_changed = instance.linked_version_id.as_deref()
                     != Some(resolved.version_id.as_str())
+                    || instance.linked_launcher.as_deref()
+                        != Some(resolved.launcher_key())
+                    || instance.linked_launcher_root.as_deref()
+                        != Some(
+                            resolved.launcher_root.to_string_lossy().as_ref(),
+                        )
                     || instance.linked_dot_minecraft.as_deref()
                         != Some(
                             resolved.dot_minecraft.to_string_lossy().as_ref(),
@@ -198,12 +204,14 @@ pub(crate) async fn sync_direct_link_instances(
                 let instance = match create_direct_link_instance(
                     CreateDirectLinkInstance {
                         name: Some(folder_name),
-                        launcher_type: ImportLauncherType::Generic,
-                        base_path: root.clone(),
+                        launcher_type: source.launcher,
+                        base_path: source.launcher_root,
                         instance_folder: instance_folder
                             .to_string_lossy()
                             .to_string(),
-                        instance_path: None,
+                        instance_path: Some(
+                            folder.to_string_lossy().to_string(),
+                        ),
                     },
                     state,
                 )
