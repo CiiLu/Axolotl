@@ -31,12 +31,20 @@ pub(crate) async fn sync_direct_link_instances(
 ) -> crate::Result<DirectLinkSyncReport> {
     let mut report = DirectLinkSyncReport::default();
     let mut canonical_roots = Vec::new();
-    for root in roots {
-        match crate::util::io::canonicalize(&root) {
+    for root in &roots {
+        match crate::util::io::canonicalize(root) {
             Ok(root) if root.is_dir() => canonical_roots.push(root),
-            Ok(_) => report.missing += 1,
+            Ok(_) => {
+                report.missing += 1;
+                report
+                    .errors
+                    .push(format!("{} is not a directory", root.display()));
+            }
             Err(error) => {
-                report.errors.push(format!("{}: {error}", root.display()))
+                if error.kind() == std::io::ErrorKind::NotFound {
+                    report.missing += 1;
+                }
+                report.errors.push(format!("{}: {error}", root.display()));
             }
         }
     }
@@ -60,7 +68,16 @@ pub(crate) async fn sync_direct_link_instances(
                 continue;
             }
         };
-        for entry in entries.flatten() {
+        for entry in entries {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(error) => {
+                    report
+                        .errors
+                        .push(format!("{}: {error}", versions.display()));
+                    continue;
+                }
+            };
             let folder = entry.path();
             if !folder.is_dir() {
                 continue;
@@ -76,7 +93,12 @@ pub(crate) async fn sync_direct_link_instances(
             .await
             {
                 Ok(resolved) => resolved,
-                Err(_) => continue,
+                Err(error) => {
+                    report
+                        .errors
+                        .push(format!("{}: {error}", folder.display()));
+                    continue;
+                }
             };
             seen_json.push(resolved.version_json.clone());
 
@@ -173,7 +195,7 @@ pub(crate) async fn sync_direct_link_instances(
                     report.updated += 1;
                 }
             } else {
-                let instance = create_direct_link_instance(
+                let instance = match create_direct_link_instance(
                     CreateDirectLinkInstance {
                         name: Some(folder_name),
                         launcher_type: ImportLauncherType::Generic,
@@ -185,7 +207,16 @@ pub(crate) async fn sync_direct_link_instances(
                     },
                     state,
                 )
-                .await?;
+                .await
+                {
+                    Ok(instance) => instance,
+                    Err(error) => {
+                        report
+                            .errors
+                            .push(format!("{}: {error}", folder.display()));
+                        continue;
+                    }
+                };
                 let _ =
                     emit_instance(&instance.id, InstancePayloadType::Created)
                         .await;
@@ -210,10 +241,7 @@ pub(crate) async fn sync_direct_link_instances(
         let Some(root) = version_isolated_root(game_dir_override) else {
             continue;
         };
-        let Some(root) = crate::util::io::canonicalize(root).ok() else {
-            continue;
-        };
-        if canonical_roots.iter().any(|candidate| candidate == &root) {
+        if configured_root_matches(root, &canonical_roots, &roots) {
             continue;
         }
         instance_rows::delete_instance_by_id(
@@ -237,10 +265,7 @@ pub(crate) async fn sync_direct_link_instances(
         else {
             continue;
         };
-        let canonical_root = crate::util::io::canonicalize(root).ok();
-        if canonical_root.as_ref().is_none_or(|root| {
-            !canonical_roots.iter().any(|candidate| candidate == root)
-        }) {
+        if !configured_root_matches(Path::new(root), &canonical_roots, &roots) {
             // Configured roots are authoritative. Removing a root from Settings
             // only drops Axolotl's association; the external files remain intact.
             instance_rows::delete_instance_by_id(
@@ -290,4 +315,56 @@ fn version_isolated_root(path: &str) -> Option<PathBuf> {
         return None;
     }
     version_dir.parent()?.parent().map(Path::to_path_buf)
+}
+
+/// A root that remains in Settings must retain its associated records even
+/// when it cannot currently be opened (for example, a disconnected drive or
+/// a transient permission failure). Only removing the root from Settings may
+/// drop all of its associations.
+fn configured_root_matches(
+    root: &Path,
+    canonical_roots: &[PathBuf],
+    configured_roots: &[PathBuf],
+) -> bool {
+    canonical_roots.iter().any(|candidate| candidate == root)
+        || configured_roots
+            .iter()
+            .any(|candidate| paths_match(candidate, root))
+}
+
+fn paths_match(left: &Path, right: &Path) -> bool {
+    let left = left.components().collect::<PathBuf>();
+    let right = right.components().collect::<PathBuf>();
+
+    #[cfg(target_os = "windows")]
+    {
+        left.to_string_lossy()
+            .eq_ignore_ascii_case(&right.to_string_lossy())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        left == right
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn configured_but_unavailable_root_keeps_its_association() {
+        let root = PathBuf::from("minecraft-root");
+        let equivalent = PathBuf::from("minecraft-root").join(".");
+
+        assert!(configured_root_matches(&equivalent, &[], &[root]));
+    }
+
+    #[test]
+    fn removed_root_does_not_keep_its_association() {
+        assert!(!configured_root_matches(
+            Path::new("minecraft-root"),
+            &[],
+            &[PathBuf::from("other-root")],
+        ));
+    }
 }
