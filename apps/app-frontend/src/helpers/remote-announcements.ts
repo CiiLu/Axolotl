@@ -35,17 +35,23 @@ export function parseAnnouncements(value: unknown): RemoteAnnouncement[] | null 
 			typeof item.id !== 'string' || item.id.length > 100 || ids.has(item.id) ||
 			typeof item.title !== 'string' || !item.title.trim() || item.title.length > 120 ||
 			typeof item.content !== 'string' || item.content.length > 20000 ||
-			(item.summary !== null && (typeof item.summary !== 'string' || item.summary.length > 300)) ||
+			(item.summary != null && (typeof item.summary !== 'string' || item.summary.length > 300)) ||
 			!['modal', 'notification'].includes(String(item.type)) ||
 			!['low', 'normal', 'high', 'critical'].includes(String(item.priority)) ||
 			typeof item.starts_at !== 'string' || !Number.isFinite(Date.parse(item.starts_at)) ||
 			typeof item.published_at !== 'string' || !Number.isFinite(Date.parse(item.published_at)) ||
-			(item.ends_at !== null && (typeof item.ends_at !== 'string' || !Number.isFinite(Date.parse(item.ends_at)))) ||
-			(item.action_label !== null && (typeof item.action_label !== 'string' || item.action_label.length > 80)) ||
-			(item.action_url !== null && !safeAnnouncementUrl(item.action_url))
+			(item.ends_at != null && (typeof item.ends_at !== 'string' || !Number.isFinite(Date.parse(item.ends_at)))) ||
+			(item.action_label != null && (typeof item.action_label !== 'string' || item.action_label.length > 80)) ||
+			(item.action_url != null && !safeAnnouncementUrl(item.action_url))
 		) continue
 		ids.add(item.id)
-		items.push(item as RemoteAnnouncement)
+		items.push({
+			...item,
+			summary: item.summary ?? null,
+			ends_at: item.ends_at ?? null,
+			action_label: item.action_label ?? null,
+			action_url: item.action_url ?? null,
+		} as RemoteAnnouncement)
 	}
 	const rank = { low: 0, normal: 1, high: 2, critical: 3 }
 	return items.sort((first, second) => rank[second.priority] - rank[first.priority] || Date.parse(second.published_at) - Date.parse(first.published_at))
