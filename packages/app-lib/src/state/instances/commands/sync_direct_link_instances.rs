@@ -249,7 +249,7 @@ pub(crate) async fn sync_direct_link_instances(
         let Some(root) = version_isolated_root(game_dir_override) else {
             continue;
         };
-        if configured_root_matches(root, &canonical_roots, &roots) {
+        if configured_root_matches(&root, &canonical_roots, &roots) {
             continue;
         }
         instance_rows::delete_instance_by_id(
